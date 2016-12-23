@@ -1,5 +1,7 @@
 package com.onehilltech.backbone.http.retrofit;
 
+import com.onehilltech.backbone.http.Resource;
+
 import java.util.Map;
 
 import retrofit2.Call;

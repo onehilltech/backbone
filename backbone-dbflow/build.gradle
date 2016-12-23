@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
-apply plugin: 'com.neenbedankt.android-apt'
 
 group   = project.property('build.group')
 version = project.property('build.version')
@@ -33,7 +32,6 @@ android {
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_7
-        targetCompatibility JavaVersion.VERSION_1_7
     }
 
     lintOptions {
@@ -41,17 +39,9 @@ android {
     }
 }
 
-apt {
-    arguments {
-        targetModuleName 'BackboneHttp'
-    }
-}
-
 dependencies {
-    apt "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ("dbflow.version")
-
-    compile project (':backbone-dbflow')
-    compile 'joda-time:joda-time:2.3'
+    compile "com.github.Raizlabs.DBFlow:dbflow-core:" + project.property ('dbflow.version')
+    compile "com.github.Raizlabs.DBFlow:dbflow:" + project.property ('dbflow.version')
 
     androidTestCompile 'junit:junit:4.11'
     androidTestCompile('com.android.support.test:testing-support-lib:0.1') {
