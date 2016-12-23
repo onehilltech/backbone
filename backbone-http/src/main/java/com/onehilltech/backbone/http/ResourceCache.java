@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteConstraintException;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.net.URL;
 
@@ -32,11 +33,13 @@ public final class ResourceCache
 
   public void add (URL url, String eTag, DateTime lastModified)
   {
+    DateTime utcDateTime = lastModified.withZone (DateTimeZone.UTC);
+
     try
     {
       SQLite.insert (ResourceCacheModel.class)
             .columns (ResourceCacheModel$Table.url, ResourceCacheModel$Table.etag, ResourceCacheModel$Table.last_modified)
-            .values (url, eTag, lastModified)
+            .values (url, eTag, utcDateTime)
             .execute ();
     }
     catch (SQLiteConstraintException e)
@@ -65,7 +68,9 @@ public final class ResourceCache
 
   public boolean hasBeenModified (URL url, DateTime moment)
   {
+    DateTime utcDateTime = moment.withZone (DateTimeZone.UTC);
     ResourceCacheModel model = this.get (url);
-    return model == null || model.lastModified.isAfter (moment);
+
+    return model == null || model.lastModified.isAfter (utcDateTime);
   }
 }
