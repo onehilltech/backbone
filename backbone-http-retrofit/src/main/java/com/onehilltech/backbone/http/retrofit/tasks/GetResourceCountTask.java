@@ -1,16 +1,15 @@
 package com.onehilltech.backbone.http.retrofit.tasks;
 
+import com.onehilltech.backbone.http.Resource;
+import com.onehilltech.backbone.http.retrofit.ResourceEndpoint;
 import com.onehilltech.concurrent.CompletionCallback;
 import com.onehilltech.concurrent.Task;
-import com.onehilltech.gatekeeper.android.RefreshTokenCallback;
-import com.onehilltech.gatekeeper.android.SingleUserSessionClient;
-import com.onehilltech.backbone.http.retrofit.Resource;
-import com.onehilltech.backbone.http.retrofit.ResourceEndpoint;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 
 public class GetResourceCountTask extends Task
@@ -21,22 +20,19 @@ public class GetResourceCountTask extends Task
 
     private ResourceEndpoint<?> endpoint_;
 
-    private SingleUserSessionClient session_;
-
     private Map <String, Object> criteria_;
 
     private int currentCount_ = -1;
 
-    public Builder (ResourceEndpoint<?> endpoint, SingleUserSessionClient session)
+    public Builder (ResourceEndpoint<?> endpoint)
     {
-      this (null, endpoint, session);
+      this (null, endpoint);
     }
 
-    public Builder (String name, ResourceEndpoint<?> endpoint, SingleUserSessionClient session)
+    public Builder (String name, ResourceEndpoint<?> endpoint)
     {
       this.name_ = name;
       this.endpoint_ = endpoint;
-      this.session_ = session;
     }
 
     public Builder setCriteria (Map <String, Object> criteria)
@@ -47,7 +43,7 @@ public class GetResourceCountTask extends Task
 
     public GetResourceCountTask build ()
     {
-      GetResourceCountTask task = new GetResourceCountTask (this.name_, this.endpoint_, this.session_);
+      GetResourceCountTask task = new GetResourceCountTask (this.name_, this.endpoint_);
 
       if (this.criteria_ != null)
         task.criteria_.putAll (this.criteria_);
@@ -59,23 +55,21 @@ public class GetResourceCountTask extends Task
 
   private final ResourceEndpoint<?> endpoint_;
   private final Map<String, Object> criteria_ = new HashMap<> ();
-  private final SingleUserSessionClient session_;
 
-  GetResourceCountTask (String name, ResourceEndpoint<?> endpoint, SingleUserSessionClient session)
+  GetResourceCountTask (String name, ResourceEndpoint<?> endpoint)
   {
     super (name);
 
     this.endpoint_ = endpoint;
-    this.session_ = session;
   }
 
   @Override
   public void run (Object o, final CompletionCallback completionCallback)
   {
-    this.endpoint_.count (this.criteria_).enqueue (new RefreshTokenCallback<Resource> (this.session_)
+    this.endpoint_.count (this.criteria_).enqueue (new Callback<Resource> ()
     {
       @Override
-      public void onHandleResponse (Call<Resource> call, Response<Resource> response)
+      public void onResponse (Call<Resource> call, Response<Resource> response)
       {
         if (response.isSuccessful ())
         {
@@ -94,6 +88,7 @@ public class GetResourceCountTask extends Task
         completionCallback.fail (t);
       }
     });
-  }}
+  }
+}
 
 

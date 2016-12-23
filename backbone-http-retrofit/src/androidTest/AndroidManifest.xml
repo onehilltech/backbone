@@ -15,4 +15,7 @@
   limitations under the License.
 -->
 
-<manifest package="com.onehilltech.backbone.http.retrofit.test" />
+<manifest package="com.onehilltech.backbone.http.retrofit.test"
+          xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+</manifest>
