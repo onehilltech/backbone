@@ -68,9 +68,7 @@ public final class ResourceCache
 
   public boolean hasBeenModified (URL url, DateTime moment)
   {
-    DateTime utcDateTime = moment.withZone (DateTimeZone.UTC);
     ResourceCacheModel model = this.get (url);
-
-    return model == null || model.lastModified.isAfter (utcDateTime);
+    return model == null || model.lastModified.isAfter (moment);
   }
 }
