@@ -46,10 +46,10 @@ dependencies {
     compile 'com.github.onehilltech.concurrent:concurrent-android:0.8.1'
 
     compile 'com.squareup.retrofit2:retrofit:2.1.0'
-    compile 'com.squareup.retrofit2:converter-gson:2.1.0'
 
     androidTestCompile 'junit:junit:4.11'
-    androidTestCompile 'com.squareup.okhttp:mockwebserver:2.0.0'
+    androidTestCompile 'com.squareup.okhttp:mockwebserver:2.1.0'
+    androidTestCompile 'com.squareup.retrofit2:converter-scalars:2.1.0'
 
     androidTestCompile('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
