@@ -8,7 +8,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import com.onehilltech.backbone.http.retrofit.Resource;
+import com.onehilltech.backbone.http.Resource;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -21,7 +21,7 @@ import java.util.Map;
 public class GsonResourceMarshaller
     implements JsonDeserializer <Resource>, JsonSerializer <Resource>
 {
-  private Gson gson_;
+  private Gson gson_ = new Gson ();
 
   private final GsonResourceManager resourceManager_ = GsonResourceManager.getInstance ();
 
@@ -69,7 +69,7 @@ public class GsonResourceMarshaller
   {
     JsonObject obj = new JsonObject ();
 
-    for (Map.Entry <String, Object> entry: src.entrySet ())
+    for (Map.Entry <String, Object> entry: src.entitySet ())
     {
       String name = entry.getKey ();
       Type type = this.resourceManager_.getType (name);

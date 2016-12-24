@@ -41,7 +41,7 @@ android {
 
 dependencies {
     compile project (':backbone-http-retrofit')
-    compile 'com.squareup.retrofit2:retrofit:2.1.0'
+
     compile 'com.squareup.retrofit2:converter-gson:2.1.0'
 
     androidTestCompile 'junit:junit:4.11'
