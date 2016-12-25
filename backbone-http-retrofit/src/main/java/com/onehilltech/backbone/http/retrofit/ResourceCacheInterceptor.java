@@ -58,7 +58,14 @@ public class ResourceCacheInterceptor implements Interceptor
       String eTag = response.header (HttpHeaders.ETAG);
 
       if (lastModified != null || eTag != null)
-        cache.add (url, eTag, DateTime.parse (lastModified, HTTP_DATE_FORMATTER));
+      {
+        DateTime date =
+            lastModified != null ?
+                DateTime.parse (lastModified, HTTP_DATE_FORMATTER) :
+                null;
+        
+        cache.add (url, eTag, date);
+      }
     }
 
     return response;
