@@ -33,7 +33,10 @@ public final class ResourceCache
 
   public void add (URL url, String eTag, DateTime lastModified)
   {
-    DateTime utcDateTime = lastModified.withZone (DateTimeZone.UTC);
+    DateTime utcDateTime =
+        lastModified != null ?
+            lastModified.withZone (DateTimeZone.UTC) :
+            null;
 
     try
     {

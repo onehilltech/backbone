@@ -63,7 +63,7 @@ public class ResourceCacheInterceptor implements Interceptor
             lastModified != null ?
                 DateTime.parse (lastModified, HTTP_DATE_FORMATTER) :
                 null;
-        
+
         cache.add (url, eTag, date);
       }
     }
