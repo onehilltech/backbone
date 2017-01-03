@@ -73,7 +73,7 @@ public class GetResourceCountTask extends Task
       {
         if (response.isSuccessful ())
         {
-          long count = response.body ().get ("count");
+          int count = response.body ().get ("count");
           completionCallback.done (count);
         }
         else
