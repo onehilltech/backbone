@@ -1,5 +1,7 @@
 package com.onehilltech.backbone.http.retrofit.tasks;
 
+import android.support.annotation.Nullable;
+
 import com.onehilltech.backbone.http.Resource;
 import com.onehilltech.concurrent.CompletionCallback;
 import com.onehilltech.concurrent.Task;
@@ -67,7 +69,7 @@ public class GetResourcesTask extends Task
 
   private final Map<String, Object> criteria_ = new HashMap<> ();
 
-  GetResourcesTask (String name, ResourceEndpoint<?> endpoint)
+  private GetResourcesTask (String name, ResourceEndpoint<?> endpoint)
   {
     super (name);
 
@@ -75,11 +77,11 @@ public class GetResourcesTask extends Task
   }
 
   @Override
-  public void run (Object o, final CompletionCallback completionCallback)
+  public void run (@Nullable Object o, final CompletionCallback completionCallback)
   {
-    final Long remoteCount = (Long)o;
+    Integer remoteCount = (int)o;
 
-    if (remoteCount == null || remoteCount != this.cacheCount_)
+    if (o == null || remoteCount != this.cacheCount_)
     {
       this.endpoint_.get (this.criteria_).enqueue (new Callback<Resource> ()
       {
