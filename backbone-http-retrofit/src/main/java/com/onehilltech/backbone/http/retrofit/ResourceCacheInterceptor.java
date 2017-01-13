@@ -30,26 +30,30 @@ public class ResourceCacheInterceptor implements Interceptor
     URL url = request.url ().url ();
 
     ResourceCache cache = ResourceCache.getInstance ();
-    ResourceCacheModel model = cache.get (url);
 
-    if (model != null && model.lastModified != null)
+    if (cache.getIsCachingEnabled ())
     {
-      // Make a new request object with the addition of the Last-Modified header
-      // to the request. The date must be in UTC format.
+      ResourceCacheModel model = cache.get (url);
 
-      DateTime utcDateTime = model.lastModified.withZone (DateTimeZone.UTC);
-      String ifModifiedSince = utcDateTime.toString (HTTP_DATE_FORMATTER);
+      if (model != null && model.lastModified != null)
+      {
+        // Make a new request object with the addition of the Last-Modified header
+        // to the request. The date must be in UTC format.
 
-      Request.Builder builder =
-          request.newBuilder ()
-                 .header (HttpHeaders.IF_MODIFIED_SINCE, ifModifiedSince);
+        DateTime utcDateTime = model.lastModified.withZone (DateTimeZone.UTC);
+        String ifModifiedSince = utcDateTime.toString (HTTP_DATE_FORMATTER);
 
-      request = builder.build ();
+        Request.Builder builder =
+            request.newBuilder ()
+                   .header (HttpHeaders.IF_MODIFIED_SINCE, ifModifiedSince);
+
+        request = builder.build ();
+      }
     }
 
     Response response = chain.proceed (request);
 
-    if (response.isSuccessful ())
+    if (response.isSuccessful () && cache.getIsCachingEnabled ())
     {
       // We need to check the response headers for the Last-Modified header. If
       // it exist, we need to update the entry in our local cache.

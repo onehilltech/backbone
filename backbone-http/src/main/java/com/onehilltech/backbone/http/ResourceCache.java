@@ -13,6 +13,8 @@ public final class ResourceCache
 {
   private static ResourceCache instance_;
 
+  private boolean enabled_ = true;
+
   public static ResourceCache getInstance ()
   {
     if (instance_ != null)
@@ -20,6 +22,16 @@ public final class ResourceCache
 
     instance_ = new ResourceCache ();
     return instance_;
+  }
+
+  public void enableCaching (boolean state)
+  {
+    this.enabled_ = state;
+  }
+
+  public boolean getIsCachingEnabled ()
+  {
+    return this.enabled_;
   }
 
   public ResourceCacheModel get (URL url)
