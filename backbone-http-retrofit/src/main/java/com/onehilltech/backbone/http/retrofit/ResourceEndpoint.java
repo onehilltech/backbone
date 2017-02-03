@@ -2,6 +2,7 @@ package com.onehilltech.backbone.http.retrofit;
 
 import com.onehilltech.backbone.http.Resource;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import retrofit2.Call;
@@ -94,6 +95,11 @@ public class ResourceEndpoint <T>
   public Call<Resource> get (String id)
   {
     return this.methods_.get (this.path_, id);
+  }
+
+  public Call<Resource> get (String id, HashMap <String, Object> query)
+  {
+    return this.methods_.get (this.path_, id, query);
   }
 
   /**
@@ -199,13 +205,23 @@ public class ResourceEndpoint <T>
     Call<Resource> get (@Path("name") String name, @QueryMap(encoded = true) Map<String, Object> options);
 
     /**
-     * Query a single resources.
+     * Get a single resources.
      *
      * @param name
      * @return
      */
     @GET("{name}/{id}")
     Call<Resource> get (@Path("name") String name, @Path("id") String id);
+
+    /**
+     * Get a single resource.
+     *
+     * @param name
+     * @param id
+     * @param options
+     * @return
+     */
+    Call<Resource> get (@Path("name") String name, @Path("id") String id, @QueryMap(encoded = true) Map<String, Object> options);
 
     /**
      * Update an existing resource.
