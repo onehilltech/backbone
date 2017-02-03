@@ -70,6 +70,11 @@ public class Resource
     return this.values_.entrySet ();
   }
 
+  public boolean contains (String name)
+  {
+    return this.values_.containsKey (name);
+  }
+
   /**
    * Get the number of entities in the resource.
    *
