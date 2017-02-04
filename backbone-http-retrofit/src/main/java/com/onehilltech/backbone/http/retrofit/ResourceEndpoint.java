@@ -221,6 +221,7 @@ public class ResourceEndpoint <T>
      * @param options
      * @return
      */
+    @GET("{name}/{id}")
     Call<Resource> get (@Path("name") String name, @Path("id") String id, @QueryMap(encoded = true) Map<String, Object> options);
 
     /**
