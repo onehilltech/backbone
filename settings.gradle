@@ -19,6 +19,7 @@ include 'services:webservice'
 rootProject.name = 'backbone'
 
 include ':backbone-android'
+include ':backbone-android-objectid'
 include ':backbone-dbflow'
 include ':backbone-http'
 include ':backbone-http-retrofit'
