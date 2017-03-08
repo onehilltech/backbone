@@ -72,6 +72,8 @@ public final class ObjectId
     this.machinePart_ = ByteUtils.toInt ((byte)0, buffer.get (), buffer.get (), buffer.get ());
     this.processPart_ = (short)ByteUtils.toInt ((byte)0, (byte)0, buffer.get (), buffer.get ());
     this.counter_ =  ByteUtils.toInt ((byte)0, buffer.get (), buffer.get (), buffer.get ());
+
+    this.computeHashCode ();
   }
 
   /**
