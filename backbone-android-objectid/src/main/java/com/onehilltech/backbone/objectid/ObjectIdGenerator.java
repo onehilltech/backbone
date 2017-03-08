@@ -86,10 +86,10 @@ public final class ObjectIdGenerator
    */
   public ObjectId nextObjectId ()
   {
-    DateTime date = DateTime.now ();
+    int seconds = (int) (DateTime.now ().getMillis () / 1000);
     int counter = this.counter_.getAndIncrement ();
 
-    return new ObjectId (date, this.machinePart_, this.processPart_, counter);
+    return new ObjectId (seconds, this.machinePart_, this.processPart_, counter);
   }
 
   /**

@@ -1,7 +1,5 @@
 package com.onehilltech.backbone.objectid;
 
-import org.joda.time.DateTime;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
@@ -18,7 +16,7 @@ import java.util.Arrays;
 public final class ObjectId
 {
   /// Current date/timeof the generated id.
-  private DateTime date_;
+  private int seconds_;
 
   /// The machine part of the id.
   private int machinePart_;
@@ -32,35 +30,48 @@ public final class ObjectId
   /// Pre-computed hash code for the object id.
   private int hashCode_;
 
-  private static final char [] HEX_CHARS = "1234567890abcdef".toCharArray ();
+  private static final char [] HEX_CHARS = "0123456789abcdef".toCharArray ();
 
   /**
-   * Convert a String to an ObjectId.
+   * Initializing constructor.
    *
-   * @param objectId
-   * @return
+   * @param seconds
+   * @param machinePart
+   * @param process
+   * @param counter
    */
-  public static ObjectId fromString (String objectId)
+  ObjectId (int seconds, int machinePart, short process, int counter)
   {
-    return null;
+    this.seconds_ = seconds;
+    this.machinePart_ = machinePart & 0x00ffffff;
+    this.processPart_ = process;
+    this.counter_ = counter & 0x00ffffff;
+
+    this.computeHashCode ();
   }
 
   /**
    * Initializing constructor.
    *
-   * @param date
-   * @param machinePart
-   * @param process
-   * @param counter
+   * @param hexString
    */
-  ObjectId (DateTime date, int machinePart, short process, int counter)
+  public ObjectId (String hexString)
   {
-    this.date_ = date;
-    this.machinePart_ = machinePart;
-    this.processPart_ = process;
-    this.counter_ = counter;
+    this (ByteUtils.fromHexStringToByteArray (hexString));
+  }
 
-    this.computeHashCode ();
+  /**
+   * Initializing constructor.
+   *
+   * @param bytes
+   */
+  public ObjectId (byte [] bytes)
+  {
+    ByteBuffer buffer = ByteBuffer.wrap (bytes);
+    this.seconds_ = ByteUtils.toInt (buffer.get (), buffer.get (), buffer.get (), buffer.get ());
+    this.machinePart_ = ByteUtils.toInt ((byte)0, buffer.get (), buffer.get (), buffer.get ());
+    this.processPart_ = (short)ByteUtils.toInt ((byte)0, (byte)0, buffer.get (), buffer.get ());
+    this.counter_ =  ByteUtils.toInt ((byte)0, buffer.get (), buffer.get (), buffer.get ());
   }
 
   /**
@@ -98,9 +109,9 @@ public final class ObjectId
    *
    * @return
    */
-  public DateTime getDate ()
+  public int getSeconds ()
   {
-    return this.date_;
+    return this.seconds_;
   }
 
   @Override
@@ -111,8 +122,7 @@ public final class ObjectId
 
     ObjectId objId = (ObjectId) obj;
 
-    return
-        this.date_.equals (objId.date_) &&
+    return this.seconds_ == objId.seconds_ &&
             this.machinePart_ == objId.machinePart_ &&
             this.processPart_ == objId.processPart_ &&
             this.counter_ == objId.counter_;
@@ -124,7 +134,7 @@ public final class ObjectId
   private void computeHashCode ()
   {
     Object[] objs = {
-        this.date_,
+        this.seconds_,
         this.machinePart_,
         this.processPart_,
         this.counter_
@@ -165,14 +175,11 @@ public final class ObjectId
   {
     ByteBuffer buffer = ByteBuffer.allocate (12);
 
-    // Convert the date to seconds since epoch.
-    int seconds = (int) (this.date_.getMillis () / 1000);
-
     // Write the individual bytes to prevent byte swapping.
-    buffer.put (ByteUtils.int3 (seconds));
-    buffer.put (ByteUtils.int2 (seconds));
-    buffer.put (ByteUtils.int1 (seconds));
-    buffer.put (ByteUtils.int0 (seconds));
+    buffer.put (ByteUtils.int3 (this.seconds_));
+    buffer.put (ByteUtils.int2 (this.seconds_));
+    buffer.put (ByteUtils.int1 (this.seconds_));
+    buffer.put (ByteUtils.int0 (this.seconds_));
     buffer.put (ByteUtils.int2 (this.machinePart_));
     buffer.put (ByteUtils.int1 (this.machinePart_));
     buffer.put (ByteUtils.int0 (this.machinePart_));

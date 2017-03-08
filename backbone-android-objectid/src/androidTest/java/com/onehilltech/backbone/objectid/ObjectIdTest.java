@@ -13,11 +13,12 @@ public class ObjectIdTest
   public void testConstructor ()
   {
     ObjectIdGenerator generator = ObjectIdGenerator.getInstance ();
-    int counter = generator.getCounter ();
+    int counter = generator.getCounter () & 0x00ffffff;
+    int machinePart = generator.getMachinePart () & 0x00ffffff;
 
     ObjectId objectId = generator.nextObjectId ();
     Assert.assertEquals (counter, objectId.getCounter ());
-    Assert.assertEquals (generator.getMachinePart (), objectId.getMachinePart ());
+    Assert.assertEquals (machinePart, objectId.getMachinePart ());
     Assert.assertEquals (generator.getProcessPart (), objectId.getProcessPart ());
   }
 
@@ -28,5 +29,15 @@ public class ObjectIdTest
     String str = objectId.toString ();
 
     Assert.assertEquals (24, str.length ());
+  }
+
+  @Test
+  public void testFromString ()
+  {
+    ObjectId expected = ObjectIdGenerator.getInstance ().nextObjectId ();
+    String objStr = expected.toString ();
+    ObjectId actual = new ObjectId (objStr);
+
+    Assert.assertEquals (expected, actual);
   }
 }
