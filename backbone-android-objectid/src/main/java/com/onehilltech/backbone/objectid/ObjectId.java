@@ -1,5 +1,7 @@
 package com.onehilltech.backbone.objectid;
 
+import org.joda.time.DateTime;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
@@ -114,6 +116,16 @@ public final class ObjectId
   public int getSeconds ()
   {
     return this.seconds_;
+  }
+
+  /**
+   * Get the date the object id was generated.
+   *
+   * @return
+   */
+  public DateTime getDate ()
+  {
+    return new DateTime (this.seconds_ * 1000);
   }
 
   @Override
