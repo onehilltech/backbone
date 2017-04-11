@@ -92,6 +92,24 @@ public class ResourceEndpoint <T>
     return this.methods_.create (this.path_, new Resource (this.name_, obj));
   }
 
+  /**
+   * Create a new resource, passing optional query parameters.
+   *
+   * @param obj
+   * @param query
+   * @return
+   */
+  public Call<Resource> create (T obj, HashMap <String, Object> query)
+  {
+    return this.methods_.create (this.path_, new Resource (this.name_, obj), query);
+  }
+
+  /**
+   * Get a single resource by its id.
+   *
+   * @param id
+   * @return
+   */
   public Call<Resource> get (String id)
   {
     return this.methods_.get (this.path_, id);
@@ -183,7 +201,18 @@ public class ResourceEndpoint <T>
      * @return
      */
     @POST("{name}")
-    Call<Resource> create (@Path("name") String name, @Body Resource rc);
+    Call<Resource> create (@Path ("name") String name, @Body Resource rc);
+
+    /**
+     * Create a new resource.
+     *
+     * @param name
+     * @param rc
+     * @param options
+     * @return
+     */
+    @POST("{name}")
+    Call<Resource> create (@Path ("name") String name, @Body Resource rc,  @QueryMap(encoded = true) Map<String, Object> options);
 
     /**
      * Query a list of resources.
