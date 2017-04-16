@@ -28,7 +28,6 @@ public class ResourceCacheModel extends BaseModel
   public URL url;
 
   @Column(name="etag")
-  @Unique
   @Index
   public String ETag;
 
