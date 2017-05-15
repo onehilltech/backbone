@@ -1,7 +1,10 @@
 package com.onehilltech.backbone.data;
 
-public interface DataModel
+import com.raizlabs.android.dbflow.structure.BaseModel;
+
+public abstract class DataModel extends BaseModel
 {
-  String getId ();
-  void setId (String id);
+  public abstract String getId ();
+
+  public abstract void setId (String id);
 }
