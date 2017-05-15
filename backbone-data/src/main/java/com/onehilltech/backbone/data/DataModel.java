@@ -6,7 +6,7 @@ import com.raizlabs.android.dbflow.structure.BaseModel;
 public abstract class DataModel extends BaseModel
 {
   @PrimaryKey
-  protected String _id;
+  public String _id;
 
   protected DataModel ()
   {
