@@ -42,6 +42,8 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
       {
         if (value != null)
           out.value (value.getStringValue ("_id"));
+        else
+          out.nullValue ();
       }
 
       @Override
