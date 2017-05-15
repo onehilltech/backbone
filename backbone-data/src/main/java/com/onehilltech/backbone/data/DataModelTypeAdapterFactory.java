@@ -40,7 +40,8 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
       @Override
       public void write (JsonWriter out, ForeignKeyContainer <E> value) throws IOException
       {
-        out.value (value.getStringValue ("_id"));
+        if (value != null)
+          out.value (value.getStringValue ("_id"));
       }
 
       @Override
