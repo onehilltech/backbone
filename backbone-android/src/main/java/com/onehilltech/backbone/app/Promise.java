@@ -1,7 +1,9 @@
 package com.onehilltech.backbone.app;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Iterator;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -9,6 +11,12 @@ import java.util.concurrent.Executors;
 public class Promise <T>
   implements Runnable
 {
+  public interface Settlement <T>
+  {
+    void resolve (T value);
+
+    void reject (Throwable reason);
+  }
 
   public interface OnResolved <T>
   {
@@ -30,11 +38,11 @@ public class Promise <T>
 
   private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool ();
 
-  private final PromiseFulfill<T> impl_;
+  private final PromiseExecutor<T> impl_;
 
   private final Executor executor_;
 
-  public Promise (PromiseFulfill<T> impl)
+  public Promise (PromiseExecutor<T> impl)
   {
     this.impl_ = impl;
     this.executor_ = DEFAULT_EXECUTOR;
@@ -97,30 +105,66 @@ public class Promise <T>
   }
 
   /**
-   * Fulfill all the promises.
+   * Settle a collection of promises.
    *
    * @param promises
    * @return
    */
-  public static Promise <Collection <Object>> all (Promise... promises)
+  public static Promise <List <Object>> all (Promise <?>... promises)
   {
-    return new Promise<> ((fulfill) -> {
-      ArrayList <Object> results = new ArrayList<> (promises.length);
+    return all (Arrays.asList (promises));
+  }
 
-      for (Promise <?> promise : promises) {
-        // Execute the promise.
-        promise.run ();
+  /**
+   * Settle a collection of promises.
+   *
+   * @param promises
+   * @return
+   */
+  public static Promise <List <Object>> all (List <Promise <?>> promises)
+  {
+    return new Promise<> ((settlement) -> {
+      ArrayList <Object> results = new ArrayList<> (promises.size ());
 
-        // Extract the result from the promise, and then add it
-        if (promise.resolve_ != null)
+      if (!promises.isEmpty ())
+      {
+        Iterator<Promise<?>> iterator = promises.iterator ();
+
+        // The first promise in the collection that is rejected causes all promises
+        // to be rejected.
+        final OnRejected onRejected = (reason) -> settlement.reject (reason);
+
+        final OnResolved onResolved = new OnResolved ()
         {
+          @Override
+          public void onResolved (Object value)
+          {
+            // Add the resolved value to the result set.
+            results.add (value);
 
-        }
-        else if (promise.rejection_ != null)
-        {
-          // This promise failed.
-          break;
-        }
+            if (iterator.hasNext ())
+            {
+              // We have more promises to resolve. So, let's move to the next one and
+              // attempt to resolve it.
+              Promise<?> promise = iterator.next ();
+              promise.then (this, onRejected);
+            } else
+            {
+              // We have fulfilled all the promises. We can return control to the
+              // client so it can continue.
+              settlement.resolve (results);
+            }
+          }
+        };
+
+        // Start resolving the promises.
+        Promise<?> promise = iterator.next ();
+        promise.then (onResolved, onRejected);
+      }
+      else
+      {
+        // There are no promises to resolve. We can just issue our settlement.
+        settlement.resolve (results);
       }
     });
   }
@@ -128,7 +172,7 @@ public class Promise <T>
   /**
    * Implementation of the completion callback for this promise.
    */
-  private final PromiseFulfillment<T> completion_ = new PromiseFulfillment<T> ()
+  private final Settlement<T> completion_ = new Settlement<T> ()
   {
     @Override
     public void resolve (T value)

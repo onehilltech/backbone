@@ -9,14 +9,15 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.List;
+
 @RunWith(AndroidJUnit4.class)
 public class PromiseTest
 {
   private final Object lock_ = new Object ();
 
   @Test
-  public void testThenResolve ()
-      throws Exception
+  public void testThenResolve () throws Exception
   {
     synchronized (this.lock_)
     {
@@ -37,8 +38,7 @@ public class PromiseTest
   }
 
   @Test
-  public void testThenReject ()
-      throws Exception
+  public void testThenReject () throws Exception
   {
     synchronized (this.lock_)
     {
@@ -48,6 +48,33 @@ public class PromiseTest
         synchronized (lock_)
         {
           Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+          lock_.notify ();
+        }
+      });
+
+      this.lock_.wait (5000);
+
+      Assert.assertFalse (p.isPending ());
+    }
+  }
+
+  @Test
+  public void testAll () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise<List<Object>> p =
+          Promise.all (
+              new Promise<Integer> ((settlement) -> settlement.resolve (10)),
+              new Promise<Integer> ((settlement) -> settlement.resolve (20)));
+
+      p.then ((value) -> {
+        Assert.assertEquals (2, value.size ());
+        Assert.assertEquals (10, value.get (0));
+        Assert.assertEquals (20, value.get (1));
+
+        synchronized (lock_)
+        {
           lock_.notify ();
         }
       });
