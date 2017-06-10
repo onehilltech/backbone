@@ -105,6 +105,36 @@ public class Promise <T>
   }
 
   /**
+   * Test if the promise has been rejected.
+   *
+   * @return
+   */
+  public boolean isRejected ()
+  {
+    return this.rejection_ != null;
+  }
+
+  /**
+   * Get the reason the promise was rejected.
+   *
+   * @return
+   */
+  public Throwable getReason ()
+  {
+    return this.rejection_;
+  }
+
+  /**
+   * Test if the promise has been resolved, or fulfilled.
+   *
+   * @return
+   */
+  public boolean isResolved ()
+  {
+    return this.resolve_ != null;
+  }
+
+  /**
    * Settle a collection of promises.
    *
    * @param promises
