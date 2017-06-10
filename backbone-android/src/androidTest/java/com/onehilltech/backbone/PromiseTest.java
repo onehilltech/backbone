@@ -31,6 +31,8 @@ public class PromiseTest
       });
 
       this.lock_.wait (5000);
+
+      Assert.assertFalse (p.isPending ());
     }
   }
 
@@ -51,6 +53,8 @@ public class PromiseTest
       });
 
       this.lock_.wait (5000);
+
+      Assert.assertFalse (p.isPending ());
     }
   }
 }
