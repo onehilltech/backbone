@@ -3,13 +3,13 @@ package com.onehilltech.backbone.app;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Promise
+public class Promise <T>
   implements Runnable
 {
 
-  public interface OnResolved
+  public interface OnResolved <T>
   {
-    void onResolved (Object value);
+    void onResolved (T value);
   }
 
   public interface OnRejected
@@ -17,29 +17,29 @@ public class Promise
     void onRejected (Throwable reason);
   }
 
-  private Object resolved_;
+  private T resolved_;
 
   private Throwable rejected_;
 
-  private OnResolved onResolved_;
+  private OnResolved <T> onResolved_;
 
   private OnRejected onRejected_;
 
   private static final ExecutorService PROMISE_EXECUTOR = Executors.newCachedThreadPool ();
 
-  private final PromiseExecutor impl_;
+  private final PromiseExecutor <T> impl_;
 
-  public Promise (PromiseExecutor impl)
+  public Promise (PromiseExecutor <T> impl)
   {
     this.impl_ = impl;
   }
 
-  public void then (OnResolved onResolved)
+  public void then (OnResolved <T> onResolved)
   {
     this.then (onResolved, null);
   }
 
-  public void then (OnResolved onResolved, OnRejected onRejected)
+  public void then (OnResolved <T> onResolved, OnRejected onRejected)
   {
     // Store the resolve and rejected callbacks.
     this.onResolved_ = onResolved;
@@ -94,10 +94,13 @@ public class Promise
     return this.rejected_ == null && this.resolved_ == null;
   }
 
-  private final PromiseCompletion completion_ = new PromiseCompletion ()
+  /**
+   * Implementation of the completion callback for this promise.
+   */
+  private final PromiseCompletion <T> completion_ = new PromiseCompletion <T> ()
   {
     @Override
-    public void resolve (Object value)
+    public void resolve (T value)
     {
       // Check that the promise is still pending.
       if (!isPending ())

@@ -1,6 +1,6 @@
 package com.onehilltech.backbone.app;
 
-public interface PromiseExecutor
+public interface PromiseExecutor <T>
 {
-  void execute (PromiseCompletion completion);
+  void execute (PromiseCompletion <T> completion);
 }

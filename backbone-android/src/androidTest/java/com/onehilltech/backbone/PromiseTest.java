@@ -20,12 +20,12 @@ public class PromiseTest
   {
     synchronized (this.lock_)
     {
-      Promise p = new Promise ((completion) -> completion.resolve (5));
+      Promise <Integer> p = new Promise <> ((completion) -> completion.resolve (5));
 
       p.then ((value) -> {
         synchronized (lock_)
         {
-          Assert.assertEquals (5, value);
+          Assert.assertEquals (5, (int)value);
           lock_.notify ();
         }
       });
@@ -40,7 +40,7 @@ public class PromiseTest
   {
     synchronized (this.lock_)
     {
-      Promise p = new Promise ((completion) -> completion.reject (new IllegalStateException ()));
+      Promise <Integer> p = new Promise <> ((completion) -> completion.reject (new IllegalStateException ()));
 
       p.then ((value) -> { }, (reason) -> {
         synchronized (lock_)
