@@ -180,7 +180,7 @@ public class Promise <T>
    * @param reason
    * @return
    */
-  public static Promise <?> reject (Throwable reason)
+  public static <T> Promise <T> reject (Throwable reason)
   {
     return new Promise<> (reason);
   }
