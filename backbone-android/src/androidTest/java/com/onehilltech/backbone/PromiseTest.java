@@ -22,6 +22,9 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise <Integer> p = new Promise <> ((completion) -> completion.resolve (5));
+      Assert.assertTrue (p.isPending ());
+      Assert.assertFalse (p.isRejected ());
+      Assert.assertFalse (p.isResolved ());
 
       p.then ((value) -> {
         synchronized (lock_)
@@ -34,6 +37,8 @@ public class PromiseTest
       this.lock_.wait (5000);
 
       Assert.assertFalse (p.isPending ());
+      Assert.assertTrue (p.isResolved ());
+      Assert.assertFalse (p.isRejected ());
     }
   }
 
@@ -55,6 +60,8 @@ public class PromiseTest
       this.lock_.wait (5000);
 
       Assert.assertFalse (p.isPending ());
+      Assert.assertFalse (p.isResolved ());
+      Assert.assertTrue (p.isRejected ());
     }
   }
 
@@ -83,5 +90,25 @@ public class PromiseTest
 
       Assert.assertFalse (p.isPending ());
     }
+  }
+
+  @Test
+  public void testStaticResolve ()
+  {
+    Promise <Integer> p = Promise.resolve (7);
+
+    Assert.assertTrue (p.isResolved ());
+    Assert.assertFalse (p.isRejected ());
+    Assert.assertFalse (p.isPending ());
+  }
+
+  @Test
+  public void testStaticReject ()
+  {
+    Promise <?> p = Promise.reject (new IllegalStateException ());
+
+    Assert.assertTrue (p.isRejected ());
+    Assert.assertFalse (p.isResolved ());
+    Assert.assertFalse (p.isPending ());
   }
 }

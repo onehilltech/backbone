@@ -48,6 +48,20 @@ public class Promise <T>
     this.executor_ = DEFAULT_EXECUTOR;
   }
 
+  private Promise (T resolve)
+  {
+    this.impl_ = null;
+    this.resolve_ = resolve;
+    this.executor_ = DEFAULT_EXECUTOR;
+  }
+
+  private Promise (Throwable reason)
+  {
+    this.impl_ = null;
+    this.rejection_ = reason;
+    this.executor_ = DEFAULT_EXECUTOR;
+  }
+
   /**
    * Fulfill the promise.
    *
@@ -132,6 +146,29 @@ public class Promise <T>
   public boolean isResolved ()
   {
     return this.resolve_ != null;
+  }
+
+  /**
+   * Create a Promise that is already resolved.
+   *
+   * @param value
+   * @param <T>
+   * @return
+   */
+  public static <T> Promise <T> resolve (T value)
+  {
+    return new Promise<> (value);
+  }
+
+  /**
+   * Create a promise that is already rejected.
+   *
+   * @param reason
+   * @return
+   */
+  public static Promise <?> reject (Throwable reason)
+  {
+    return new Promise<> (reason);
   }
 
   /**
