@@ -1,0 +1,12 @@
+<resources>
+    <dimen name="material_spacing_units">8dp</dimen>
+    <dimen name="material_spacing_1">8dp</dimen>
+    <dimen name="material_spacing_2">16dp</dimen>
+    <dimen name="material_spacing_3">24dp</dimen>
+    <dimen name="material_spacing_4">32dp</dimen>
+
+    <dimen name="material_text_field_input_size">16sp</dimen>
+    <dimen name="material_text_field_label_size">12sp</dimen>
+    <dimen name="material_text_field_helper_size">12sp</dimen>
+    <dimen name="material_text_field_underline_width">2dp</dimen>
+</resources>
