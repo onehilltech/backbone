@@ -8,6 +8,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * @class Promise
+ *
+ * A promise is an object which can be returned synchronously from an asynchronous
+ * function.
+ *
+ * @param <T>
+ */
 public class Promise <T>
   implements Runnable
 {
@@ -63,7 +71,7 @@ public class Promise <T>
   }
 
   /**
-   * Fulfill the promise.
+   * Settle the promise.
    *
    * @param onResolved
    */
@@ -72,6 +80,12 @@ public class Promise <T>
     this.then (onResolved, null);
   }
 
+  /**
+   * Settle the promise. The promised will either be resolved or rejected.
+   *
+   * @param onResolved
+   * @param onRejected
+   */
   public void then (OnResolved <T> onResolved, OnRejected onRejected)
   {
     // Store the resolve and rejected callbacks.
