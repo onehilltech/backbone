@@ -27,13 +27,18 @@ public class Promise <T>
 
   private static final ExecutorService PROMISE_EXECUTOR = Executors.newCachedThreadPool ();
 
-  private final PromiseExecutor <T> impl_;
+  private final PromiseFulfill<T> impl_;
 
-  public Promise (PromiseExecutor <T> impl)
+  public Promise (PromiseFulfill<T> impl)
   {
     this.impl_ = impl;
   }
 
+  /**
+   * Fulfill the promise.
+   *
+   * @param onResolved
+   */
   public void then (OnResolved <T> onResolved)
   {
     this.then (onResolved, null);
@@ -97,7 +102,7 @@ public class Promise <T>
   /**
    * Implementation of the completion callback for this promise.
    */
-  private final PromiseCompletion <T> completion_ = new PromiseCompletion <T> ()
+  private final PromiseFulfillment<T> completion_ = new PromiseFulfillment<T> ()
   {
     @Override
     public void resolve (T value)

@@ -1,6 +1,6 @@
 package com.onehilltech.backbone.app;
 
-public interface PromiseCompletion <T>
+public interface PromiseFulfillment <T>
 {
   void resolve (T value);
 
