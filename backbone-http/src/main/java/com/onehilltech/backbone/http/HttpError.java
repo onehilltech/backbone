@@ -7,6 +7,8 @@ package com.onehilltech.backbone.http;
  */
 public class HttpError extends RuntimeException
 {
+  private int statusCode;
+
   private String code;
 
   private String message;
@@ -20,6 +22,16 @@ public class HttpError extends RuntimeException
   {
     this.code = code;
     this.message = message;
+  }
+
+  public int getStatusCode ()
+  {
+    return this.statusCode;
+  }
+
+  public void setStatusCode (int statusCode)
+  {
+    this.statusCode = statusCode;
   }
 
   public String getCode ()
