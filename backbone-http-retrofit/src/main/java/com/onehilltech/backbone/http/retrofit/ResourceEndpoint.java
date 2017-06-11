@@ -90,9 +90,10 @@ public class ResourceEndpoint <T>
    * @param obj       Resource values
    * @return
    */
-  public Call<Resource> create (T obj)
+  public Promise<Resource> create (T obj)
   {
-    return this.methods_.create (this.path_, new Resource (this.name_, obj));
+    Call <Resource> call = this.methods_.create (this.path_, new Resource (this.name_, obj));
+    return this.executeCall (call);
   }
 
   /**
