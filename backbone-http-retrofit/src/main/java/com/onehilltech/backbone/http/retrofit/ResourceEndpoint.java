@@ -1,11 +1,14 @@
 package com.onehilltech.backbone.http.retrofit;
 
+import com.onehilltech.backbone.app.Promise;
 import com.onehilltech.backbone.http.Resource;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -99,9 +102,31 @@ public class ResourceEndpoint <T>
    * @param query
    * @return
    */
-  public Call<Resource> create (T obj, HashMap <String, Object> query)
+  public Promise<Resource> create (T obj, HashMap <String, Object> query)
   {
-    return this.methods_.create (this.path_, new Resource (this.name_, obj), query);
+    return new Promise<> ((settlement) -> {
+      this.methods_.create (this.path_, new Resource (this.name_, obj), query).enqueue (new Callback<Resource> ()
+      {
+        @Override
+        public void onResponse (Call<Resource> call, Response<Resource> response)
+        {
+          if (response.isSuccessful ())
+          {
+            settlement.resolve (response.body ());
+          }
+          else
+          {
+            settlement.reject (new IllegalStateException (response.message ()));
+          }
+        }
+
+        @Override
+        public void onFailure (Call<Resource> call, Throwable t)
+        {
+          settlement.reject (t);
+        }
+      });
+    });
   }
 
   /**
@@ -110,14 +135,16 @@ public class ResourceEndpoint <T>
    * @param id
    * @return
    */
-  public Call<Resource> get (String id)
+  public Promise<Resource> get (String id)
   {
-    return this.methods_.get (this.path_, id);
+    Call <Resource> call = this.methods_.get (this.path_, id);
+    return this.executeCall (call);
   }
 
-  public Call<Resource> get (String id, HashMap <String, Object> query)
+  public Promise<Resource> get (String id, HashMap <String, Object> query)
   {
-    return this.methods_.get (this.path_, id, query);
+    Call <Resource> call = this.methods_.get (this.path_, id, query);
+    return this.executeCall (call);
   }
 
   /**
@@ -125,9 +152,10 @@ public class ResourceEndpoint <T>
    *
    * @return
    */
-  public Call<Resource> get ()
+  public Promise<Resource> get ()
   {
-    return this.methods_.get (this.path_);
+    Call <Resource> call = this.methods_.get (this.path_);
+    return this.executeCall (call);
   }
 
   /**
@@ -136,9 +164,10 @@ public class ResourceEndpoint <T>
    * @param params
    * @return
    */
-  public Call<Resource> get (Map <String, Object> params)
+  public Promise<Resource> get (Map <String, Object> params)
   {
-    return this.methods_.get (this.path_, params);
+    Call <Resource> call = this.methods_.get (this.path_, params);
+    return this.executeCall (call);
   }
 
   /**
@@ -148,9 +177,10 @@ public class ResourceEndpoint <T>
    * @param value
    * @return
    */
-  public Call<Resource> update (String id, T value)
+  public Promise<Resource> update (String id, T value)
   {
-    return this.methods_.update (this.path_, id, new Resource (this.name_, value));
+    Call<Resource> call = this.methods_.update (this.path_, id, new Resource (this.name_, value));
+    return this.executeCall (call);
   }
 
   /**
@@ -159,9 +189,10 @@ public class ResourceEndpoint <T>
    * @param id
    * @return
    */
-  public Call<Boolean> delete (String id)
+  public Promise<Boolean> delete (String id)
   {
-    return this.methods_.delete (this.path_, id);
+    Call <Boolean> call = this.methods_.delete (this.path_, id);
+    return this.executeCall (call);
   }
 
   /**
@@ -169,9 +200,10 @@ public class ResourceEndpoint <T>
    *
    * @return
    */
-  public Call<Resource> count ()
+  public Promise<Resource> count ()
   {
-    return this.methods_.count (this.path_);
+    Call <Resource> call = this.methods_.count (this.path_);
+    return this.executeCall (call);
   }
 
   /**
@@ -180,9 +212,37 @@ public class ResourceEndpoint <T>
    * @param query
    * @return
    */
-  public Call<Resource> count (Map <String, Object> query)
+  public Promise<Resource> count (Map <String, Object> query)
   {
-    return this.methods_.count (this.path_, query);
+    Call <Resource> call = this.methods_.count (this.path_, query);
+    return this.executeCall (call);
+  }
+
+  private <T> Promise <T> executeCall (Call <T> call)
+  {
+    return new Promise<> (settlement -> {
+      call.enqueue (new Callback<T> ()
+      {
+        @Override
+        public void onResponse (Call<T> call, Response<T> response)
+        {
+          if (response.isSuccessful ())
+          {
+            settlement.resolve (response.body ());
+          }
+          else
+          {
+            settlement.reject (new IllegalStateException (response.message ()));
+          }
+        }
+
+        @Override
+        public void onFailure (Call<T> call, Throwable t)
+        {
+          settlement.reject (t);
+        }
+      });
+    });
   }
 
   /**

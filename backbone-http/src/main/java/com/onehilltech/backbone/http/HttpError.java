@@ -5,7 +5,7 @@ package com.onehilltech.backbone.http;
  *
  * The default representation of an http error in the response body.
  */
-public class HttpError
+public class HttpError extends RuntimeException
 {
   private String code;
 
