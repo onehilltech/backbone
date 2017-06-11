@@ -25,9 +25,9 @@ public class Promise <T>
     void reject (Throwable reason);
   }
 
-  public interface OnResolved <T>
+  public interface OnResolved <T, U>
   {
-    void onResolved (T value, ContinuationExecutor cont);
+    void onResolved (T value, ContinuationExecutor <U> cont);
   }
 
   public interface OnRejected
@@ -39,15 +39,15 @@ public class Promise <T>
 
   private Throwable rejection_;
 
-  protected OnResolved <T> onResolved_;
-
-  protected OnRejected onRejected_;
-
   private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool ();
 
   private final PromiseExecutor<T> impl_;
 
   private final Executor executor_;
+
+  protected OnResolved <T, ?> onResolved_;
+
+  protected OnRejected onRejected_;
 
   public Promise (PromiseExecutor<T> impl)
   {
@@ -74,7 +74,7 @@ public class Promise <T>
    *
    * @param onResolved
    */
-  public <U> Promise <U> then (OnResolved <T> onResolved)
+  public <U> Promise <U> then (OnResolved <T, U> onResolved)
   {
     return this.then (onResolved, null);
   }
@@ -85,9 +85,8 @@ public class Promise <T>
    * @param onResolved
    * @param onRejected
    */
-  public <U> Promise <U> then (OnResolved <T> onResolved, OnRejected onRejected)
+  public <U> Promise <U> then (OnResolved <T, U> onResolved, OnRejected onRejected)
   {
-    // Store the resolve and rejected callbacks.
     this.onResolved_ = onResolved;
     this.onRejected_ = onRejected;
 
@@ -100,15 +99,15 @@ public class Promise <T>
       {
         // The promise has already been resolved. Let's go ahead and pass the value
         // to the caller.
-        if (this.onResolved_ != null)
-          this.onResolved_.onResolved (this.value_, continuationExecutor);
+        if (onResolved != null)
+          onResolved.onResolved (this.value_, continuationExecutor);
       }
       else if (this.rejection_ != null)
       {
         // The promise has already been rejected. Let's go ahead and pass the reason back
         // to the caller.
-        if (this.onRejected_ != null)
-          this.onRejected_.onRejected (this.rejection_);
+        if (onRejected != null)
+          onRejected.onRejected (this.rejection_);
       }
       else if (this.impl_ != null)
       {
@@ -127,14 +126,14 @@ public class Promise <T>
             // Cache the result of the promise.
             value_ = value;
 
-            if (onResolved_ == null)
+            if (onResolved == null)
               return;
 
             // Execute the resolved callback on a different thread of execution. We pass
             // a continuation executor to the callback just in case we must execute another
             // promise after this promise has been resolved.
             executor_.execute (() -> {
-              onResolved_.onResolved (value_, continuationExecutor);
+              onResolved.onResolved (value_, continuationExecutor);
             });
           }
 
@@ -149,8 +148,8 @@ public class Promise <T>
             rejection_ = reason;
 
             executor_.execute (() -> {
-              if (onRejected_ != null)
-                onRejected_.onRejected (rejection_);
+              if (onRejected != null)
+                onRejected.onRejected (rejection_);
             });
           }
         });

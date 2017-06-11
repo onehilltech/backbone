@@ -6,6 +6,7 @@ import android.support.test.runner.AndroidJUnit4;
 import com.onehilltech.backbone.app.Promise;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -15,6 +16,13 @@ import java.util.List;
 public class PromiseTest
 {
   private final Object lock_ = new Object ();
+  private boolean complete_;
+
+  @Before
+  public void setup ()
+  {
+    this.complete_ = false;
+  }
 
   @Test
   public void testThenResolve () throws Exception
@@ -114,28 +122,59 @@ public class PromiseTest
   }
 
   @Test
-  public void testPromiseContinuation () throws Exception
+  public void testPromiseChainStronglyTyped () throws Exception
   {
     synchronized (this.lock_)
     {
-      Promise <?> p = Promise.resolve ("Hello, World");
-
-      p.then ((str, cont) -> {
+      Promise.OnResolved <String, Long> completion1 = (str, cont) -> {
         Assert.assertEquals ("Hello, World", str);
 
-        cont.with (Promise.resolve (10));
-      }).then ((n, cont) -> {
-        Assert.assertEquals (10, n);
+        cont.with (Promise.resolve (10L));
+      };
+
+      Promise.OnResolved <Long, Void> completion2 = (value, cont) -> {
+        Assert.assertEquals (10L, (long)value);
 
         synchronized (this.lock_)
         {
+          this.complete_ = true;
           this.lock_.notify ();
         }
-      });
+      };
+
+      Promise.resolve ("Hello, World")
+             .then (completion1)
+             .then (completion2);
 
       this.lock_.wait (5000);
 
-      Assert.assertTrue (p.isResolved ());
+      Assert.assertTrue (this.complete_);
+    }
+  }
+
+  @Test
+  public void testPromiseChain () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.resolve ("Hello, World")
+             .then ((str, cont) -> {
+               Assert.assertEquals ("Hello, World", str);
+               cont.with (Promise.resolve (10));
+             })
+             .then ((n, cont) -> {
+               Assert.assertEquals (10, n);
+
+               synchronized (this.lock_)
+               {
+                 this.complete_ = true;
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.complete_);
     }
   }
 }
