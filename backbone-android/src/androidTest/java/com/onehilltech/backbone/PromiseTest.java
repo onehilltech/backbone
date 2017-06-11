@@ -26,7 +26,7 @@ public class PromiseTest
       Assert.assertFalse (p.isRejected ());
       Assert.assertFalse (p.isResolved ());
 
-      p.then ((value) -> {
+      p.then ((value, cont) -> {
         synchronized (lock_)
         {
           Assert.assertEquals (5, (int)value);
@@ -49,13 +49,14 @@ public class PromiseTest
     {
       Promise <Integer> p = new Promise <> ((completion) -> completion.reject (new IllegalStateException ()));
 
-      p.then ((value) -> { }, (reason) -> {
-        synchronized (lock_)
-        {
-          Assert.assertEquals (IllegalStateException.class, reason.getClass ());
-          lock_.notify ();
-        }
-      });
+      p.then ((value, cont) -> Promise.resolve (5),
+              (reason) -> {
+                synchronized (lock_)
+                {
+                  Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+                  lock_.notify ();
+                }
+              });
 
       this.lock_.wait (5000);
 
@@ -75,7 +76,7 @@ public class PromiseTest
               new Promise<Integer> ((settlement) -> settlement.resolve (10)),
               new Promise<Integer> ((settlement) -> settlement.resolve (20)));
 
-      p.then ((value) -> {
+      p.then ((value, cont) -> {
         Assert.assertEquals (2, value.size ());
         Assert.assertEquals (10, value.get (0));
         Assert.assertEquals (20, value.get (1));
@@ -110,5 +111,31 @@ public class PromiseTest
     Assert.assertTrue (p.isRejected ());
     Assert.assertFalse (p.isResolved ());
     Assert.assertFalse (p.isPending ());
+  }
+
+  @Test
+  public void testPromiseContinuation () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise <?> p = Promise.resolve ("Hello, World");
+
+      p.then ((str, cont) -> {
+        Assert.assertEquals ("Hello, World", str);
+
+        cont.with (Promise.resolve (10));
+      }).then ((n, cont) -> {
+        Assert.assertEquals (10, n);
+
+        synchronized (this.lock_)
+        {
+          this.lock_.notify ();
+        }
+      });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (p.isResolved ());
+    }
   }
 }
