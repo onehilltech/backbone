@@ -11,17 +11,4 @@ class ContinuationPromise <T> extends Promise <T>
   {
     promise.then (this.onResolved_, this.onRejected_);
   }
-
-  void bubbleRejection (Throwable reason)
-  {
-    this.rejection_ = reason;
-
-    // If the rejection was set here, then we can stop bubbling the rejection
-    // at this promise. Otherwise, we need to continue to the next promise
-    // in the chain.
-    if (this.onRejected_ != null)
-      this.onRejected_.onRejected (reason);
-    else if (this.next_ != null)
-      this.next_.bubbleRejection (reason);
-  }
 }
