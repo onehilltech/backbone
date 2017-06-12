@@ -167,13 +167,10 @@ public class Promise <T>
 
   public Promise <T> _catch (OnRejected onRejected)
   {
-    //synchronized (this.lock_)
-    {
-      this.onRejected_ = onRejected;
+    this.onRejected_ = onRejected;
 
-      if (this.isRejected ())
-        this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
-    }
+    if (this.isRejected ())
+      this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
 
     return this;
   }
