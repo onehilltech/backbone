@@ -195,6 +195,8 @@ public class PromiseTest
              })
              .then ((value, cont) -> {},
                     reason -> {
+                      System.err.println ("Handling the error");
+
                       Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                       Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
@@ -205,7 +207,8 @@ public class PromiseTest
                       }
                     });
 
-      this.lock_.wait (5000);
+      if (!this.complete_)
+        this.lock_.wait ();
 
       Assert.assertTrue (this.complete_);
     }

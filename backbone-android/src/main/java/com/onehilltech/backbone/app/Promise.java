@@ -37,7 +37,7 @@ public class Promise <T>
 
   private T value_;
 
-  private Throwable rejection_;
+  protected Throwable rejection_;
 
   private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool ();
 
@@ -138,9 +138,7 @@ public class Promise <T>
             // Execute the resolved callback on a different thread of execution. We pass
             // a continuation executor to the callback just in case we must execute another
             // promise after this promise has been resolved.
-            executor_.execute (() -> {
-              onResolved.onResolved (value_, continuationExecutor);
-            });
+            executor_.execute (() -> onResolved.onResolved (value_, continuationExecutor));
           }
 
           @Override
@@ -165,6 +163,19 @@ public class Promise <T>
     });
 
     return continuation;
+  }
+
+  public Promise <T> _catch (OnRejected onRejected)
+  {
+    //synchronized (this.lock_)
+    {
+      this.onRejected_ = onRejected;
+
+      if (this.isRejected ())
+        this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
+    }
+
+    return this;
   }
 
   /**
