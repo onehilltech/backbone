@@ -45,6 +45,8 @@ public class Promise <T>
 
   private final Executor executor_;
 
+  protected ContinuationPromise <?> next_;
+
   protected OnResolved <T, ?> onResolved_;
 
   protected OnRejected onRejected_;
@@ -93,6 +95,8 @@ public class Promise <T>
     ContinuationPromise <U> continuation = new ContinuationPromise<> ();
     ContinuationExecutor <U> continuationExecutor = promise -> continuation.evaluate (promise);
 
+    this.next_ = continuation;
+
     // Place the promise on the executor.
     this.executor_.execute (()-> {
       if (this.value_ != null)
@@ -104,10 +108,13 @@ public class Promise <T>
       }
       else if (this.rejection_ != null)
       {
-        // The promise has already been rejected. Let's go ahead and pass the reason back
-        // to the caller.
+        // The promise has already been rejected. Let's go ahead and pass the reason
+        // back to the caller.
         if (onRejected != null)
           onRejected.onRejected (this.rejection_);
+
+        // Bubble the rejection.
+        continuation.bubbleRejection (this.rejection_);
       }
       else if (this.impl_ != null)
       {

@@ -160,6 +160,7 @@ public class PromiseTest
       Promise.resolve ("Hello, World")
              .then ((str, cont) -> {
                Assert.assertEquals ("Hello, World", str);
+
                cont.with (Promise.resolve (10));
              })
              .then ((n, cont) -> {
@@ -171,6 +172,38 @@ public class PromiseTest
                  this.lock_.notify ();
                }
              });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.complete_);
+    }
+  }
+
+  @Test
+  public void testBubbleRejection () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ("GREAT"))
+             .then ((value, cont) -> {
+               Assert.fail ();
+               cont.with (Promise.resolve (10));
+             })
+             .then ((value, cont) ->{
+               Assert.fail ();
+               cont.with (Promise.resolve (40));
+             })
+             .then ((value, cont) -> {},
+                    reason -> {
+                      Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+                      Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
+
+                      synchronized (this.lock_)
+                      {
+                        this.complete_ = true;
+                        this.lock_.notify ();
+                      }
+                    });
 
       this.lock_.wait (5000);
 
