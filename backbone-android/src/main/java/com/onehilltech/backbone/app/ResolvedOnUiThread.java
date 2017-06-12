@@ -1,17 +1,10 @@
 package com.onehilltech.backbone.app;
 
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
 import android.support.annotation.NonNull;
 
-public class ResolvedOnUiThread <T, U> implements Promise.OnResolved <T, U>
+public class ResolvedOnUiThread <T, U> extends OnUIThread
+    implements Promise.OnResolved <T, U>
 {
-  public interface OnResolved <T>
-  {
-    void onResolved (T value);
-  }
-
   private final Promise.OnResolved <T, U> onResolved_;
 
   private T value_;
@@ -29,20 +22,12 @@ public class ResolvedOnUiThread <T, U> implements Promise.OnResolved <T, U>
     this.value_ = value;
     this.cont_ = cont;
 
-    Message msg = uiHandler_.obtainMessage (0, this);
-    msg.sendToTarget ();
+    this.runOnUiThread ();
   }
 
-  @SuppressWarnings ("unchecked")
-  private static final Handler uiHandler_ = new Handler (Looper.getMainLooper ()) {
-    @Override
-    public void handleMessage (Message msg)
-    {
-      if (msg.what == 0)
-      {
-        ResolvedOnUiThread resolvedOnUiThread = (ResolvedOnUiThread) msg.obj;
-        resolvedOnUiThread.onResolved_.onResolved (resolvedOnUiThread.value_, resolvedOnUiThread.cont_);
-      }
-    }
-  };
+  @Override
+  protected void run ()
+  {
+    this.onResolved_.onResolved (this.value_, this.cont_);
+  }
 }
