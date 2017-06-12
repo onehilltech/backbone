@@ -112,9 +112,8 @@ public class Promise <T>
         // back to the caller.
         if (onRejected != null)
           onRejected.onRejected (this.rejection_);
-
-        // Bubble the rejection.
-        continuation.bubbleRejection (this.rejection_);
+        else
+          continuation.bubbleRejection (this.rejection_);
       }
       else if (this.impl_ != null)
       {
@@ -157,6 +156,8 @@ public class Promise <T>
             executor_.execute (() -> {
               if (onRejected != null)
                 onRejected.onRejected (rejection_);
+              else
+                continuation.bubbleRejection (rejection_);
             });
           }
         });
