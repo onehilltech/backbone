@@ -43,6 +43,7 @@ android {
 
 dependencies {
     compile project (':backbone-http-retrofit-gson')
+    compile project (':backbone-dbflow')
 
     androidTestCompile 'junit:junit:4.11'
     androidTestCompile('com.android.support.test:testing-support-lib:0.1') {
