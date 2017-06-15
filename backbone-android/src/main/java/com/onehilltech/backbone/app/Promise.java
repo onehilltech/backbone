@@ -287,50 +287,44 @@ public class Promise <T>
    */
   public static Promise <List <Object>> all (List <Promise <?>> promises)
   {
+    if (promises.isEmpty ())
+      return Promise.resolve (new ArrayList<> ());
+
     return new Promise<> ((settlement) -> {
       ArrayList <Object> results = new ArrayList<> (promises.size ());
+      Iterator<Promise<?>> iterator = promises.iterator ();
 
-      if (!promises.isEmpty ())
+      // The first promise in the collection that is rejected causes all promises
+      // to be rejected.
+      final OnRejected onRejected = (reason) -> settlement.reject (reason);
+
+      final OnResolved onResolved = new OnResolved ()
       {
-        Iterator<Promise<?>> iterator = promises.iterator ();
-
-        // The first promise in the collection that is rejected causes all promises
-        // to be rejected.
-        final OnRejected onRejected = (reason) -> settlement.reject (reason);
-
-        final OnResolved onResolved = new OnResolved ()
+        @Override
+        public void onResolved (Object value, ContinuationExecutor cont)
         {
-          @Override
-          public void onResolved (Object value, ContinuationExecutor cont)
+          // Add the resolved value to the result set.
+          results.add (value);
+
+          if (iterator.hasNext ())
           {
-            // Add the resolved value to the result set.
-            results.add (value);
-
-            if (iterator.hasNext ())
-            {
-              // We have more promises to resolve. So, let's move to the next one and
-              // attempt to resolve it.
-              Promise<?> promise = iterator.next ();
-              promise.then (this, onRejected);
-            }
-            else
-            {
-              // We have fulfilled all the promises. We can return control to the
-              // client so it can continue.
-              settlement.resolve (results);
-            }
+            // We have more promises to resolve. So, let's move to the next one and
+            // attempt to resolve it.
+            Promise<?> promise = iterator.next ();
+            promise.then (this, onRejected);
           }
-        };
+          else
+          {
+            // We have fulfilled all the promises. We can return control to the
+            // client so it can continue.
+            settlement.resolve (results);
+          }
+        }
+      };
 
-        // Start resolving the promises.
-        Promise<?> promise = iterator.next ();
-        promise.then (onResolved, onRejected);
-      }
-      else
-      {
-        // There are no promises to resolve. We can just issue our settlement.
-        settlement.resolve (results);
-      }
+      // Start resolving the promises.
+      Promise<?> promise = iterator.next ();
+      promise.then (onResolved, onRejected);
     });
   }
 }
