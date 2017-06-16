@@ -38,12 +38,16 @@ public class PromiseTest
       p.then ((value, cont) -> {
         synchronized (lock_)
         {
+          this.isComplete_ = true;
+
           Assert.assertEquals (5, (int)value);
           lock_.notify ();
         }
       });
 
       this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
 
       Assert.assertFalse (p.isPending ());
       Assert.assertTrue (p.isResolved ());
@@ -60,9 +64,12 @@ public class PromiseTest
 
       p.then ((value, cont) -> Promise.resolve (5),
               (reason) -> {
+                this.isComplete_ = true;
+
                 synchronized (lock_)
                 {
                   Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+
                   lock_.notify ();
                 }
               });
@@ -72,6 +79,8 @@ public class PromiseTest
       Assert.assertFalse (p.isPending ());
       Assert.assertFalse (p.isResolved ());
       Assert.assertTrue (p.isRejected ());
+
+      Assert.assertTrue (this.isComplete_);
     }
   }
 
@@ -173,12 +182,14 @@ public class PromiseTest
 
         synchronized (lock_)
         {
+          this.isComplete_ = true;
           lock_.notify ();
         }
       });
 
       this.lock_.wait (5000);
 
+      Assert.assertTrue (this.isComplete_);
       Assert.assertFalse (p.isPending ());
     }
   }
@@ -426,7 +437,7 @@ public class PromiseTest
                 try
                 {
                   Thread.sleep (300);
-                  settlement.resolve (10);
+                  settlement.resolve (20);
                 }
                 catch (InterruptedException e)
                 {
@@ -437,7 +448,7 @@ public class PromiseTest
                 try
                 {
                   Thread.sleep (600);
-                  settlement.resolve (10);
+                  settlement.resolve (30);
                 }
                 catch (InterruptedException e)
                 {
@@ -447,7 +458,7 @@ public class PromiseTest
           );
 
       p.then ((value, cont) -> {
-        Assert.assertEquals (10, (int)value);
+        Assert.assertEquals (20, (int)value);
 
         this.isComplete_ = true;
 

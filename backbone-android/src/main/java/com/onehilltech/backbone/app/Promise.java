@@ -53,24 +53,34 @@ public class Promise <T>
 
   protected OnRejected onRejected_;
 
+  private boolean isRunning_ = false;
+
+  private final Object runLock_ = new Object ();
+
   public Promise (PromiseExecutor<T> impl)
   {
-    this.impl_ = impl;
-    this.executor_ = DEFAULT_EXECUTOR;
+    this (impl, null, null);
   }
 
   private Promise (T resolve)
   {
-    this.impl_ = null;
-    this.value_ = resolve;
-    this.executor_ = DEFAULT_EXECUTOR;
+    this (null, resolve, null);
   }
 
   private Promise (Throwable reason)
   {
-    this.impl_ = null;
+    this (null, null, reason);
+  }
+
+  private Promise (PromiseExecutor<T> impl, T resolve, Throwable reason)
+  {
+    this.impl_ = impl;
+    this.value_ = resolve;
     this.rejection_ = reason;
     this.executor_ = DEFAULT_EXECUTOR;
+
+    // Force the promise to start.
+    this.runInBackground ();
   }
 
   /**
@@ -100,102 +110,104 @@ public class Promise <T>
     this.next_ = continuation;
     this.nextExecutor_ = continuationExecutor;
 
-    // Place the promise on the executor.
-    this.executor_.execute (()-> {
-      if (this.value_ != null)
-      {
-        // The promise has already been resolved. Let's go ahead and pass the value
-        // to the caller.
-        if (onResolved != null)
-          onResolved.onResolved (this.value_, continuationExecutor);
-      }
-      else if (this.rejection_ != null)
-      {
-        // The promise has already been rejected. Let's go ahead and pass the reason
-        // back to the caller.
-        if (onRejected != null)
-          onRejected.onRejected (this.rejection_);
-        else
-          continuation.bubbleRejection (this.rejection_);
-      }
-      else if (this.impl_ != null)
-      {
-        // Execute the promise. This method must call either resolve or reject
-        // before this method return. Failure to do so means the promise was not
-        // completed, and in a bad state.
-        try
-        {
-          this.impl_.execute (new Settlement<T> ()
-          {
-            @Override
-            public void resolve (T value)
-            {
-              // Check that the promise is still pending.
-              if (!isPending ())
-                throw new IllegalStateException ("Promise already resolved/rejected");
-
-              // Cache the result of the promise.
-              value_ = value;
-
-              if (onResolved != null)
-              {
-                // Execute the resolved callback on a different thread of execution. We pass
-                // a continuation executor to the callback just in case we must execute another
-                // promise after this promise has been resolved.
-                executor_.execute (() -> onResolved.onResolved (value_, continuationExecutor));
-              }
-            }
-
-            @Override
-            public void reject (Throwable reason)
-            {
-              // Check that the promise is still pending.
-              if (!isPending ())
-                throw new IllegalStateException ("Promise already resolved/rejected");
-
-              // Store the reason, and notify the client.
-              rejection_ = reason;
-
-              executor_.execute (() ->
-                                 {
-                                   if (onRejected != null)
-                                     onRejected.onRejected (rejection_);
-                                   else
-                                     continuation.bubbleRejection (rejection_);
-                                 });
-            }
-          });
-        }
-        catch (Exception e)
-        {
-          // The exception results in a rejection.
-          rejection_ = e;
-
-          executor_.execute (() ->
-                             {
-                               if (onRejected != null)
-                                 onRejected.onRejected (rejection_);
-                               else
-                                 continuation.bubbleRejection (rejection_);
-                             });
-        }
-      }
-    });
+    // Run the promise implementation.
+    this.runInBackground ();
 
     return continuation;
   }
 
+  private void runInBackground ()
+  {
+    this.executor_.execute (this::run);
+  }
+
+  private synchronized void run ()
+  {
+    if (this.value_ != null)
+    {
+      // The promise has already been resolved. Let's go ahead and pass the value
+      // to the caller.
+      if (this.onResolved_ != null)
+        this.onResolved_.onResolved (this.value_, this.nextExecutor_);
+    }
+    else if (this.rejection_ != null)
+    {
+      // The promise has already been rejected. Let's go ahead and pass the reason
+      // back to the caller.
+      this.bubbleCurrentRejection ();
+    }
+    else if (!this.isRunning_ && this.impl_ != null)
+    {
+      // The promise is now running.
+      this.isRunning_ = true;
+
+      // Execute the promise. This method must call either resolve or reject
+      // before this method return. Failure to do so means the promise was not
+      // completed, and in a bad state.
+      try
+      {
+        this.impl_.execute (new Settlement<T> ()
+        {
+          @Override
+          public void resolve (T value)
+          {
+            // Check that the promise is still pending.
+            if (!isPending ())
+              throw new IllegalStateException ("Promise already resolved/rejected");
+
+            // Cache the result of the promise.
+            value_ = value;
+
+            if (onResolved_ != null)
+            {
+              // Execute the resolved callback on a different thread of execution. We pass
+              // a continuation executor to the callback just in case we must execute another
+              // promise after this promise has been resolved.
+              executor_.execute (() -> onResolved_.onResolved (value_, nextExecutor_));
+            }
+          }
+
+          @Override
+          public void reject (Throwable reason)
+          {
+            // Check that the promise is still pending.
+            if (!isPending ())
+              throw new IllegalStateException ("Promise already resolved/rejected");
+
+            executor_.execute (() -> bubbleRejection (reason));
+          }
+        });
+      }
+      catch (Exception e)
+      {
+        this.executor_.execute (() -> bubbleRejection (e));
+      }
+    }
+  }
+
+  /**
+   * Bubble the rejection.
+   *
+   * @param reason
+   */
   void bubbleRejection (Throwable reason)
   {
     this.rejection_ = reason;
+    this.bubbleCurrentRejection ();
+  }
 
+  /**
+   * Bubble the current rejection.
+   */
+  private void bubbleCurrentRejection ()
+  {
     // If the rejection was set here, then we can stop bubbling the rejection
     // at this promise. Otherwise, we need to continue to the next promise
     // in the chain.
     if (this.onRejected_ != null)
-      this.onRejected_.onRejected (reason);
+      this.onRejected_.onRejected (this.rejection_);
     else if (this.next_ != null)
-      this.next_.bubbleRejection (reason);
+      this.next_.bubbleRejection (this.rejection_);
   }
 
   public Promise <T> _catch (OnRejected onRejected)
