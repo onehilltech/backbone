@@ -403,4 +403,64 @@ public class PromiseTest
       Assert.assertTrue (this.isComplete_);
     }
   }
+
+  @Test
+  public void testRace () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise<Integer> p =
+          Promise.race (
+              new Promise<> ((settlement) -> {
+                try
+                {
+                  Thread.sleep (500);
+                  settlement.resolve (10);
+                }
+                catch (InterruptedException e)
+                {
+                  settlement.reject (e);
+                }
+              }),
+              new Promise<> ((settlement) -> {
+                try
+                {
+                  Thread.sleep (300);
+                  settlement.resolve (10);
+                }
+                catch (InterruptedException e)
+                {
+                  settlement.reject (e);
+                }
+              }),
+              new Promise<> ((settlement) -> {
+                try
+                {
+                  Thread.sleep (600);
+                  settlement.resolve (10);
+                }
+                catch (InterruptedException e)
+                {
+                  settlement.reject (e);
+                }
+              })
+          );
+
+      p.then ((value, cont) -> {
+        Assert.assertEquals (10, (int)value);
+
+        this.isComplete_ = true;
+
+        synchronized (lock_)
+        {
+          lock_.notify ();
+        }
+      })
+      ._catch (reason -> Assert.fail ());
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
 }

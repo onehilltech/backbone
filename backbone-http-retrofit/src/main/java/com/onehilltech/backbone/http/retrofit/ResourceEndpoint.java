@@ -1,13 +1,18 @@
 package com.onehilltech.backbone.http.retrofit;
 
 import com.onehilltech.backbone.app.Promise;
+import com.onehilltech.backbone.http.HttpError;
 import com.onehilltech.backbone.http.Resource;
 
+import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.util.HashMap;
 import java.util.Map;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
+import retrofit2.Converter;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.http.Body;
@@ -34,6 +39,10 @@ public class ResourceEndpoint <T>
   /// Methods for interacting with the resource
   private final ResourceEndpoint.Methods methods_;
 
+  private final Retrofit retrofit_;
+
+  private final Converter<ResponseBody, Resource> resourceConverter_;
+
   /**
    * Create a new instance of the resource endpoint.
    *
@@ -56,20 +65,21 @@ public class ResourceEndpoint <T>
    */
   public static <T> ResourceEndpoint<T> create (Retrofit retrofit, String name, String path)
   {
-    ResourceEndpoint.Methods methods = retrofit.create (ResourceEndpoint.Methods.class);
-    return new ResourceEndpoint<> (methods, name, path);
+    return new ResourceEndpoint<> (retrofit, name, path);
   }
 
   /**
    * Initializing constructor.
    *
-   * @param methods         Instantiated Methods interface
    * @param name            Name of the resource
    * @param path            Absolute/relative path to the resource
    */
-  private ResourceEndpoint (ResourceEndpoint.Methods methods, String name, String path)
+  private ResourceEndpoint (Retrofit retrofit, String name, String path)
   {
-    this.methods_ = methods;
+    this.retrofit_ = retrofit;
+    this.methods_ = this.retrofit_.create (ResourceEndpoint.Methods.class);
+    this.resourceConverter_ = this.retrofit_.responseBodyConverter (Resource.class, new Annotation[0]);
+
     this.name_ = name;
     this.path_ = path;
   }
@@ -221,7 +231,7 @@ public class ResourceEndpoint <T>
 
   private <T> Promise <T> executeCall (Call <T> call)
   {
-    return new Promise<> (settlement -> {
+    return new Promise<> (settlement ->
       call.enqueue (new Callback<T> ()
       {
         @Override
@@ -233,7 +243,19 @@ public class ResourceEndpoint <T>
           }
           else
           {
-            settlement.reject (new IllegalStateException (response.message ()));
+            try
+            {
+              // Get the errors from the response message.
+              Resource r = resourceConverter_.convert (response.errorBody ());
+              HttpError httpError = r.get ("errors");
+              httpError.setStatusCode (response.code ());
+
+              settlement.reject (httpError);
+            }
+            catch (IOException e)
+            {
+              settlement.reject (e);
+            }
           }
         }
 
@@ -242,8 +264,8 @@ public class ResourceEndpoint <T>
         {
           settlement.reject (t);
         }
-      });
-    });
+      })
+    );
   }
 
   /**

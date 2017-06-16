@@ -330,4 +330,70 @@ public class Promise <T>
       promise.then (onResolved, onRejected);
     });
   }
+
+  /**
+   * This method returns a promise that resolves or rejects as soon as one of the
+   * promises in the iterable resolves or rejects, with the value or reason from
+   * that promise.
+   *
+   * @param promises
+   * @param <U>
+   * @return
+   */
+  public static <U> Promise <U> race (Promise <U>... promises)
+  {
+    return race (Arrays.asList (promises));
+  }
+
+  /**
+   * This method returns a promise that resolves or rejects as soon as one of the
+   * promises in the iterable resolves or rejects, with the value or reason from
+   * that promise.
+   *
+   * @param promises
+   * @param <U>
+   * @return
+   */
+  public static <U> Promise <U> race (List <Promise <U>> promises)
+  {
+    if (promises.isEmpty ())
+      return Promise.resolve (null);
+
+    final Object lock = new Object ();
+
+    return new Promise<> ((settlement) -> {
+      // The first promise in the collection that is rejected causes all promises
+      // to be rejected.
+      final OnRejected onRejected = reason -> {
+        synchronized (lock)
+        {
+          try
+          {
+            settlement.reject (reason);
+          }
+          catch (IllegalStateException e)
+          {
+            // Do nothing since we are not the first to finish
+          }
+        }
+      };
+
+      final OnResolved <U, ?> onResolved = (value, cont) -> {
+        synchronized (lock)
+        {
+          try
+          {
+            settlement.resolve (value);
+          }
+          catch (IllegalStateException e)
+          {
+            // Do nothing since we were not the first to finish.
+          }
+        }
+      };
+
+      for (Promise <U> promise: promises)
+        promise.then (onResolved, onRejected);
+    });
+  }
 }
