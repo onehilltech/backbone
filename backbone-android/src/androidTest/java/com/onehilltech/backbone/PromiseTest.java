@@ -293,6 +293,28 @@ public class PromiseTest
   }
 
   @Test
+  public void testRejectOnly () throws Exception
+  {
+    Promise.reject (new IllegalStateException ())
+           ._catch (reason -> {
+             this.isComplete_ = true;
+             Assert.assertEquals (reason.getClass (), IllegalStateException.class);
+
+             synchronized (this.lock_)
+             {
+               this.lock_.notify ();
+             }
+           });
+
+    synchronized (this.lock_)
+    {
+      this.lock_.wait (5000);
+    }
+
+    Assert.assertTrue (this.isComplete_);
+  }
+
+  @Test
   public void testPromiseChainStronglyTyped () throws Exception
   {
     synchronized (this.lock_)
