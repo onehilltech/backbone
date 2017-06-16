@@ -47,6 +47,8 @@ public class Promise <T>
 
   protected ContinuationPromise <?> next_;
 
+  protected ContinuationExecutor nextExecutor_;
+
   protected OnResolved <T, ?> onResolved_;
 
   protected OnRejected onRejected_;
@@ -93,9 +95,10 @@ public class Promise <T>
     this.onRejected_ = onRejected;
 
     ContinuationPromise <U> continuation = new ContinuationPromise<> ();
-    ContinuationExecutor <U> continuationExecutor = promise -> continuation.evaluate (promise);
+    ContinuationExecutor <U> continuationExecutor = continuation::evaluate;
 
     this.next_ = continuation;
+    this.nextExecutor_ = continuationExecutor;
 
     // Place the promise on the executor.
     this.executor_.execute (()-> {
@@ -134,13 +137,13 @@ public class Promise <T>
               // Cache the result of the promise.
               value_ = value;
 
-              if (onResolved == null)
-                return;
-
-              // Execute the resolved callback on a different thread of execution. We pass
-              // a continuation executor to the callback just in case we must execute another
-              // promise after this promise has been resolved.
-              executor_.execute (() -> onResolved.onResolved (value_, continuationExecutor));
+              if (onResolved != null)
+              {
+                // Execute the resolved callback on a different thread of execution. We pass
+                // a continuation executor to the callback just in case we must execute another
+                // promise after this promise has been resolved.
+                executor_.execute (() -> onResolved.onResolved (value_, continuationExecutor));
+              }
             }
 
             @Override

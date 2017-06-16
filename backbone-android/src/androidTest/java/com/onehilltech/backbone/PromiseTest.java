@@ -10,18 +10,19 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(AndroidJUnit4.class)
 public class PromiseTest
 {
   private final Object lock_ = new Object ();
-  private boolean complete_;
+  private boolean isComplete_;
 
   @Before
   public void setup ()
   {
-    this.complete_ = false;
+    this.isComplete_ = false;
   }
 
   @Test
@@ -75,6 +76,87 @@ public class PromiseTest
   }
 
   @Test
+  public void testMultipleThen () throws Exception
+  {
+    Promise <Integer> p1 = new Promise<> ((settlement) -> {
+      try
+      {
+        Thread.sleep (30);
+        settlement.resolve (1);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
+      }
+    });
+
+    Promise <Integer> p2 = new Promise<> ((settlement) -> {
+      try
+      {
+        Thread.sleep (30);
+        settlement.resolve (2);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
+      }
+    });
+
+    Promise <Integer> p3 = new Promise<> ((settlement) -> {
+      try
+      {
+        Thread.sleep (30);
+        settlement.resolve (3);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
+      }
+    });
+
+    Promise <Integer> p4 = new Promise<> ((settlement) -> {
+      try
+      {
+        Thread.sleep (30);
+        settlement.resolve (4);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
+      }
+    });
+
+    final Promise.OnResolved <Integer, Integer> doP2 = (n, cont) ->
+        cont.with (p2);
+
+    final Promise.OnResolved <Integer, Integer> doP3 = (n, cont) ->
+        cont.with (p3);
+
+    final Promise.OnResolved <Integer, Integer> doP4 = (n, cont) ->
+        cont.with (p4);
+
+    synchronized (this.lock_)
+    {
+      p1.then (doP2)
+        .then (doP3)
+        .then (doP4)
+        .then ((n, cont) -> {
+          this.isComplete_ = true;
+
+          synchronized (this.lock_)
+          {
+            this.lock_.notify ();
+          }
+        })
+        ._catch (reason -> Assert.fail ());
+
+      this.lock_.wait ();
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
   public void testAll () throws Exception
   {
     synchronized (this.lock_)
@@ -98,6 +180,84 @@ public class PromiseTest
       this.lock_.wait (5000);
 
       Assert.assertFalse (p.isPending ());
+    }
+  }
+
+
+  @Test
+  public void testAllAsContinuation () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      // Create a LOT of promises.
+      ArrayList <Promise <?>> promises = new ArrayList<> ();
+
+      for (int i = 0; i < 7; ++ i)
+      {
+        Promise <Integer> p = new Promise<> ((settlement) -> {
+          try
+          {
+            Thread.sleep (30);
+            settlement.resolve (10);
+          }
+          catch (Exception e)
+          {
+            settlement.reject (e);
+          }
+        });
+
+        promises.add (p);
+      }
+
+      Promise.OnResolved <Integer, List <Object>> doAll =
+          (n, cont) -> cont.with (Promise.all (promises));
+
+      Promise <Integer> start = new Promise<> (settlement -> {
+        try
+        {
+          Thread.sleep (40);
+          settlement.resolve (20);
+        }
+        catch (Exception e)
+        {
+          settlement.reject (e);
+        }
+      });
+
+      Promise <Integer> middle = new Promise<> (settlement -> {
+        try
+        {
+          Thread.sleep (40);
+          settlement.resolve (20);
+        }
+        catch (Exception e)
+        {
+          settlement.reject (e);
+        }
+      });
+
+      Promise.OnResolved <Integer, Integer> doMiddle = (n, cont) ->
+          cont.with (middle);
+
+      start.then (doMiddle)
+           .then (doAll)
+           .then ((result, cont) -> {
+             this.isComplete_ = true;
+
+             Assert.assertEquals (promises.size (), result.size ());
+
+             for (int i = 0; i < result.size (); ++ i)
+               Assert.assertEquals (10, result.get (i));
+
+             synchronized (this.lock_)
+             {
+               this.lock_.notify ();
+             }
+           });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
     }
   }
 
@@ -137,7 +297,7 @@ public class PromiseTest
 
         synchronized (this.lock_)
         {
-          this.complete_ = true;
+          this.isComplete_ = true;
           this.lock_.notify ();
         }
       };
@@ -148,7 +308,7 @@ public class PromiseTest
 
       this.lock_.wait (5000);
 
-      Assert.assertTrue (this.complete_);
+      Assert.assertTrue (this.isComplete_);
     }
   }
 
@@ -168,14 +328,14 @@ public class PromiseTest
 
                synchronized (this.lock_)
                {
-                 this.complete_ = true;
+                 this.isComplete_ = true;
                  this.lock_.notify ();
                }
              });
 
       this.lock_.wait (5000);
 
-      Assert.assertTrue (this.complete_);
+      Assert.assertTrue (this.isComplete_);
     }
   }
 
@@ -202,14 +362,14 @@ public class PromiseTest
 
                       synchronized (this.lock_)
                       {
-                        this.complete_ = true;
+                        this.isComplete_ = true;
                         this.lock_.notify ();
                       }
                     });
 
       this.lock_.wait (5000);
 
-      Assert.assertTrue (this.complete_);
+      Assert.assertTrue (this.isComplete_);
     }
   }
 
@@ -233,14 +393,14 @@ public class PromiseTest
 
                synchronized (this.lock_)
                {
-                 this.complete_ = true;
+                 this.isComplete_ = true;
                  this.lock_.notify ();
                }
              });
 
       this.lock_.wait (5000);
 
-      Assert.assertTrue (this.complete_);
+      Assert.assertTrue (this.isComplete_);
     }
   }
 }
