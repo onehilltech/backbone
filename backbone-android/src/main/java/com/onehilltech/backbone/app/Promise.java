@@ -65,7 +65,7 @@ public class Promise <T>
 
   private final Executor executor_;
 
-  protected OnResolved <T, ?> onResolved_;
+  protected final ArrayList <OnResolved <T, ?>> onResolved_ = new ArrayList<> ();
 
   protected final ArrayList <OnRejected> onRejected_ = new ArrayList<> ();
 
@@ -110,7 +110,8 @@ public class Promise <T>
     this.executor_ = DEFAULT_EXECUTOR;
 
     // Force the promise to start.
-    this.executor_.execute (this::runInBackground);
+    if (this.isPending () && this.impl_ != null)
+      this.executor_.execute (this::runInBackground);
   }
 
   /**
@@ -131,7 +132,8 @@ public class Promise <T>
    */
   public <U> Promise <U> then (OnResolved <T, U> onResolved, @Nullable OnRejected onRejected)
   {
-    this.onResolved_ = onResolved;
+    if (onResolved != null)
+      this.onResolved_.add (onResolved);
 
     if (onRejected != null)
       this.onRejected_.add (onRejected);
@@ -157,76 +159,56 @@ public class Promise <T>
   private void runInBackground ()
   {
     this.executor_.execute (() -> {
-      if (this.isResolved ())
+      // Execute the promise. This method must call either resolve or reject
+      // before this method return. Failure to do so means the promise was not
+      // completed, and in a bad state.
+      try
       {
-        // The promise has already been resolved. Let's go ahead and pass the value
-        // to the caller.
-        if (this.onResolved_ != null)
-          this.onResolved_.onResolved (this.value_, (promise) -> {
-            for (Continuation cont: this.cont_)
-              cont.promise.evaluate (promise);
-          });
-      }
-      else if (this.isRejected ())
-      {
-        // The promise has already been rejected. Let's go ahead and pass the reason
-        // back to the caller.
-        this.processCurrentRejection ();
-      }
-      else if (!this.isRunning_ && this.impl_ != null)
-      {
-        synchronized (this.stateLock_)
+        this.impl_.execute (new Settlement<T> ()
         {
-          // The promise is now running.
-          this.isRunning_ = true;
-        }
-
-        // Execute the promise. This method must call either resolve or reject
-        // before this method return. Failure to do so means the promise was not
-        // completed, and in a bad state.
-        try
-        {
-          this.impl_.execute (new Settlement<T> ()
+          @Override
+          public void resolve (T value)
           {
-            @Override
-            public void resolve (T value)
-            {
-              // Check that the promise is still pending.
-              if (!isPending ())
-                throw new IllegalStateException ("Promise already resolved/rejected");
+            // Check that the promise is still pending.
+            if (!isPending ())
+              throw new IllegalStateException ("Promise already resolved/rejected");
 
-              // Cache the result of the promise.
-              value_ = value;
+            // Cache the result of the promise.
+            value_ = value;
 
-              if (onResolved_ != null)
-              {
-                // Execute the resolved callback on a different thread of execution. We pass
-                // a continuation executor to the callback just in case we must execute another
-                // promise after this promise has been resolved.
-                executor_.execute (() -> onResolved_.onResolved (value_, (promise -> {
-                  for (Continuation cont : cont_)
-                    cont.promise.evaluate (promise);
-                })));
-              }
-            }
+            // Execute the resolved callback on a different thread of execution. We pass
+            // a continuation executor to the callback just in case we must execute another
+            // promise after this promise has been resolved.
+            executor_.execute (() -> processResolve ());
+          }
 
-            @Override
-            public void reject (Throwable reason)
-            {
-              // Check that the promise is still pending.
-              if (!isPending ())
-                throw new IllegalStateException ("Promise already resolved/rejected");
+          @Override
+          public void reject (Throwable reason)
+          {
+            // Check that the promise is still pending.
+            if (!isPending ())
+              throw new IllegalStateException ("Promise already resolved/rejected");
 
-              executor_.execute (() -> processRejection (reason));
-            }
-          });
-        }
-        catch (Exception e)
-        {
-          this.executor_.execute (() -> processRejection (e));
-        }
+            executor_.execute (() -> processRejection (reason));
+          }
+        });
+      }
+      catch (Exception e)
+      {
+        this.executor_.execute (() -> processRejection (e));
       }
     });
+  }
+
+  private void processResolve ()
+  {
+    for (OnResolved <T, ?> onResolved: this.onResolved_)
+    {
+      onResolved.onResolved (this.value_, (promise -> {
+        for (Continuation cont : this.cont_)
+          cont.promise.evaluate (promise);
+      }));
+    }
   }
 
   /**

@@ -13,10 +13,15 @@ class ContinuationPromise <T> extends Promise <T>
     // We need to execute this promise and pass the result to the executor
     // in this continuation executor. This allows us to chain the result.
     promise.then (
-        (result, cont) -> onResolved_.onResolved (result, (p) -> {
-          for (Continuation continuation: cont_)
-            continuation.promise.evaluate (p);
-        }),
+        (result, cont) -> {
+          for (OnResolved <T, ?> onResolved: onResolved_)
+          {
+            onResolved.onResolved (result, (p) -> {
+              for (Continuation continuation : cont_)
+                continuation.promise.evaluate (p);
+            });
+          }
+        },
         reason -> {
           for (OnRejected onRejected: this.onRejected_)
             onRejected.onRejected (reason);
