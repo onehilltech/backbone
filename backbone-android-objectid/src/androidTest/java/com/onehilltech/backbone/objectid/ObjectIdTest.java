@@ -13,7 +13,7 @@ public class ObjectIdTest
   public void testConstructor ()
   {
     ObjectIdGenerator generator = ObjectIdGenerator.getInstance ();
-    int counter = generator.getCounter () & 0x00ffffff;
+    int counter = generator.getNextCounter () & 0x00ffffff;
     int machinePart = generator.getMachinePart () & 0x00ffffff;
 
     ObjectId objectId = generator.nextObjectId ();

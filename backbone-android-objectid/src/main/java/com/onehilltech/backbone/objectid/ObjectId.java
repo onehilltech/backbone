@@ -3,7 +3,10 @@ package com.onehilltech.backbone.objectid;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @class ObjectId
@@ -33,6 +36,23 @@ public final class ObjectId
   private int hashCode_;
 
   private static final char [] HEX_CHARS = "0123456789abcdef".toCharArray ();
+
+  /// Machine part to use for all generated ObjectId
+  private static final int MACHINE_PART = UUID.randomUUID ().hashCode ();
+
+  /// Process part to use for all generated ObjectId
+  private static final short PROCESS_PART = (short)android.os.Process.myPid ();
+
+  /// Next counter value for the generated ObjectId
+  private static final AtomicInteger COUNTER = new AtomicInteger (new SecureRandom ().nextInt ());
+
+  public ObjectId ()
+  {
+    this ((int) (DateTime.now ().getMillis () / 1000),
+          MACHINE_PART,
+          PROCESS_PART,
+          COUNTER.getAndIncrement ());
+  }
 
   /**
    * Initializing constructor.
