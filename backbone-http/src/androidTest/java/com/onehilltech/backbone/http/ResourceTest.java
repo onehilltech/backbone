@@ -21,7 +21,7 @@ public class ResourceTest
 
     r = new Resource ("count", 45);
     Assert.assertEquals (1, r.entityCount ());
-    Assert.assertEquals (45, r.get ("count"));
+    Assert.assertEquals ((long)45, (long)r.get ("count"));
 
     Map <String, Object> entities = new HashMap<> ();
     entities.put ("count", 35);
