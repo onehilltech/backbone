@@ -188,14 +188,15 @@ public class Promise <T>
 
     if (this.status_ == Status.Resolved)
     {
-      this.executor_.execute (() -> onResolved.onResolved (this.value_, promise -> contPromise.evaluate (promise)));
+      if (onResolved != null)
+        this.executor_.execute (() -> onResolved.onResolved (this.value_, promise -> contPromise.evaluate (promise)));
     }
     else if (this.status_ == Status.Rejected)
     {
       if (onRejected != null)
         this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
-
-      contPromise.processRejection (this.rejection_);
+      else
+        contPromise.processRejection (this.rejection_);
     }
 
     return contPromise;
@@ -226,19 +227,9 @@ public class Promise <T>
   private void processSettled ()
   {
     if (this.status_ == Status.Resolved)
-    {
       this.processCurrentResolve ();
-
-      for (Continuation continuation: this.cont_)
-        this.executor_.execute (() -> continuation.promise.processResolve (this.value_));
-    }
-    else
-    {
+    else if (this.status_ == Status.Rejected)
       this.processCurrentRejection ();
-
-      for (Continuation continuation: this.cont_)
-        this.executor_.execute (()->continuation.promise.processRejection (this.rejection_));
-    }
   }
 
   @SuppressWarnings ("unchecked")
@@ -302,6 +293,9 @@ public class Promise <T>
 
     for (OnSettled onSettled: this.onSettled_)
       this.executor_.execute (onSettled::onSettled);
+
+    for (Continuation continuation: this.cont_)
+      this.executor_.execute (() -> continuation.promise.processResolve (this.value_));
   }
 
   protected void processResolve (T value)
@@ -343,18 +337,9 @@ public class Promise <T>
       this.executor_.execute (() -> cont.promise.processRejection (this.rejection_));
   }
 
-  public Promise <T> _catch (@NonNull OnRejected onRejected)
+  public <U> Promise <U> _catch (@NonNull OnRejected onRejected)
   {
-    // Always add the rejected function to the list of rejection handlers. This way,
-    // we know how many have been attached to this promise. Then, run this rejection
-    // handler if the promise has already been rejected.
-
-    this.onRejected_.add (onRejected);
-
-    if (this.status_ == Status.Rejected)
-      this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
-
-    return this;
+    return this.then (null, onRejected);
   }
 
   /**

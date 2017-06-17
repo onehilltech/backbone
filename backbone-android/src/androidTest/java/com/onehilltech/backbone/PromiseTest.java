@@ -423,6 +423,41 @@ public class PromiseTest
   }
 
   @Test
+  public void testStopAtFirstCatch () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ("GREAT"))
+             .then ((value, cont) -> {
+               Assert.fail ();
+               cont.with (Promise.resolve (10));
+             })
+             .then ((value, cont) -> {
+               Assert.fail ();
+               cont.with (Promise.resolve (40));
+             })
+             ._catch ((reason) -> {
+               Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+               Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             })
+             ._catch (reason -> Assert.fail ());
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+
+      this.lock_.wait (1000);
+    }
+  }
+
+  @Test
   public void testRace () throws Exception
   {
     synchronized (this.lock_)
