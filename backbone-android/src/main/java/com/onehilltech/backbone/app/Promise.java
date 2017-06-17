@@ -63,6 +63,8 @@ public class Promise <T>
   /// The resolved value for the promise.
   private T value_;
 
+  private boolean isPending_ = true;
+
   /// The rejected value for the promise.
   protected Throwable rejection_;
 
@@ -99,7 +101,7 @@ public class Promise <T>
    */
   public Promise (PromiseExecutor<T> impl)
   {
-    this (impl, null, null);
+    this (impl, true, null, null);
   }
 
   /**
@@ -109,7 +111,7 @@ public class Promise <T>
    */
   private Promise (T resolve)
   {
-    this (null, resolve, null);
+    this (null, false, resolve, null);
   }
 
   /**
@@ -119,7 +121,7 @@ public class Promise <T>
    */
   private Promise (Throwable reason)
   {
-    this (null, null, reason);
+    this (null, false, null, reason);
   }
 
   /**
@@ -129,16 +131,17 @@ public class Promise <T>
    * @param resolve
    * @param reason
    */
-  private Promise (PromiseExecutor<T> impl, T resolve, Throwable reason)
+  private Promise (PromiseExecutor<T> impl, boolean isPending, T resolve, Throwable reason)
   {
     this.impl_ = impl;
     this.value_ = resolve;
     this.rejection_ = reason;
+    this.isPending_ = isPending;
     this.executor_ = DEFAULT_EXECUTOR;
 
     // If the promise is not pending, then we need to settle the promise. We also
     // need to settle the promise in the background so normal control can continue.
-    if (this.isPending () && this.impl_ != null)
+    if (this.isPending_ && this.impl_ != null)
       this.executor_.execute (this::runInBackground);
   }
 
@@ -245,6 +248,7 @@ public class Promise <T>
               throw new IllegalStateException ("Promise already resolved/rejected");
 
             // Cache the result of the promise.
+            isPending_ = false;
             value_ = value;
 
             // Execute the resolved callback on a different thread of execution. We pass
@@ -260,6 +264,7 @@ public class Promise <T>
             if (!isPending ())
               throw new IllegalStateException ("Promise already resolved/rejected");
 
+            isPending_ = false;
             executor_.execute (() -> processRejection (reason));
           }
         });
@@ -343,7 +348,7 @@ public class Promise <T>
    */
   public boolean isPending ()
   {
-    return this.rejection_ == null && this.value_ == null;
+    return this.isPending_;
   }
 
   /**
