@@ -557,4 +557,33 @@ public class PromiseTest
       Assert.assertTrue (this.isComplete_);
     }
   }
+
+  @Test
+  public void testAlwaysDownstream () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ("GREAT"))
+             .then ((value, cont) -> {
+               Assert.fail ();
+               cont.with (Promise.resolve (10));
+             })
+             .then ((value, cont) ->{
+               Assert.fail ();
+               cont.with (Promise.resolve (40));
+             })
+             .always (( ) -> {
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
 }
