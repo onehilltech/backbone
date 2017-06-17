@@ -60,7 +60,7 @@ public class PromiseTest
       Promise <Integer> p = new Promise <> ((completion) -> completion.reject (new IllegalStateException ()));
 
       p.then ((value, cont) -> Promise.resolve (5),
-              (reason) -> {
+              (reason, cont) -> {
                 this.isComplete_ = true;
 
                 synchronized (lock_)
@@ -150,7 +150,7 @@ public class PromiseTest
             this.lock_.notify ();
           }
         })
-        ._catch (reason -> Assert.fail ());
+        ._catch ((reason, cont) -> Assert.fail ());
 
       this.lock_.wait ();
 
@@ -282,7 +282,7 @@ public class PromiseTest
   public void testRejectOnly () throws Exception
   {
     Promise.reject (new IllegalStateException ())
-           ._catch (reason -> {
+           ._catch ((reason, cont) -> {
              this.isComplete_ = true;
              Assert.assertEquals (reason.getClass (), IllegalStateException.class);
 
@@ -373,7 +373,7 @@ public class PromiseTest
                cont.with (Promise.resolve (40));
              })
              .then ((value, cont) -> {},
-                    reason -> {
+                    (reason, cont) -> {
                       Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                       Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
@@ -404,7 +404,7 @@ public class PromiseTest
                Assert.fail ();
                cont.with (Promise.resolve (40));
              })
-             ._catch ((reason) -> {
+             ._catch ((reason, cont) -> {
                Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
@@ -436,7 +436,7 @@ public class PromiseTest
                Assert.fail ();
                cont.with (Promise.resolve (40));
              })
-             ._catch ((reason) -> {
+             ._catch ((reason, cont) -> {
                Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
@@ -447,7 +447,7 @@ public class PromiseTest
                  this.lock_.notify ();
                }
              })
-             ._catch (reason -> Assert.fail ());
+             ._catch ((reason, cont) -> Assert.fail ());
 
       this.lock_.wait (5000);
 
@@ -509,132 +509,10 @@ public class PromiseTest
           lock_.notify ();
         }
       })
-      ._catch (reason -> Assert.fail ());
+      ._catch ((reason, cont) -> Assert.fail ());
 
       this.lock_.wait (5000);
 
-      Assert.assertTrue (this.isComplete_);
-    }
-  }
-
-  @Test
-  public void testAlways () throws Exception
-  {
-    synchronized (this.lock_)
-    {
-      new Promise<Integer> (settlement -> settlement.resolve (10))
-          .always (() -> {
-            this.isComplete_ = true;
-
-            synchronized (this.lock_)
-            {
-              this.lock_.notify ();
-            }
-          });
-
-      this.lock_.wait (5000);
-
-      Assert.assertTrue (this.isComplete_);
-    }
-  }
-
-  @Test
-  public void testAlwaysFromResolve () throws Exception
-  {
-    synchronized (this.lock_)
-    {
-      Promise.resolve (10)
-             .always (() -> {
-               this.isComplete_ = true;
-
-               synchronized (this.lock_)
-               {
-                 this.lock_.notify ();
-               }
-             });
-
-      this.lock_.wait (5000);
-
-      Assert.assertTrue (this.isComplete_);
-    }
-  }
-
-  @Test
-  public void testAlwaysFromReject () throws Exception
-  {
-    synchronized (this.lock_)
-    {
-      Promise.reject (new IllegalStateException ("GREAT"))
-             .always (() -> {
-               this.isComplete_ = true;
-
-               synchronized (this.lock_)
-               {
-                 this.lock_.notify ();
-               }
-             });
-
-      this.lock_.wait (5000);
-
-      Assert.assertTrue (this.isComplete_);
-    }
-  }
-
-  @Test
-  public void testAlwaysDownstream () throws Exception
-  {
-    synchronized (this.lock_)
-    {
-      Promise.reject (new IllegalStateException ("GREAT"))
-             .then ((value, cont) -> {
-               Assert.fail ();
-               cont.with (Promise.resolve (10));
-             })
-             .then ((value, cont) ->{
-               Assert.fail ();
-               cont.with (Promise.resolve (40));
-             })
-             .always (( ) -> {
-               this.isComplete_ = true;
-
-               synchronized (this.lock_)
-               {
-                 this.lock_.notify ();
-               }
-             });
-
-      this.lock_.wait (5000);
-
-      Assert.assertTrue (this.isComplete_);
-    }
-  }
-
-  @Test
-  public void testThenAfterAlways () throws Exception
-  {
-    synchronized (this.lock_)
-    {
-      Promise.resolve (42)
-             .always (() -> {
-               Assert.assertEquals (0, this.counter_);
-               ++ this.counter_;
-             })
-             .then ((value, cont) ->{
-               Assert.assertEquals (42, value);
-               Assert.assertEquals (1, this.counter_);
-
-               ++ this.counter_;
-
-               synchronized (this.lock_)
-               {
-                 this.isComplete_ = true;
-                 this.lock_.notify ();
-               }
-             });
-
-      this.lock_.wait ();
-
-      Assert.assertEquals (2, this.counter_);
       Assert.assertTrue (this.isComplete_);
     }
   }

@@ -45,19 +45,16 @@ public class Promise <T>
    * @param <T>
    * @param <U>
    */
+  @FunctionalInterface
   public interface OnResolved <T, U>
   {
     void onResolved (T value, ContinuationExecutor <U> cont);
   }
 
-  public interface OnRejected
+  @FunctionalInterface
+  public interface OnRejected <T>
   {
-    void onRejected (Throwable reason);
-  }
-
-  public interface OnSettled
-  {
-    void onSettled ();
+    void onRejected (Throwable reason, ContinuationExecutor <T> cont);
   }
 
   public enum Status
@@ -65,7 +62,7 @@ public class Promise <T>
     Pending,
     Resolved,
     Rejected
-  };
+  }
 
   /// The resolved value for the promise.
   private T value_;
@@ -84,8 +81,6 @@ public class Promise <T>
   protected final ArrayList <OnResolved <T, ?>> onResolved_ = new ArrayList<> ();
 
   protected final ArrayList <OnRejected> onRejected_ = new ArrayList<> ();
-
-  protected final ArrayList <OnSettled> onSettled_ = new ArrayList<> ();
 
   protected static class Continuation
   {
@@ -188,38 +183,19 @@ public class Promise <T>
 
     if (this.status_ == Status.Resolved)
     {
+      // The promise is already resolved. If we can, we are going to pass the
+      // value to the handler. We also need to run all the "settled" handlers.
+
       if (onResolved != null)
         this.executor_.execute (() -> onResolved.onResolved (this.value_, promise -> contPromise.evaluate (promise)));
     }
     else if (this.status_ == Status.Rejected)
     {
       if (onRejected != null)
-        this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
+        this.executor_.execute (() -> onRejected.onRejected (this.rejection_, promise -> contPromise.evaluate (promise)));
       else
         contPromise.processRejection (this.rejection_);
     }
-
-    return contPromise;
-  }
-
-  /**
-   * Handler that always runs irrespective of the Promise being resolved or rejected.
-   *
-   * @param onSettled
-   * @param <U>
-   * @return
-   */
-  public <U> Promise <U> always (@NonNull OnSettled onSettled)
-  {
-    this.onSettled_.add (onSettled);
-
-    ContinuationPromise <U> contPromise = new ContinuationPromise<> ();
-    ContinuationExecutor <U> contExecutor = contPromise::evaluate;
-
-    this.cont_.add (new Continuation (contPromise, contExecutor));
-
-    if (this.status_ != Status.Pending)
-      this.executor_.execute (this::processSettled);
 
     return contPromise;
   }
@@ -291,9 +267,6 @@ public class Promise <T>
       );
     }
 
-    for (OnSettled onSettled: this.onSettled_)
-      this.executor_.execute (onSettled::onSettled);
-
     for (Continuation continuation: this.cont_)
       this.executor_.execute (() -> continuation.promise.processResolve (this.value_));
   }
@@ -327,14 +300,20 @@ public class Promise <T>
     // If the rejection was set here, then we can stop bubbling the rejection
     // at this promise. Otherwise, we need to continue to the next promise
     // in the chain.
-    for (OnRejected onRejected : this.onRejected_)
-      this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
 
-    for (OnSettled onSettled: this.onSettled_)
-      this.executor_.execute (onSettled::onSettled);
+    for (OnRejected <T> onRejected: this.onRejected_)
+    {
+      this.executor_.execute (() -> onRejected.onRejected (this.rejection_, (promise -> {
+        for (Continuation cont : this.cont_)
+          cont.promise.evaluate (promise);
+      })));
+    }
 
-    for (Continuation cont: this.cont_)
-      this.executor_.execute (() -> cont.promise.processRejection (this.rejection_));
+    if (this.onRejected_.isEmpty ())
+    {
+      for (Continuation cont : this.cont_)
+        this.executor_.execute (() -> cont.promise.processRejection (this.rejection_));
+    }
   }
 
   public <U> Promise <U> _catch (@NonNull OnRejected onRejected)
@@ -393,7 +372,7 @@ public class Promise <T>
 
       // The first promise in the collection that is rejected causes all promises
       // to be rejected.
-      final OnRejected onRejected = (reason) -> settlement.reject (reason);
+      final OnRejected onRejected = (reason, cont) -> settlement.reject (reason);
 
       final OnResolved onResolved = new OnResolved ()
       {
@@ -458,7 +437,7 @@ public class Promise <T>
     return new Promise<> ((settlement) -> {
       // The first promise in the collection that is rejected causes all promises
       // to be rejected.
-      final OnRejected onRejected = reason -> {
+      final OnRejected onRejected = (reason, cont) -> {
         synchronized (lock)
         {
           try

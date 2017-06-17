@@ -22,12 +22,22 @@ class ContinuationPromise <T> extends Promise <T>
             });
           }
         },
-        reason -> {
-          for (OnRejected onRejected: this.onRejected_)
-            onRejected.onRejected (reason);
-
-          for (Continuation continuation: cont_)
-            continuation.promise.processRejection (reason);
+        (reason, cont) -> {
+          if (!this.onRejected_.isEmpty ())
+          {
+            for (OnRejected<T> onRejected : this.onRejected_)
+            {
+              onRejected.onRejected (reason, p -> {
+                for (Continuation continuation : cont_)
+                  continuation.promise.evaluate (p);
+              });
+            }
+          }
+          else
+          {
+            for (Continuation continuation : cont_)
+              continuation.promise.processRejection (reason);
+          }
         });
   }
 }
