@@ -193,6 +193,8 @@ public class Promise <T>
 
       if (onResolved != null)
         this.executor_.execute (() -> onResolved.onResolved (this.value_, promise -> contPromise.evaluate (promise)));
+      else
+        this.executor_.execute (() -> contPromise.processResolve (null));
     }
     else if (this.status_ == Status.Rejected)
     {

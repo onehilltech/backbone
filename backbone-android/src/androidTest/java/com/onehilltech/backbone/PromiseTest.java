@@ -485,6 +485,75 @@ public class PromiseTest
   }
 
   @Test
+  public void testThenAfterRejectShouldNotWork () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ())
+             .then ((value, cont) -> {
+               Assert.assertNull (value);
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertFalse (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testRejectCatchThen () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ())
+             ._catch ((reason, cont) -> Assert.assertEquals (IllegalStateException.class, reason.getClass ()))
+             .then ((value, cont) -> {
+               Assert.assertNull (value);
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testResolveCatchThen () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.resolve (50)
+             ._catch ((reason, cont) -> Assert.assertEquals (IllegalStateException.class, reason.getClass ()))
+             .then ((value, cont) -> {
+               Assert.assertNull (value);
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+  @Test
   public void testThenAfterCatch () throws Exception
   {
     synchronized (this.lock_)
