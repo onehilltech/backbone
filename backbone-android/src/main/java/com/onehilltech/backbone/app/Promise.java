@@ -203,7 +203,7 @@ public class Promise <T>
             // Execute the resolved callback on a different thread of execution. We pass
             // a continuation executor to the callback just in case we must execute another
             // promise after this promise has been resolved.
-            executor_.execute (() -> processResolve ());
+            processResolve ();
           }
 
           @Override
@@ -228,10 +228,12 @@ public class Promise <T>
   {
     for (OnResolved <T, ?> onResolved: this.onResolved_)
     {
-      onResolved.onResolved (this.value_, (promise -> {
-        for (Continuation cont : this.cont_)
-          cont.promise.evaluate (promise);
-      }));
+      this.executor_.execute (() ->
+        onResolved.onResolved (this.value_, (promise -> {
+          for (Continuation cont : this.cont_)
+            cont.promise.evaluate (promise);
+        }))
+      );
     }
   }
 
