@@ -108,7 +108,7 @@ public class DataStore
                   // Resolve the result.
                   settlement.resolve (model);
                 })
-                ._catch (reason -> {
+                ._catch ((reason, cont) -> {
                   if (reason.getLocalizedMessage ().toLowerCase ().equals ("not modified"))
                   {
                     // The server said that the data has not been modified. This means we
@@ -116,8 +116,8 @@ public class DataStore
                     // to load the data from disk, and resolve our promise.
 
                     this.peek (dataClass, id)
-                        .then ((model, cont) -> settlement.resolve (model))
-                        ._catch (settlement::reject);
+                        .then ((model, c) -> settlement.resolve (model))
+                        ._catch ((r, c) -> settlement.reject (reason));
                   }
                   else
                   {
