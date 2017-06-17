@@ -10,22 +10,9 @@ import org.junit.runner.RunWith;
 public class ObjectIdTest
 {
   @Test
-  public void testConstructor ()
-  {
-    ObjectIdGenerator generator = ObjectIdGenerator.getInstance ();
-    int counter = generator.getNextCounter () & 0x00ffffff;
-    int machinePart = generator.getMachinePart () & 0x00ffffff;
-
-    ObjectId objectId = generator.nextObjectId ();
-    Assert.assertEquals (counter, objectId.getCounter ());
-    Assert.assertEquals (machinePart, objectId.getMachinePart ());
-    Assert.assertEquals (generator.getProcessPart (), objectId.getProcessPart ());
-  }
-
-  @Test
   public void testToString ()
   {
-    ObjectId objectId = ObjectIdGenerator.getInstance ().nextObjectId ();
+    ObjectId objectId = new ObjectId ();
     String str = objectId.toString ();
 
     Assert.assertEquals (24, str.length ());
@@ -34,7 +21,7 @@ public class ObjectIdTest
   @Test
   public void testFromString ()
   {
-    ObjectId expected = ObjectIdGenerator.getInstance ().nextObjectId ();
+    ObjectId expected = new ObjectId ();
     String objStr = expected.toString ();
     ObjectId actual = new ObjectId (objStr);
 

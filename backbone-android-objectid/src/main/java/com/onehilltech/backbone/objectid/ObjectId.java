@@ -38,10 +38,10 @@ public final class ObjectId
   private static final char [] HEX_CHARS = "0123456789abcdef".toCharArray ();
 
   /// Machine part to use for all generated ObjectId
-  private static final int MACHINE_PART = UUID.randomUUID ().hashCode ();
+  public static final int MACHINE_PART = UUID.randomUUID ().hashCode ();
 
   /// Process part to use for all generated ObjectId
-  private static final short PROCESS_PART = (short)android.os.Process.myPid ();
+  public static final short PROCESS_PART = (short)android.os.Process.myPid ();
 
   /// Next counter value for the generated ObjectId
   private static final AtomicInteger COUNTER = new AtomicInteger (new SecureRandom ().nextInt ());
