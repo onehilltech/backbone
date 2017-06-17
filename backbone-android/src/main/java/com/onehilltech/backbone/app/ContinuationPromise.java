@@ -25,6 +25,9 @@ class ContinuationPromise <T> extends Promise <T>
         reason -> {
           for (OnRejected onRejected: this.onRejected_)
             onRejected.onRejected (reason);
+
+          for (Continuation continuation: cont_)
+            continuation.promise.processRejection (reason);
         });
   }
 }

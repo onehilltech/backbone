@@ -388,8 +388,6 @@ public class PromiseTest
              })
              .then ((value, cont) -> {},
                     reason -> {
-                      System.err.println ("Handling the error");
-
                       Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                       Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 

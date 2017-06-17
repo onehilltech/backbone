@@ -55,8 +55,10 @@ public class Promise <T>
     void onRejected (Throwable reason);
   }
 
+  /// The resolved value for the promise.
   private T value_;
 
+  /// The rejected value for the promise.
   protected Throwable rejection_;
 
   private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool ();
@@ -83,25 +85,43 @@ public class Promise <T>
 
   protected final ArrayList <Continuation> cont_ = new ArrayList<> ();
 
-  private boolean isRunning_ = false;
-
-  private final Object stateLock_ = new Object ();
-
+  /**
+   * The executor for the Promise.
+   *
+   * @param impl
+   */
   public Promise (PromiseExecutor<T> impl)
   {
     this (impl, null, null);
   }
 
+  /**
+   * Create a Promise that is resolved.
+   *
+   * @param resolve
+   */
   private Promise (T resolve)
   {
     this (null, resolve, null);
   }
 
+  /**
+   * Create a Promise that is rejected.
+   *
+   * @param reason
+   */
   private Promise (Throwable reason)
   {
     this (null, null, reason);
   }
 
+  /**
+   * Initializing constructor.
+   *
+   * @param impl
+   * @param resolve
+   * @param reason
+   */
   private Promise (PromiseExecutor<T> impl, T resolve, Throwable reason)
   {
     this.impl_ = impl;
@@ -109,7 +129,8 @@ public class Promise <T>
     this.rejection_ = reason;
     this.executor_ = DEFAULT_EXECUTOR;
 
-    // Force the promise to start.
+    // If the promise is not pending, then we need to settle the promise. We also
+    // need to settle the promise in the background so normal control can continue.
     if (this.isPending () && this.impl_ != null)
       this.executor_.execute (this::runInBackground);
   }
@@ -147,9 +168,12 @@ public class Promise <T>
     {
       this.executor_.execute (() -> onResolved.onResolved (this.value_, promise -> contPromise.evaluate (promise)));
     }
-    else if (onRejected != null && this.isRejected ())
+    else if (this.isRejected ())
     {
-      this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
+      if (onRejected != null)
+        this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
+
+      contPromise.processRejection (this.rejection_);
     }
 
     return contPromise;
@@ -231,10 +255,10 @@ public class Promise <T>
     // at this promise. Otherwise, we need to continue to the next promise
     // in the chain.
     for (OnRejected onRejected : this.onRejected_)
-      onRejected.onRejected (this.rejection_);
+      this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
 
     for (Continuation cont: this.cont_)
-      cont.promise.processRejection (this.rejection_);
+      this.executor_.execute (() -> cont.promise.processRejection (this.rejection_));
   }
 
   public Promise <T> _catch (@NonNull OnRejected onRejected)
