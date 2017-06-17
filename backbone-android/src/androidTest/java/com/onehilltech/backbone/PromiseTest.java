@@ -301,7 +301,7 @@ public class PromiseTest
   }
 
   @Test
-  public void testPromiseChainStronglyTyped () throws Exception
+  public void testPromiseChainTyped () throws Exception
   {
     synchronized (this.lock_)
     {
@@ -454,6 +454,56 @@ public class PromiseTest
       Assert.assertTrue (this.isComplete_);
 
       this.lock_.wait (1000);
+    }
+  }
+
+  @Test
+  public void testThenAfterCatchWithContinuationValue () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ())
+             ._catch ((reason, cont) -> {
+               Assert.assertEquals (IllegalStateException.class, reason.getClass ());
+
+               cont.with (Promise.resolve (10));
+             })
+             .then ((value, cont) -> {
+               Assert.assertEquals (10, value);
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testThenAfterCatch () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ())
+             ._catch ((reason, cont) -> Assert.assertEquals (IllegalStateException.class, reason.getClass ()))
+             .then ((value, cont) -> {
+               Assert.assertNull (value);
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
     }
   }
 

@@ -162,6 +162,11 @@ public class Promise <T>
     return this.then (onResolved, null);
   }
 
+  static class RejectionHandled
+  {
+    private boolean handled = false;
+  }
+
   /**
    * Settle the promise. The promised will either be resolved or rejected.
    *
@@ -192,20 +197,30 @@ public class Promise <T>
     else if (this.status_ == Status.Rejected)
     {
       if (onRejected != null)
-        this.executor_.execute (() -> onRejected.onRejected (this.rejection_, promise -> contPromise.evaluate (promise)));
+      {
+        final RejectionHandled rejectionHandled = new RejectionHandled ();
+
+        // We are handling the rejection as this level. If the client calls the
+        // continuation function, then we are going to use that value. Otherwise,
+        // let's start the next chain on fresh start.
+        this.executor_.execute (() -> {
+          onRejected.onRejected (this.rejection_, promise -> {
+            rejectionHandled.handled = true;
+            contPromise.evaluate (promise);
+          });
+
+          if (!rejectionHandled.handled)
+            contPromise.processResolve (null);
+        });
+      }
       else
+      {
+        // Pass the rejection up a single level.
         contPromise.processRejection (this.rejection_);
+      }
     }
 
     return contPromise;
-  }
-
-  private void processSettled ()
-  {
-    if (this.status_ == Status.Resolved)
-      this.processCurrentResolve ();
-    else if (this.status_ == Status.Rejected)
-      this.processCurrentRejection ();
   }
 
   @SuppressWarnings ("unchecked")
