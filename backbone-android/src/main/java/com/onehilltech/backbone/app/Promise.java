@@ -55,6 +55,11 @@ public class Promise <T>
     void onRejected (Throwable reason);
   }
 
+  public interface OnSettled
+  {
+    void onSettled ();
+  }
+
   /// The resolved value for the promise.
   private T value_;
 
@@ -70,6 +75,8 @@ public class Promise <T>
   protected final ArrayList <OnResolved <T, ?>> onResolved_ = new ArrayList<> ();
 
   protected final ArrayList <OnRejected> onRejected_ = new ArrayList<> ();
+
+  protected final ArrayList <OnSettled> onSettled_ = new ArrayList<> ();
 
   protected static class Continuation
   {
@@ -179,6 +186,28 @@ public class Promise <T>
     return contPromise;
   }
 
+  /**
+   * Handler that always runs irrespective of the Promise being resolved or rejected.
+   *
+   * @param onSettled
+   * @param <U>
+   * @return
+   */
+  public <U> Promise <U> always (@NonNull OnSettled onSettled)
+  {
+    this.onSettled_.add (onSettled);
+
+    if (!this.isPending ())
+      this.executor_.execute (onSettled::onSettled);
+
+    ContinuationPromise <U> contPromise = new ContinuationPromise<> ();
+    ContinuationExecutor <U> contExecutor = contPromise::evaluate;
+
+    this.cont_.add (new Continuation (contPromise, contExecutor));
+
+    return contPromise;
+  }
+
   @SuppressWarnings ("unchecked")
   private void runInBackground ()
   {
@@ -235,6 +264,9 @@ public class Promise <T>
         }))
       );
     }
+
+    for (OnSettled onSettled: this.onSettled_)
+      this.executor_.execute (onSettled::onSettled);
   }
 
   /**
@@ -258,6 +290,9 @@ public class Promise <T>
     // in the chain.
     for (OnRejected onRejected : this.onRejected_)
       this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
+
+    for (OnSettled onSettled: this.onSettled_)
+      this.executor_.execute (onSettled::onSettled);
 
     for (Continuation cont: this.cont_)
       this.executor_.execute (() -> cont.promise.processRejection (this.rejection_));

@@ -494,4 +494,67 @@ public class PromiseTest
       Assert.assertTrue (this.isComplete_);
     }
   }
+
+  @Test
+  public void testAlways () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      new Promise<Integer> (settlement -> settlement.resolve (10))
+          .always (() -> {
+            this.isComplete_ = true;
+
+            synchronized (this.lock_)
+            {
+              this.lock_.notify ();
+            }
+          });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testAlwaysFromResolve () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.resolve (10)
+             .always (() -> {
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testAlwaysFromReject () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.reject (new IllegalStateException ("GREAT"))
+             .always (() -> {
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
 }
