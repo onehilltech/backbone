@@ -18,11 +18,13 @@ public class PromiseTest
 {
   private final Object lock_ = new Object ();
   private boolean isComplete_;
+  private int counter_;
 
   @Before
   public void setup ()
   {
     this.isComplete_ = false;
+    this.counter_ = 0;
   }
 
   @Test
@@ -583,6 +585,36 @@ public class PromiseTest
 
       this.lock_.wait (5000);
 
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testThenAfterAlways () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.resolve (42)
+             .always (() -> {
+               Assert.assertEquals (0, this.counter_);
+               ++ this.counter_;
+             })
+             .then ((value, cont) ->{
+               Assert.assertEquals (42, value);
+               Assert.assertEquals (1, this.counter_);
+
+               ++ this.counter_;
+
+               synchronized (this.lock_)
+               {
+                 this.isComplete_ = true;
+                 this.lock_.notify ();
+               }
+             });
+
+      this.lock_.wait ();
+
+      Assert.assertEquals (2, this.counter_);
       Assert.assertTrue (this.isComplete_);
     }
   }

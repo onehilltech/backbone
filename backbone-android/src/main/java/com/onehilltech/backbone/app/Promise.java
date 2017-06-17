@@ -197,15 +197,33 @@ public class Promise <T>
   {
     this.onSettled_.add (onSettled);
 
-    if (!this.isPending ())
-      this.executor_.execute (onSettled::onSettled);
-
     ContinuationPromise <U> contPromise = new ContinuationPromise<> ();
     ContinuationExecutor <U> contExecutor = contPromise::evaluate;
 
     this.cont_.add (new Continuation (contPromise, contExecutor));
 
+    if (!this.isPending ())
+      this.executor_.execute (this::processSettled);
+
     return contPromise;
+  }
+
+  private void processSettled ()
+  {
+    if (this.isResolved ())
+    {
+      this.processCurrentResolve ();
+
+      for (Continuation continuation: this.cont_)
+        this.executor_.execute (() -> continuation.promise.processResolve (this.value_));
+    }
+    else
+    {
+      this.processCurrentRejection ();
+
+      for (Continuation continuation: this.cont_)
+        this.executor_.execute (()->continuation.promise.processRejection (this.rejection_));
+    }
   }
 
   @SuppressWarnings ("unchecked")
@@ -232,7 +250,7 @@ public class Promise <T>
             // Execute the resolved callback on a different thread of execution. We pass
             // a continuation executor to the callback just in case we must execute another
             // promise after this promise has been resolved.
-            processResolve ();
+            processCurrentResolve ();
           }
 
           @Override
@@ -253,7 +271,7 @@ public class Promise <T>
     });
   }
 
-  private void processResolve ()
+  private void processCurrentResolve ()
   {
     for (OnResolved <T, ?> onResolved: this.onResolved_)
     {
@@ -269,12 +287,18 @@ public class Promise <T>
       this.executor_.execute (onSettled::onSettled);
   }
 
+  protected void processResolve (T value)
+  {
+    this.value_ = value;
+    this.processCurrentResolve ();
+  }
+
   /**
    * Bubble the rejection.
    *
    * @param reason
    */
-  void processRejection (Throwable reason)
+  protected void processRejection (Throwable reason)
   {
     this.rejection_ = reason;
     this.processCurrentRejection ();
