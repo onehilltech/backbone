@@ -241,6 +241,13 @@ public class ResourceEndpoint <T>
           {
             settlement.resolve (response.body ());
           }
+          else if (response.code () == 304)
+          {
+            HttpError httpError = new HttpError ();
+            httpError.setStatusCode (304);
+
+            settlement.reject (httpError);
+          }
           else
           {
             try
