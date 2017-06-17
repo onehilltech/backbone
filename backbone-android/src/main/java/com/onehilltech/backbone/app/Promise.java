@@ -60,10 +60,17 @@ public class Promise <T>
     void onSettled ();
   }
 
+  public enum Status
+  {
+    Pending,
+    Resolved,
+    Rejected
+  };
+
   /// The resolved value for the promise.
   private T value_;
 
-  private boolean isPending_ = true;
+  private Status status_;
 
   /// The rejected value for the promise.
   protected Throwable rejection_;
@@ -101,7 +108,7 @@ public class Promise <T>
    */
   public Promise (PromiseExecutor<T> impl)
   {
-    this (impl, true, null, null);
+    this (impl, Status.Pending, null, null);
   }
 
   /**
@@ -111,7 +118,7 @@ public class Promise <T>
    */
   private Promise (T resolve)
   {
-    this (null, false, resolve, null);
+    this (null, Status.Resolved, resolve, null);
   }
 
   /**
@@ -121,7 +128,7 @@ public class Promise <T>
    */
   private Promise (Throwable reason)
   {
-    this (null, false, null, reason);
+    this (null, Status.Rejected, null, reason);
   }
 
   /**
@@ -131,18 +138,23 @@ public class Promise <T>
    * @param resolve
    * @param reason
    */
-  private Promise (PromiseExecutor<T> impl, boolean isPending, T resolve, Throwable reason)
+  private Promise (PromiseExecutor<T> impl, Status status, T resolve, Throwable reason)
   {
     this.impl_ = impl;
     this.value_ = resolve;
     this.rejection_ = reason;
-    this.isPending_ = isPending;
+    this.status_ = status;
     this.executor_ = DEFAULT_EXECUTOR;
 
     // If the promise is not pending, then we need to settle the promise. We also
     // need to settle the promise in the background so normal control can continue.
-    if (this.isPending_ && this.impl_ != null)
+    if (this.status_ == Status.Pending && this.impl_ != null)
       this.executor_.execute (this::runInBackground);
+  }
+
+  public Status getStatus ()
+  {
+    return this.status_;
   }
 
   /**
@@ -174,11 +186,11 @@ public class Promise <T>
 
     this.cont_.add (new Continuation (contPromise, contExecutor));
 
-    if (this.isResolved ())
+    if (this.status_ == Status.Resolved)
     {
       this.executor_.execute (() -> onResolved.onResolved (this.value_, promise -> contPromise.evaluate (promise)));
     }
-    else if (this.isRejected ())
+    else if (this.status_ == Status.Rejected)
     {
       if (onRejected != null)
         this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
@@ -205,7 +217,7 @@ public class Promise <T>
 
     this.cont_.add (new Continuation (contPromise, contExecutor));
 
-    if (!this.isPending ())
+    if (this.status_ != Status.Pending)
       this.executor_.execute (this::processSettled);
 
     return contPromise;
@@ -213,7 +225,7 @@ public class Promise <T>
 
   private void processSettled ()
   {
-    if (this.isResolved ())
+    if (this.status_ == Status.Resolved)
     {
       this.processCurrentResolve ();
 
@@ -244,11 +256,11 @@ public class Promise <T>
           public void resolve (T value)
           {
             // Check that the promise is still pending.
-            if (!isPending ())
+            if (status_ != Status.Pending)
               throw new IllegalStateException ("Promise already resolved/rejected");
 
             // Cache the result of the promise.
-            isPending_ = false;
+            status_ = Status.Resolved;
             value_ = value;
 
             // Execute the resolved callback on a different thread of execution. We pass
@@ -261,10 +273,10 @@ public class Promise <T>
           public void reject (Throwable reason)
           {
             // Check that the promise is still pending.
-            if (!isPending ())
+            if (status_ != Status.Pending)
               throw new IllegalStateException ("Promise already resolved/rejected");
 
-            isPending_ = false;
+            status_ = Status.Rejected;
             executor_.execute (() -> processRejection (reason));
           }
         });
@@ -295,6 +307,8 @@ public class Promise <T>
   protected void processResolve (T value)
   {
     this.value_ = value;
+    this.status_ = Status.Resolved;
+
     this.processCurrentResolve ();
   }
 
@@ -306,6 +320,8 @@ public class Promise <T>
   protected void processRejection (Throwable reason)
   {
     this.rejection_ = reason;
+    this.status_ = Status.Rejected;
+
     this.processCurrentRejection ();
   }
 
@@ -335,40 +351,10 @@ public class Promise <T>
 
     this.onRejected_.add (onRejected);
 
-    if (this.isRejected ())
+    if (this.status_ == Status.Rejected)
       this.executor_.execute (() -> onRejected.onRejected (this.rejection_));
 
     return this;
-  }
-
-  /**
-   * Check if the promise is pending.
-   *
-   * @return
-   */
-  public boolean isPending ()
-  {
-    return this.isPending_;
-  }
-
-  /**
-   * Test if the promise has been rejected.
-   *
-   * @return
-   */
-  public boolean isRejected ()
-  {
-    return this.rejection_ != null;
-  }
-
-  /**
-   * Test if the promise has been resolved, or fulfilled.
-   *
-   * @return
-   */
-  public boolean isResolved ()
-  {
-    return this.value_ != null;
   }
 
   /**

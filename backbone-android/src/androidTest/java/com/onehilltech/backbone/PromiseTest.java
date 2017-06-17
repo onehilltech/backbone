@@ -33,9 +33,7 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise <Integer> p = new Promise <> ((completion) -> completion.resolve (5));
-      Assert.assertTrue (p.isPending ());
-      Assert.assertFalse (p.isRejected ());
-      Assert.assertFalse (p.isResolved ());
+      Assert.assertEquals (Promise.Status.Pending, p.getStatus ());
 
       p.then ((value, cont) -> {
         synchronized (lock_)
@@ -50,10 +48,7 @@ public class PromiseTest
       this.lock_.wait (5000);
 
       Assert.assertTrue (this.isComplete_);
-
-      Assert.assertFalse (p.isPending ());
-      Assert.assertTrue (p.isResolved ());
-      Assert.assertFalse (p.isRejected ());
+      Assert.assertEquals (Promise.Status.Resolved, p.getStatus ());
     }
   }
 
@@ -77,10 +72,6 @@ public class PromiseTest
               });
 
       this.lock_.wait (5000);
-
-      Assert.assertFalse (p.isPending ());
-      Assert.assertFalse (p.isResolved ());
-      Assert.assertTrue (p.isRejected ());
 
       Assert.assertTrue (this.isComplete_);
     }
@@ -192,7 +183,6 @@ public class PromiseTest
       this.lock_.wait (5000);
 
       Assert.assertTrue (this.isComplete_);
-      Assert.assertFalse (p.isPending ());
     }
   }
 
@@ -278,20 +268,14 @@ public class PromiseTest
   public void testStaticResolve ()
   {
     Promise <Integer> p = Promise.resolve (7);
-
-    Assert.assertTrue (p.isResolved ());
-    Assert.assertFalse (p.isRejected ());
-    Assert.assertFalse (p.isPending ());
+    Assert.assertEquals (Promise.Status.Resolved, p.getStatus ());
   }
 
   @Test
   public void testStaticReject ()
   {
     Promise <?> p = Promise.reject (new IllegalStateException ());
-
-    Assert.assertTrue (p.isRejected ());
-    Assert.assertFalse (p.isResolved ());
-    Assert.assertFalse (p.isPending ());
+    Assert.assertEquals (Promise.Status.Rejected, p.getStatus ());
   }
 
   @Test
@@ -416,7 +400,7 @@ public class PromiseTest
                Assert.fail ();
                cont.with (Promise.resolve (10));
              })
-             .then ((value, cont) ->{
+             .then ((value, cont) -> {
                Assert.fail ();
                cont.with (Promise.resolve (40));
              })
@@ -424,9 +408,10 @@ public class PromiseTest
                Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
+               this.isComplete_ = true;
+
                synchronized (this.lock_)
                {
-                 this.isComplete_ = true;
                  this.lock_.notify ();
                }
              });
