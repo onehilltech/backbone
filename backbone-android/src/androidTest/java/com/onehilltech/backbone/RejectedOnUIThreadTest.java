@@ -30,7 +30,7 @@ public class RejectedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (new RejectedOnUIThread ((reason, cont) -> {
+             ._catch (new RejectedOnUIThread (reason -> {
                boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
                Assert.assertTrue (isUiThread);
 
@@ -39,6 +39,8 @@ public class RejectedOnUIThreadTest
                  this.complete_ = true;
                  this.lock_.notify ();
                }
+
+               return null;
              }));
 
       this.lock_.wait (5000);

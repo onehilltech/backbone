@@ -2,14 +2,14 @@ package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
 
-public class RejectedOnUIThread <U> extends OnUIThread
-    implements Promise.OnRejected <U>
+public class RejectedOnUIThread extends OnUIThread
+    implements Promise.OnRejected
 {
   private final Promise.OnRejected onRejected_;
 
-  private Throwable reason_;
+  private final ContinuationPromise cont_ = new ContinuationPromise ();
 
-  private ContinuationExecutor<U> cont_;
+  private Throwable reason_;
 
   public RejectedOnUIThread (@NonNull Promise.OnRejected onRejected)
   {
@@ -17,17 +17,23 @@ public class RejectedOnUIThread <U> extends OnUIThread
   }
 
   @Override
-  public void onRejected (Throwable reason, ContinuationExecutor<U> cont)
+  public Promise onRejected (Throwable reason)
   {
     this.reason_ = reason;
-    this.cont_ = cont;
 
     this.runOnUiThread ();
+
+    return this.cont_;
   }
 
   @Override
   protected void run ()
   {
-    this.onRejected_.onRejected (this.reason_, this.cont_);
+    Promise promise = this.onRejected_.onRejected (this.reason_);
+
+    if (promise != null)
+      this.cont_.settle (promise);
+    else
+      this.cont_.settle (Promise.resolve (null));
   }
 }

@@ -29,7 +29,7 @@ public class ResolvedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.resolve (10)
-             .then (new ResolvedOnUiThread<> ((value, cont) -> {
+             .then (new ResolvedOnUiThread<> (value -> {
                boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
                Assert.assertTrue (isUiThread);
 
@@ -38,6 +38,8 @@ public class ResolvedOnUIThreadTest
                  this.complete_ = true;
                  this.lock_.notify ();
                }
+
+               return null;
              }));
 
       this.lock_.wait (5000);

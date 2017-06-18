@@ -13,6 +13,9 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.onehilltech.backbone.app.Promise.rejected;
+import static com.onehilltech.backbone.app.Promise.resolved;
+
 @RunWith(AndroidJUnit4.class)
 public class PromiseTest
 {
@@ -32,18 +35,18 @@ public class PromiseTest
   {
     synchronized (this.lock_)
     {
-      Promise <Integer> p = new Promise <> ((completion) -> completion.resolve (5));
-      Assert.assertEquals (Promise.Status.Pending, p.getStatus ());
+      Promise <Integer> p = new Promise <> (settlement -> settlement.resolve (5));
 
-      p.then ((value, cont) -> {
-        synchronized (lock_)
-        {
-          this.isComplete_ = true;
+      p.then (
+          resolved (value -> {
+            this.isComplete_ = true;
+            Assert.assertEquals (5, (int)value);
 
-          Assert.assertEquals (5, (int)value);
-          lock_.notify ();
-        }
-      });
+            synchronized (lock_)
+            {
+              lock_.notify ();
+            }
+          }));
 
       this.lock_.wait (5000);
 
@@ -57,10 +60,10 @@ public class PromiseTest
   {
     synchronized (this.lock_)
     {
-      Promise <Integer> p = new Promise <> ((completion) -> completion.reject (new IllegalStateException ()));
+      Promise <Integer> p = new Promise <> (settlement -> settlement.reject (new IllegalStateException ()));
 
-      p.then ((value, cont) -> Promise.resolve (5),
-              (reason, cont) -> {
+      p.then (resolved (value -> Promise.resolve (5)),
+              rejected (reason -> {
                 this.isComplete_ = true;
 
                 synchronized (lock_)
@@ -69,7 +72,7 @@ public class PromiseTest
 
                   lock_.notify ();
                 }
-              });
+              }));
 
       this.lock_.wait (5000);
 
@@ -92,7 +95,7 @@ public class PromiseTest
       }
     });
 
-    Promise <Integer> p2 = new Promise<> ((settlement) -> {
+    Promise <Integer> p2 = new Promise<> (settlement -> {
       try
       {
         Thread.sleep (30);
@@ -104,7 +107,7 @@ public class PromiseTest
       }
     });
 
-    Promise <Integer> p3 = new Promise<> ((settlement) -> {
+    Promise <Integer> p3 = new Promise<> (settlement -> {
       try
       {
         Thread.sleep (30);
@@ -116,7 +119,7 @@ public class PromiseTest
       }
     });
 
-    Promise <Integer> p4 = new Promise<> ((settlement) -> {
+    Promise <Integer> p4 = new Promise<> (settlement -> {
       try
       {
         Thread.sleep (30);
@@ -128,29 +131,22 @@ public class PromiseTest
       }
     });
 
-    final Promise.OnResolved <Integer, Integer> doP2 = (n, cont) ->
-        cont.with (p2);
-
-    final Promise.OnResolved <Integer, Integer> doP3 = (n, cont) ->
-        cont.with (p3);
-
-    final Promise.OnResolved <Integer, Integer> doP4 = (n, cont) ->
-        cont.with (p4);
-
     synchronized (this.lock_)
     {
-      p1.then (doP2)
-        .then (doP3)
-        .then (doP4)
-        .then ((n, cont) -> {
+      p1.then (n -> p2)
+        .then (n -> p3)
+        .then (n -> p4)
+        .then (resolved (n -> {
+          Assert.assertEquals (4, (int)n);
+
           this.isComplete_ = true;
 
           synchronized (this.lock_)
           {
             this.lock_.notify ();
           }
-        })
-        ._catch ((reason, cont) -> Assert.fail ());
+        }))
+        ._catch (rejected (reason -> Assert.fail ()));
 
       this.lock_.wait ();
 
@@ -165,20 +161,22 @@ public class PromiseTest
     {
       Promise<List<Object>> p =
           Promise.all (
-              new Promise<Integer> ((settlement) -> settlement.resolve (10)),
-              new Promise<Integer> ((settlement) -> settlement.resolve (20)));
+              new Promise<Integer> (settlement -> settlement.resolve (10)),
+              new Promise<Integer> (settlement -> settlement.resolve (20)));
 
-      p.then ((value, cont) -> {
+      p.then (resolved (value -> {
         Assert.assertEquals (2, value.size ());
+
         Assert.assertEquals (10, value.get (0));
         Assert.assertEquals (20, value.get (1));
 
+        this.isComplete_ = true;
+
         synchronized (lock_)
         {
-          this.isComplete_ = true;
           lock_.notify ();
         }
-      });
+      }));
 
       this.lock_.wait (5000);
 
@@ -186,14 +184,13 @@ public class PromiseTest
     }
   }
 
-
   @Test
   public void testAllAsContinuation () throws Exception
   {
     synchronized (this.lock_)
     {
       // Create a LOT of promises.
-      ArrayList <Promise <?>> promises = new ArrayList<> ();
+      ArrayList<Promise <?>> promises = new ArrayList<> ();
 
       for (int i = 0; i < 7; ++ i)
       {
@@ -211,9 +208,6 @@ public class PromiseTest
 
         promises.add (p);
       }
-
-      Promise.OnResolved <Integer, List <Object>> doAll =
-          (n, cont) -> cont.with (Promise.all (promises));
 
       Promise <Integer> start = new Promise<> (settlement -> {
         try
@@ -239,12 +233,9 @@ public class PromiseTest
         }
       });
 
-      Promise.OnResolved <Integer, Integer> doMiddle = (n, cont) ->
-          cont.with (middle);
-
-      start.then (doMiddle)
-           .then (doAll)
-           .then ((result, cont) -> {
+      start.then (n -> middle)
+           .then (n -> Promise.all (promises))
+           .then (resolved (result -> {
              this.isComplete_ = true;
 
              Assert.assertEquals (promises.size (), result.size ());
@@ -256,7 +247,7 @@ public class PromiseTest
              {
                this.lock_.notify ();
              }
-           });
+           }));
 
       this.lock_.wait (5000);
 
@@ -282,7 +273,7 @@ public class PromiseTest
   public void testRejectOnly () throws Exception
   {
     Promise.reject (new IllegalStateException ())
-           ._catch ((reason, cont) -> {
+           ._catch (rejected (reason -> {
              this.isComplete_ = true;
              Assert.assertEquals (reason.getClass (), IllegalStateException.class);
 
@@ -290,7 +281,7 @@ public class PromiseTest
              {
                this.lock_.notify ();
              }
-           });
+           }));
 
     synchronized (this.lock_)
     {
@@ -305,21 +296,20 @@ public class PromiseTest
   {
     synchronized (this.lock_)
     {
-      Promise.OnResolved <String, Long> completion1 = (str, cont) -> {
+      Promise.OnResolved <String, Long> completion1 = str -> {
         Assert.assertEquals ("Hello, World", str);
-
-        cont.with (Promise.resolve (10L));
+        return Promise.resolve (10L);
       };
 
-      Promise.OnResolved <Long, Void> completion2 = (value, cont) -> {
+      Promise.OnResolved <Long, Void> completion2 = resolved (value -> {
         Assert.assertEquals (10L, (long)value);
+        this.isComplete_ = true;
 
         synchronized (this.lock_)
         {
-          this.isComplete_ = true;
           this.lock_.notify ();
         }
-      };
+      });
 
       Promise.resolve ("Hello, World")
              .then (completion1)
@@ -337,20 +327,43 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.resolve ("Hello, World")
-             .then ((str, cont) -> {
+             .then (str -> {
                Assert.assertEquals ("Hello, World", str);
-
-               cont.with (Promise.resolve (10));
+               return Promise.resolve (10);
              })
-             .then ((n, cont) -> {
-               Assert.assertEquals (10, n);
+             .then (resolved (n -> {
+               // n is of type long, but assertEquals has ambiguous calls.
+               Assert.assertEquals (10, (long)n);
 
                synchronized (this.lock_)
                {
                  this.isComplete_ = true;
                  this.lock_.notify ();
                }
-             });
+             }));
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testPromiseChainNoContinuation () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.resolve ("Hello, World")
+             .then (resolved (str -> Assert.assertEquals ("Hello, World", str)))
+             .then (resolved (n -> {
+               Assert.assertNull (n);
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             }));
 
       this.lock_.wait (5000);
 
@@ -364,47 +377,15 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ("GREAT"))
-             .then ((value, cont) -> {
+             .then (value -> {
                Assert.fail ();
-               cont.with (Promise.resolve (10));
+               return Promise.resolve (10);
              })
-             .then ((value, cont) ->{
+             .then (value -> {
                Assert.fail ();
-               cont.with (Promise.resolve (40));
+               return Promise.resolve (40);
              })
-             .then ((value, cont) -> {},
-                    (reason, cont) -> {
-                      Assert.assertEquals (IllegalStateException.class, reason.getClass ());
-                      Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
-
-                      synchronized (this.lock_)
-                      {
-                        this.isComplete_ = true;
-                        this.lock_.notify ();
-                      }
-                    });
-
-      this.lock_.wait (5000);
-
-      Assert.assertTrue (this.isComplete_);
-    }
-  }
-
-  @Test
-  public void testCatch () throws Exception
-  {
-    synchronized (this.lock_)
-    {
-      Promise.reject (new IllegalStateException ("GREAT"))
-             .then ((value, cont) -> {
-               Assert.fail ();
-               cont.with (Promise.resolve (10));
-             })
-             .then ((value, cont) -> {
-               Assert.fail ();
-               cont.with (Promise.resolve (40));
-             })
-             ._catch ((reason, cont) -> {
+             ._catch (rejected (reason -> {
                Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
@@ -414,7 +395,7 @@ public class PromiseTest
                {
                  this.lock_.notify ();
                }
-             });
+             }));
 
       this.lock_.wait (5000);
 
@@ -428,15 +409,15 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ("GREAT"))
-             .then ((value, cont) -> {
+             .then (value -> {
                Assert.fail ();
-               cont.with (Promise.resolve (10));
+               return Promise.resolve (10);
              })
-             .then ((value, cont) -> {
+             .then (value -> {
                Assert.fail ();
-               cont.with (Promise.resolve (40));
+               return Promise.resolve (40);
              })
-             ._catch ((reason, cont) -> {
+             ._catch (rejected (reason -> {
                Assert.assertEquals (IllegalStateException.class, reason.getClass ());
                Assert.assertEquals ("GREAT", reason.getLocalizedMessage ());
 
@@ -446,8 +427,8 @@ public class PromiseTest
                {
                  this.lock_.notify ();
                }
-             })
-             ._catch ((reason, cont) -> Assert.fail ());
+             }))
+             ._catch (rejected (reason -> Assert.fail ()));
 
       this.lock_.wait (5000);
 
@@ -457,26 +438,28 @@ public class PromiseTest
     }
   }
 
+
   @Test
   public void testThenAfterCatchWithContinuationValue () throws Exception
   {
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch ((reason, cont) -> {
+             ._catch (reason -> {
                Assert.assertEquals (IllegalStateException.class, reason.getClass ());
 
-               cont.with (Promise.resolve (10));
+               return Promise.resolve (10);
              })
-             .then ((value, cont) -> {
+             .then (resolved (value -> {
                Assert.assertEquals (10, value);
+
                this.isComplete_ = true;
 
                synchronized (this.lock_)
                {
                  this.lock_.notify ();
                }
-             });
+             }));
 
       this.lock_.wait (5000);
 
@@ -490,17 +473,19 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             .then ((value, cont) -> {
+             .then (resolved (value -> {
+
                Assert.assertNull (value);
+
                this.isComplete_ = true;
 
                synchronized (this.lock_)
                {
                  this.lock_.notify ();
                }
-             });
+             }));
 
-      this.lock_.wait (5000);
+      this.lock_.wait (500);
 
       Assert.assertFalse (this.isComplete_);
     }
@@ -512,8 +497,8 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch ((reason, cont) -> Assert.assertEquals (IllegalStateException.class, reason.getClass ()))
-             .then ((value, cont) -> {
+             ._catch (rejected (reason -> Assert.assertEquals (IllegalStateException.class, reason.getClass ())))
+             .then (resolved (value -> {
                Assert.assertNull (value);
 
                this.isComplete_ = true;
@@ -522,7 +507,7 @@ public class PromiseTest
                {
                  this.lock_.notify ();
                }
-             });
+             }));
 
       this.lock_.wait (5000);
 
@@ -536,8 +521,8 @@ public class PromiseTest
     synchronized (this.lock_)
     {
       Promise.resolve (50)
-             ._catch ((reason, cont) -> Assert.assertEquals (IllegalStateException.class, reason.getClass ()))
-             .then ((value, cont) -> {
+             ._catch (rejected (reason -> Assert.fail ()))
+             .then (resolved (value -> {
                Assert.assertNull (value);
 
                this.isComplete_ = true;
@@ -546,29 +531,54 @@ public class PromiseTest
                {
                  this.lock_.notify ();
                }
-             });
+             }));
 
       this.lock_.wait (5000);
 
       Assert.assertTrue (this.isComplete_);
     }
   }
+
   @Test
   public void testThenAfterCatch () throws Exception
   {
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch ((reason, cont) -> Assert.assertEquals (IllegalStateException.class, reason.getClass ()))
-             .then ((value, cont) -> {
+             ._catch (rejected (reason -> Assert.assertEquals (IllegalStateException.class, reason.getClass ())))
+             .then (resolved (value -> {
                Assert.assertNull (value);
+
                this.isComplete_ = true;
 
                synchronized (this.lock_)
                {
                  this.lock_.notify ();
                }
-             });
+             }));
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testRaceEmpty () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.race (new ArrayList<Promise<Integer>> ())
+             .then (resolved (value -> {
+               Assert.assertNull (value);
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             }));
 
       this.lock_.wait (5000);
 
@@ -618,17 +628,18 @@ public class PromiseTest
               })
           );
 
-      p.then ((value, cont) -> {
+      p.then (resolved (value -> {
         Assert.assertEquals (20, (int)value);
 
+        Assert.assertFalse (this.isComplete_);
         this.isComplete_ = true;
 
-        synchronized (lock_)
+        synchronized (this.lock_)
         {
-          lock_.notify ();
+          this.lock_.notify ();
         }
-      })
-      ._catch ((reason, cont) -> Assert.fail ());
+      }))
+      ._catch (rejected (reason -> Assert.fail ()));
 
       this.lock_.wait (5000);
 

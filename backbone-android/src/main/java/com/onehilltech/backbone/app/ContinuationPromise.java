@@ -1,5 +1,7 @@
 package com.onehilltech.backbone.app;
 
+import android.support.annotation.NonNull;
+
 class ContinuationPromise <T> extends Promise <T>
 {
   public ContinuationPromise ()
@@ -8,36 +10,58 @@ class ContinuationPromise <T> extends Promise <T>
   }
 
   @SuppressWarnings ("unchecked")
-  public void evaluate (Promise <T> promise)
+  public void settle (@NonNull Promise <T> promise)
   {
     // We need to execute this promise and pass the result to the executor
     // in this continuation executor. This allows us to chain the result.
-    promise.then (
-        (result, cont) -> {
-          for (OnResolved <T, ?> onResolved: onResolved_)
+    final OnResolved <T, ?> resolved = result -> {
+      for (OnResolved <T, ?> onResolved: onResolved_)
+      {
+        Promise <?> p = onResolved.onResolved (result);
+
+        if (p != null)
+        {
+          for (Continuation continuation : cont_)
+            continuation.promise.settle (p);
+        }
+        else
+        {
+          for (Continuation continuation : cont_)
+            continuation.promise.settle (Promise.resolve (null));
+        }
+      }
+
+      return null;
+    };
+
+    final OnRejected rejected = reason -> {
+      if (!this.onRejected_.isEmpty ())
+      {
+        for (OnRejected onRejected : this.onRejected_)
+        {
+          Promise <?> p = onRejected.onRejected (reason);
+
+          if (p != null)
           {
-            onResolved.onResolved (result, (p) -> {
-              for (Continuation continuation : cont_)
-                continuation.promise.evaluate (p);
-            });
-          }
-        },
-        (reason, cont) -> {
-          if (!this.onRejected_.isEmpty ())
-          {
-            for (OnRejected<T> onRejected : this.onRejected_)
-            {
-              onRejected.onRejected (reason, p -> {
-                for (Continuation continuation : cont_)
-                  continuation.promise.evaluate (p);
-              });
-            }
+            for (Continuation continuation : cont_)
+              continuation.promise.settle (p);
           }
           else
           {
             for (Continuation continuation : cont_)
-              continuation.promise.processRejection (reason);
+              continuation.promise.settle (Promise.resolve (null));
           }
-        });
+        }
+      }
+      else
+      {
+        for (Continuation continuation : cont_)
+          continuation.promise.processRejection (reason);
+      }
+
+      return null;
+    };
+
+    promise.then (resolved, rejected);
   }
 }

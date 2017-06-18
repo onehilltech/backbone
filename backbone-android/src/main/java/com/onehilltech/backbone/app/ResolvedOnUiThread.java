@@ -7,9 +7,9 @@ public class ResolvedOnUiThread <T, U> extends OnUIThread
 {
   private final Promise.OnResolved <T, U> onResolved_;
 
-  private T value_;
+  private final ContinuationPromise cont_ = new ContinuationPromise ();
 
-  private ContinuationExecutor<U> cont_;
+  private T value_;
 
   public ResolvedOnUiThread (@NonNull Promise.OnResolved <T, U> onResolved)
   {
@@ -17,17 +17,23 @@ public class ResolvedOnUiThread <T, U> extends OnUIThread
   }
 
   @Override
-  public void onResolved (T value, ContinuationExecutor<U> cont)
+  public Promise onResolved (T value)
   {
     this.value_ = value;
-    this.cont_ = cont;
 
     this.runOnUiThread ();
+
+    return this.cont_;
   }
 
   @Override
   protected void run ()
   {
-    this.onResolved_.onResolved (this.value_, this.cont_);
+    Promise <?> promise = this.onResolved_.onResolved (this.value_);
+
+    if (promise != null)
+      this.cont_.settle (promise);
+    else
+      this.cont_.settle (Promise.resolve (null));
   }
 }
