@@ -20,6 +20,9 @@ import com.raizlabs.android.dbflow.structure.ModelAdapter;
 
 import retrofit2.Retrofit;
 
+import static com.onehilltech.backbone.app.Promise.rejected;
+import static com.onehilltech.backbone.app.Promise.resolved;
+
 public class DataStore
 {
   private static final Property <String> _ID = PropertyFactory.from ("_id");
@@ -82,10 +85,9 @@ public class DataStore
    * Get a single model element by making a network request. If the server returns that
    * the resource has not been modified, then we load the resource from our local disk.
    *
-   * @param dataClass
-   * @param id
-   * @param <T>
-   * @return
+   * @param dataClass       Data model class
+   * @param id              Id of model
+   * @return                The model, or null
    */
   public <T extends DataModel> Promise <T> get (Class <T> dataClass, String id)
   {
@@ -100,15 +102,15 @@ public class DataStore
         ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
 
         endpoint.get (id)
-                .then ((r, cont) -> {
+                .then (resolved (r -> {
                   // Get the result, and save to the database.
                   T model = r.get (singular);
                   model.save ();
 
                   // Resolve the result.
                   settlement.resolve (model);
-                })
-                ._catch ((reason, cont) -> {
+                }))
+                ._catch (rejected (reason -> {
                   if (reason.getLocalizedMessage ().toLowerCase ().equals ("not modified"))
                   {
                     // The server said that the data has not been modified. This means we
@@ -116,14 +118,14 @@ public class DataStore
                     // to load the data from disk, and resolve our promise.
 
                     this.peek (dataClass, id)
-                        .then ((model, c) -> settlement.resolve (model))
-                        ._catch ((r, c) -> settlement.reject (reason));
+                        .then (resolved (settlement::resolve))
+                        ._catch (rejected (settlement::reject));
                   }
                   else
                   {
                     settlement.reject (reason);
                   }
-                });
+                }));
       }
       else
       {
@@ -137,10 +139,9 @@ public class DataStore
    * the model element already exist in the data store. If the element does not exist,
    * then a null value is returned via the Promise.
    *
-   * @param dataClass
-   * @param id
-   * @param <T>
-   * @return
+   * @param dataClass           Data model class
+   * @param id                  Id of model
+   * @return                    The model, or null
    */
   public <T extends DataModel> Promise <T> peek (Class <T> dataClass, String id)
   {
