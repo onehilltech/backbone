@@ -320,7 +320,7 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   private void settlePromise ()
   {
-    Log.d ("Promise", "Settling a promise");
+    Log.d ("Promise", "Settling a promise [thread=" + Thread.currentThread ().getId () + "]");
 
     this.executor_.execute (() -> {
       // Execute the promise. This method must call either resolve or reject
@@ -373,6 +373,8 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   private void processCurrentResolve ()
   {
+    Log.d ("Promise", "Processing the current resolve [thread=" + Thread.currentThread ().getId () + "]");
+
     for (OnResolved <T, ?> onResolved: this.onResolved_)
     {
       this.executor_.execute (() -> {
@@ -410,6 +412,8 @@ public class Promise <T>
    */
   protected void processRejection (Throwable reason)
   {
+    Log.d ("Promise", "Processing a rejection [thread=" + Thread.currentThread ().getId () + "]");
+
     this.rejection_ = reason;
     this.status_ = Status.Rejected;
 

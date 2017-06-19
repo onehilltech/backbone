@@ -1,6 +1,7 @@
 package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 class ContinuationPromise <T> extends Promise <T>
 {
@@ -12,6 +13,8 @@ class ContinuationPromise <T> extends Promise <T>
   @SuppressWarnings ("unchecked")
   public void settle (@NonNull Promise <T> promise)
   {
+    Log.d ("ContinuationPromise", "Settling a continuation promise [thread=" + Thread.currentThread ().getId () + "]");
+
     // We need to execute this promise and pass the result to the executor
     // in this continuation executor. This allows us to chain the result.
     final OnResolved <T, ?> resolved = result -> {
