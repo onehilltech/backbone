@@ -2,6 +2,7 @@ package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -319,6 +320,8 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   private void settlePromise ()
   {
+    Log.d ("Promise", "Setting promise");
+
     this.executor_.execute (() -> {
       // Execute the promise. This method must call either resolve or reject
       // before this method return. Failure to do so means the promise was not
