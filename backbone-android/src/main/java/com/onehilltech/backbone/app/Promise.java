@@ -216,7 +216,7 @@ public class Promise <T>
     // If the promise is not pending, then we need to settle the promise. We also
     // need to settle the promise in the background so normal control can continue.
     if (this.status_ == Status.Pending && this.impl_ != null)
-      this.executor_.execute (this::runInBackground);
+      this.settlePromise ();
   }
 
   public Status getStatus ()
@@ -317,7 +317,7 @@ public class Promise <T>
   }
 
   @SuppressWarnings ("unchecked")
-  private void runInBackground ()
+  private void settlePromise ()
   {
     this.executor_.execute (() -> {
       // Execute the promise. This method must call either resolve or reject
@@ -356,13 +356,13 @@ public class Promise <T>
               //throw new IllegalStateException ("Promise already resolved/rejected");
 
             status_ = Status.Rejected;
-            executor_.execute (() -> processRejection (reason));
+            processRejection (reason);
           }
         });
       }
       catch (Exception e)
       {
-        this.executor_.execute (() -> processRejection (e));
+        this.processRejection (e);
       }
     });
   }
@@ -445,7 +445,7 @@ public class Promise <T>
       // We did not handle the rejection as this level. So, let's pass the
       // rejection to the next level in an attempt to find a handler.
       for (Continuation cont : this.cont_)
-        this.executor_.execute (() -> cont.promise.processRejection (this.rejection_));
+        cont.promise.processRejection (this.rejection_);
     }
   }
 
