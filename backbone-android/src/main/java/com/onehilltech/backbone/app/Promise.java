@@ -2,15 +2,16 @@ package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @class Promise
@@ -130,10 +131,20 @@ public class Promise <T>
   /// The rejected value for the promise.
   protected Throwable rejection_;
 
-  private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool (r -> {
-    Log.d ("Promise", "Creating a new thread");
-    return new Thread (r);
-  });
+  private static class PromiseThreadFactory implements ThreadFactory
+  {
+    private AtomicInteger counter_ = new AtomicInteger (0);
+
+    @Override
+    public Thread newThread (@NonNull Runnable runnable)
+    {
+      String threadName = "PromiseThread-" + this.counter_.getAndIncrement ();
+      return new Thread (runnable, threadName);
+    }
+  }
+
+  private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool (new PromiseThreadFactory ());
+
 
   private final PromiseExecutor<T> impl_;
 
