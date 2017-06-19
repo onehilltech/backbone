@@ -144,7 +144,7 @@ public class Promise <T>
     }
   }
 
-  private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool (new PromiseThreadFactory ());
+  private static final ExecutorService DEFAULT_EXECUTOR;
 
 
   private final PromiseExecutor<T> impl_;
@@ -320,7 +320,7 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   private void settlePromise ()
   {
-    Log.d ("Promise", "Setting promise");
+    Log.d ("Promise", "Settling a promise");
 
     this.executor_.execute (() -> {
       // Execute the promise. This method must call either resolve or reject
@@ -610,5 +610,11 @@ public class Promise <T>
       for (Promise <U> promise: promises)
         promise.then (onResolved, onRejected);
     });
+  }
+
+  static
+  {
+    int numThreads = Runtime.getRuntime ().availableProcessors () + 1;
+    DEFAULT_EXECUTOR = Executors.newFixedThreadPool (numThreads, new PromiseThreadFactory ());
   }
 }
