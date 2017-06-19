@@ -2,16 +2,21 @@ package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
 
-public class ResolvedOnUiThread <T, U> extends OnUIThread
+public class ResolvedOnUIThread <T, U> extends OnUIThread
     implements Promise.OnResolved <T, U>
 {
+  public static <T, U> Promise.OnResolved <T, U> resolveOnUiThread (Promise.OnResolved <T, U> onResolved)
+  {
+    return new ResolvedOnUIThread<> (onResolved);
+  }
+
   private final Promise.OnResolved <T, U> onResolved_;
 
   private final ContinuationPromise cont_ = new ContinuationPromise ();
 
   private T value_;
 
-  public ResolvedOnUiThread (@NonNull Promise.OnResolved <T, U> onResolved)
+  private ResolvedOnUIThread (@NonNull Promise.OnResolved <T, U> onResolved)
   {
     this.onResolved_ = onResolved;
   }

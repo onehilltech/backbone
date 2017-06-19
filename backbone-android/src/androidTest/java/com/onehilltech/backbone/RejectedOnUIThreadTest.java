@@ -4,12 +4,13 @@ import android.os.Looper;
 import android.support.test.runner.AndroidJUnit4;
 
 import com.onehilltech.backbone.app.Promise;
-import com.onehilltech.backbone.app.RejectedOnUIThread;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import static com.onehilltech.backbone.app.RejectedOnUIThread.rejectOnUiThread;
 
 @RunWith(AndroidJUnit4.class)
 public class RejectedOnUIThreadTest
@@ -30,7 +31,7 @@ public class RejectedOnUIThreadTest
     synchronized (this.lock_)
     {
       Promise.reject (new IllegalStateException ())
-             ._catch (new RejectedOnUIThread (reason -> {
+             ._catch (rejectOnUiThread (reason -> {
                boolean isUiThread = Looper.getMainLooper ().getThread ().equals (Thread.currentThread ());
                Assert.assertTrue (isUiThread);
 

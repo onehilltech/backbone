@@ -5,13 +5,18 @@ import android.support.annotation.NonNull;
 public class RejectedOnUIThread extends OnUIThread
     implements Promise.OnRejected
 {
+  public static Promise.OnRejected rejectOnUiThread (Promise.OnRejected onRejected)
+  {
+    return new RejectedOnUIThread (onRejected);
+  }
+
   private final Promise.OnRejected onRejected_;
 
   private final ContinuationPromise cont_ = new ContinuationPromise ();
 
   private Throwable reason_;
 
-  public RejectedOnUIThread (@NonNull Promise.OnRejected onRejected)
+  private RejectedOnUIThread (@NonNull Promise.OnRejected onRejected)
   {
     this.onRejected_ = onRejected;
   }
