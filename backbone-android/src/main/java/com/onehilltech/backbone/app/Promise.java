@@ -2,6 +2,7 @@ package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -129,7 +130,10 @@ public class Promise <T>
   /// The rejected value for the promise.
   protected Throwable rejection_;
 
-  private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool ();
+  private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool (r -> {
+    Log.d ("Promise", "Creating a new thread");
+    return new Thread (r);
+  });
 
   private final PromiseExecutor<T> impl_;
 
