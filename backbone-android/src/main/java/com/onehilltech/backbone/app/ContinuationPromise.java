@@ -15,11 +15,16 @@ class ContinuationPromise <T> extends Promise <T>
     if (promise != null)
       promise.then (resolved (this::onResolve), rejected (this::onReject));
     else
-      onResolve (null);
+      this.onResolve (null);
+  }
+
+  public void continueWithNull ()
+  {
+    this.onResolve (null);
   }
 
   public void continueWith (Throwable t)
   {
-    onReject (t);
+    this.onReject (t);
   }
 }

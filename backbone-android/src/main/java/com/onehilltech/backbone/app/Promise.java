@@ -242,21 +242,28 @@ public class Promise <T>
   {
     ContinuationPromise continuation = new ContinuationPromise<> ();
 
-    if (this.status_ == Status.Resolved && onResolved != null)
+    if (this.status_ == Status.Resolved)
     {
       // The promise is already resolved. If the client has provided a handler,
       // then we need to invoke it and determine how we are to proceed. Otherwise,
       // we need to continue down the chain with a new start (i.e., a null value).
 
       this.executor_.execute (() -> {
-        try
+        if (onResolved != null)
         {
-          Promise promise = onResolved.onResolved (this.value_);
-          continuation.continueWith (promise);
+          try
+          {
+            Promise promise = onResolved.onResolved (this.value_);
+            continuation.continueWith (promise);
+          }
+          catch (Exception e)
+          {
+            continuation.continueWith (e);
+          }
         }
-        catch (Exception e)
+        else
         {
-          continuation.continueWith (e);
+          continuation.continueWithNull ();
         }
       });
     }
