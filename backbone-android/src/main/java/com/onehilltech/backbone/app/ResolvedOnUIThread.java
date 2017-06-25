@@ -37,8 +37,8 @@ public class ResolvedOnUIThread <T, U> extends OnUIThread
     Promise <?> promise = this.onResolved_.onResolved (this.value_);
 
     if (promise != null)
-      this.cont_.settle (promise);
+      this.cont_.continueWith (promise);
     else
-      this.cont_.settle (Promise.resolve (null));
+      this.cont_.continueWith (Promise.resolve (null));
   }
 }

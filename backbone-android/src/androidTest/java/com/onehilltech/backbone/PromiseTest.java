@@ -586,7 +586,7 @@ public class PromiseTest
     }
   }
 
-  @Test
+  //@Test
   public void testRace () throws Exception
   {
     synchronized (this.lock_)
@@ -644,6 +644,33 @@ public class PromiseTest
       this.lock_.wait (5000);
 
       Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  //@Test
+  public void testLongTest () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise <Integer> p = new Promise <> (settlement -> settlement.resolve (5));
+
+      p.then (
+          resolved (value -> {
+            this.isComplete_ = true;
+            Assert.assertEquals (5, (int)value);
+
+            synchronized (lock_)
+            {
+              lock_.notify ();
+            }
+          }));
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+      Assert.assertEquals (Promise.Status.Resolved, p.getStatus ());
+
+      this.lock_.wait ();
     }
   }
 }

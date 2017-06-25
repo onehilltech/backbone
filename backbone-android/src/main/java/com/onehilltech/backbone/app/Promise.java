@@ -2,7 +2,6 @@ package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -146,28 +145,25 @@ public class Promise <T>
 
   private static final ExecutorService DEFAULT_EXECUTOR;
 
-
   private final PromiseExecutor<T> impl_;
 
   private final Executor executor_;
 
-  protected final ArrayList <OnResolved <T, ?>> onResolved_ = new ArrayList<> ();
-
-  protected final ArrayList <OnRejected> onRejected_ = new ArrayList<> ();
-
-  protected static class Continuation
+  private static class PendingEntry <T>
   {
-    Continuation (ContinuationPromise promise, ContinuationExecutor executor)
-    {
-      this.promise = promise;
-      this.executor = executor;
-    }
+    final ContinuationPromise <?> cont;
+    final OnResolved <T, ?> onResolved;
+    final OnRejected onRejected;
 
-    final ContinuationPromise promise;
-    final ContinuationExecutor executor;
+    PendingEntry (ContinuationPromise <?> cont, OnResolved <T, ?> onResolved, OnRejected onRejected)
+    {
+      this.cont = cont;
+      this.onResolved = onResolved;
+      this.onRejected = onRejected;
+    }
   }
 
-  protected final ArrayList <Continuation> cont_ = new ArrayList<> ();
+  private final ArrayList <PendingEntry <T>> pendingEntries_ = new ArrayList<> ();
 
   /**
    * The executor for the Promise.
@@ -214,8 +210,8 @@ public class Promise <T>
     this.status_ = status;
     this.executor_ = DEFAULT_EXECUTOR;
 
-    // If the promise is not pending, then we need to settle the promise. We also
-    // need to settle the promise in the background so normal control can continue.
+    // If the promise is not pending, then we need to continueWith the promise. We also
+    // need to continueWith the promise in the background so normal control can continue.
     if (this.status_ == Status.Pending && this.impl_ != null)
       this.settlePromise ();
   }
@@ -244,84 +240,65 @@ public class Promise <T>
   @SuppressWarnings ("unchecked")
   public <U> Promise <U> then (OnResolved <T, U> onResolved, @Nullable OnRejected onRejected)
   {
-    if (onResolved != null)
-      this.onResolved_.add (onResolved);
+    ContinuationPromise continuation = new ContinuationPromise<> ();
 
-    if (onRejected != null)
-      this.onRejected_.add (onRejected);
-
-    ContinuationPromise <U> contPromise = new ContinuationPromise<> ();
-    ContinuationExecutor <U> contExecutor = contPromise::settle;
-
-    this.cont_.add (new Continuation (contPromise, contExecutor));
-
-    if (this.status_ == Status.Resolved)
+    if (this.status_ == Status.Resolved && onResolved != null)
     {
       // The promise is already resolved. If the client has provided a handler,
       // then we need to invoke it and determine how we are to proceed. Otherwise,
       // we need to continue down the chain with a new start (i.e., a null value).
 
-      if (onResolved != null)
-      {
-        this.executor_.execute (() -> {
-          try
-          {
-            Promise promise = onResolved.onResolved (this.value_);
-
-            if (promise != null)
-              contPromise.settle (promise);
-            else
-              contPromise.settle (Promise.resolve (null));
-          }
-          catch (Exception e)
-          {
-            contPromise.processRejection (e);
-          }
-        });
-      }
-      else
-      {
-        this.executor_.execute (() -> contPromise.settle (Promise.resolve (null)));
-      }
+      this.executor_.execute (() -> {
+        try
+        {
+          Promise promise = onResolved.onResolved (this.value_);
+          continuation.continueWith (promise);
+        }
+        catch (Exception e)
+        {
+          continuation.continueWith (e);
+        }
+      });
     }
     else if (this.status_ == Status.Rejected)
     {
-      if (onRejected != null)
-      {
-        // We are handling the rejection as this level. If the client returns a Promise,
-        // then we are going to use that value. Otherwise,
-        // let's start the next chain on fresh start.
-        this.executor_.execute (() -> {
+      // We are handling the rejection as this level. Either we are going to handle
+      // the rejection as this level via a onRejected handler, or we are going to
+      // pass the rejection to the next level.
+      this.executor_.execute (() -> {
+        if (onRejected != null)
+        {
           try
           {
             Promise promise = onRejected.onRejected (this.rejection_);
-
-            if (promise != null)
-              contPromise.settle (promise);
-            else
-              contPromise.settle (Promise.resolve (null));
+            continuation.continueWith (promise);
           }
           catch (Exception e)
           {
-            contPromise.processRejection (e);
+            continuation.continueWith (e);
           }
-        });
-      }
-      else
-      {
-        // Pass the rejection up a single level.
-        contPromise.processRejection (this.rejection_);
-      }
+        }
+        else
+        {
+          continuation.continueWith (this.rejection_);
+        }
+      });
+    }
+    else
+    {
+      // The promise is still pending. We need to add the resolved and rejected
+      // handlers to the waiting list along with the continuation promise returned
+      // from this call. This ensure the promise from the resolve/rejected handlers
+      // is passed to the correct continuation promise.
+      this.pendingEntries_.add (new PendingEntry<> (continuation, onResolved, onRejected));
     }
 
-    return contPromise;
+    return continuation;
   }
 
   @SuppressWarnings ("unchecked")
   private void settlePromise ()
   {
-    Log.d ("Promise", "Settling a promise [thread=" + Thread.currentThread ().getId () + "]");
-
     this.executor_.execute (() -> {
       // Execute the promise. This method must call either resolve or reject
       // before this method return. Failure to do so means the promise was not
@@ -335,18 +312,9 @@ public class Promise <T>
           {
             // Check that the promise is still pending.
             if (status_ != Status.Pending)
-              return;
+              throw new IllegalStateException ("Promise must be pending to resolve");
 
-              //throw new IllegalStateException ("Promise already resolved/rejected");
-
-            // Cache the result of the promise.
-            status_ = Status.Resolved;
-            value_ = value;
-
-            // Execute the resolved callback on a different thread of execution. We pass
-            // a continuation executor to the callback just in case we must execute another
-            // promise after this promise has been resolved.
-            processCurrentResolve ();
+            onResolve (value);
           }
 
           @Override
@@ -354,55 +322,46 @@ public class Promise <T>
           {
             // Check that the promise is still pending.
             if (status_ != Status.Pending)
-              return;
+              throw new IllegalStateException ("Promise must be pending to reject");
 
-              //throw new IllegalStateException ("Promise already resolved/rejected");
-
-            status_ = Status.Rejected;
-            processRejection (reason);
+            onReject (reason);
           }
         });
       }
       catch (Exception e)
       {
-        this.processRejection (e);
+        this.onReject (e);
       }
     });
   }
 
   @SuppressWarnings ("unchecked")
-  private void processCurrentResolve ()
+  protected void onResolve (T value)
   {
-    Log.d ("Promise", "Processing the current resolve [thread=" + Thread.currentThread ().getId () + "]");
+    // Cache the result of the promise.
+    this.status_ = Status.Resolved;
+    this.value_ = value;
 
-    for (OnResolved <T, ?> onResolved: this.onResolved_)
+    if (this.pendingEntries_.isEmpty ())
+      return;
+
+    for (PendingEntry <T> entry: this.pendingEntries_)
     {
       this.executor_.execute (() -> {
         try
         {
-          Promise promise = onResolved.onResolved (this.value_);
-
-          if (promise != null)
-          {
-            for (Continuation cont : this.cont_)
-              cont.promise.settle (promise);
-          }
-          else
-          {
-            for (Continuation cont : this.cont_)
-              cont.promise.settle (Promise.resolve (null));
-          }
+          Promise promise = entry.onResolved.onResolved (this.value_);
+          entry.cont.continueWith (promise);
         }
         catch (Exception e)
         {
-          for (Continuation cont : this.cont_)
-            cont.promise.processRejection (e);
+          entry.cont.continueWith (e);
         }
       });
     }
 
-    for (Continuation continuation: this.cont_)
-      this.executor_.execute (() -> continuation.promise.settle (Promise.resolve (this.value_)));
+    // Clear the list of pending entries.
+    this.pendingEntries_.clear ();
   }
 
   /**
@@ -410,50 +369,39 @@ public class Promise <T>
    *
    * @param reason
    */
-  protected void processRejection (Throwable reason)
+  @SuppressWarnings ("unchecked")
+  protected void onReject (Throwable reason)
   {
-    Log.d ("Promise", "Processing a rejection [thread=" + Thread.currentThread ().getId () + "]");
-
     this.rejection_ = reason;
     this.status_ = Status.Rejected;
 
-    this.processCurrentRejection ();
-  }
+    if (this.pendingEntries_.isEmpty ())
+      return;
 
-  /**
-   * Bubble the current rejection.
-   */
-  private void processCurrentRejection ()
-  {
-    // If the rejection was set here, then we can stop bubbling the rejection
-    // at this promise. Otherwise, we need to continue to the next promise
-    // in the chain.
-
-    for (OnRejected onRejected: this.onRejected_)
+    for (PendingEntry <T> entry: this.pendingEntries_)
     {
       this.executor_.execute (() -> {
-        Promise <?> promise = onRejected.onRejected (this.rejection_);
-
-        if (promise != null)
+        try
         {
-          for (Continuation cont : this.cont_)
-            cont.promise.settle (promise);
+          if (entry.onRejected != null)
+          {
+            Promise promise = entry.onRejected.onRejected (this.rejection_);
+            entry.cont.continueWith (promise);
+          }
+          else
+          {
+            entry.cont.continueWith (this.rejection_);
+          }
         }
-        else
+        catch (Exception e)
         {
-          for (Continuation cont : this.cont_)
-            cont.promise.settle (Promise.resolve (null));
+          entry.cont.continueWith (e);
         }
       });
     }
 
-    if (this.onRejected_.isEmpty ())
-    {
-      // We did not handle the rejection as this level. So, let's pass the
-      // rejection to the next level in an attempt to find a handler.
-      for (Continuation cont : this.cont_)
-        cont.promise.processRejection (this.rejection_);
-    }
+    // Clear the list of pending entries.
+    this.pendingEntries_.clear ();
   }
 
   public <U> Promise <U> _catch (@NonNull OnRejected onRejected)
@@ -589,7 +537,7 @@ public class Promise <T>
           }
           catch (Exception e)
           {
-            e.printStackTrace ();
+            // Do nothing since we are not the first to finish
           }
         }
       });
@@ -605,7 +553,6 @@ public class Promise <T>
           }
           catch (Exception e)
           {
-            e.printStackTrace ();
             // Do nothing since we are not the first to finish
           }
         }
@@ -618,7 +565,7 @@ public class Promise <T>
 
   static
   {
-    int numThreads = Runtime.getRuntime ().availableProcessors () + 1;
+    int numThreads = Runtime.getRuntime ().availableProcessors ();
     DEFAULT_EXECUTOR = Executors.newFixedThreadPool (numThreads, new PromiseThreadFactory ());
   }
 }
