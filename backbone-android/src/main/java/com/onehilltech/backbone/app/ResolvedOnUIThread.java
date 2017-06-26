@@ -2,6 +2,12 @@ package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
 
+
+/**
+ * @class ResolvedOnUIThread
+ *
+ * Run the OnResolved handler on the UI thread.
+ */
 public class ResolvedOnUIThread <T, U> extends OnUIThread
     implements Promise.OnResolved <T, U>
 {

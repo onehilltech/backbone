@@ -2,6 +2,11 @@ package com.onehilltech.backbone.app;
 
 import android.support.annotation.NonNull;
 
+/**
+ * @class RejectedOnUIThread
+ *
+ * Run the OnRejected handler on the UI thread.
+ */
 public class RejectedOnUIThread extends OnUIThread
     implements Promise.OnRejected
 {
