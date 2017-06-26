@@ -5,7 +5,7 @@ import android.support.annotation.NonNull;
 /**
  * @class RejectedOnUIThread
  *
- * Run the OnRejected handler on the UI thread.
+ * Proxy that run the OnRejected handler on the UI thread.
  */
 public class RejectedOnUIThread extends OnUIThread
     implements Promise.OnRejected
@@ -22,12 +22,20 @@ public class RejectedOnUIThread extends OnUIThread
     return new RejectedOnUIThread (onRejected);
   }
 
+  /// The real OnRejected handler.
   private final Promise.OnRejected onRejected_;
 
+  /// Mock continuation promise.
   private final ContinuationPromise cont_ = new ContinuationPromise ();
 
+  /// The reason for the failure.
   private Throwable reason_;
 
+  /**
+   * Initializing constructor.
+   *
+   * @param onRejected
+   */
   private RejectedOnUIThread (@NonNull Promise.OnRejected onRejected)
   {
     this.onRejected_ = onRejected;
@@ -43,14 +51,18 @@ public class RejectedOnUIThread extends OnUIThread
     return this.cont_;
   }
 
+  @SuppressWarnings ("unchecked")
   @Override
   protected void run ()
   {
-    Promise promise = this.onRejected_.onRejected (this.reason_);
-
-    if (promise != null)
+    try
+    {
+      Promise promise = this.onRejected_.onRejected (this.reason_);
       this.cont_.continueWith (promise);
-    else
-      this.cont_.continueWith (Promise.resolve (null));
+    }
+    catch (Exception e)
+    {
+      this.cont_.continueWith (e);
+    }
   }
 }
