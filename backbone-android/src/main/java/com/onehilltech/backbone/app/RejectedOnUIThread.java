@@ -10,6 +10,13 @@ import android.support.annotation.NonNull;
 public class RejectedOnUIThread extends OnUIThread
     implements Promise.OnRejected
 {
+  /**
+   * Factory method that supports using a lambda function. It also removes the need
+   * for using the new method so its usage in the Promise statements reads more fluid.
+   *
+   * @param onRejected
+   * @return
+   */
   public static Promise.OnRejected rejectOnUiThread (Promise.OnRejected onRejected)
   {
     return new RejectedOnUIThread (onRejected);

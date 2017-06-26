@@ -11,6 +11,15 @@ import android.support.annotation.NonNull;
 public class ResolvedOnUIThread <T, U> extends OnUIThread
     implements Promise.OnResolved <T, U>
 {
+  /**
+   * Factory method that supports using a lambda function. It also removes the need
+   * for using the new method so its usage in the Promise statements reads more fluid.
+   *
+   * @param onResolved
+   * @param <T>
+   * @param <U>
+   * @return
+   */
   public static <T, U> Promise.OnResolved <T, U> resolveOnUiThread (Promise.OnResolved <T, U> onResolved)
   {
     return new ResolvedOnUIThread<> (onResolved);
