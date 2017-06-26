@@ -15,6 +15,7 @@ import java.util.List;
 
 import static com.onehilltech.backbone.app.Promise.rejected;
 import static com.onehilltech.backbone.app.Promise.resolved;
+import static com.onehilltech.backbone.app.Promise.ignoreReason;
 
 @RunWith(AndroidJUnit4.class)
 public class PromiseTest
@@ -586,7 +587,7 @@ public class PromiseTest
     }
   }
 
-  //@Test
+  @Test
   public void testRace () throws Exception
   {
     synchronized (this.lock_)
@@ -640,6 +641,30 @@ public class PromiseTest
         }
       }))
       ._catch (rejected (reason -> Assert.fail ()));
+
+      this.lock_.wait (5000);
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+  @Test
+  public void testResolveCatchIgnoreThen () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      Promise.resolve (5)
+             ._catch (ignoreReason)
+             .then (resolved (reason -> {
+               Assert.assertNull (reason);
+
+               this.isComplete_ = true;
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             }));
 
       this.lock_.wait (5000);
 

@@ -373,8 +373,15 @@ public class Promise <T>
       this.executor_.execute (() -> {
         try
         {
-          Promise promise = entry.onResolved.onResolved (this.value_);
-          entry.cont.continueWith (promise);
+          if (entry.onResolved != null)
+          {
+            Promise promise = entry.onResolved.onResolved (this.value_);
+            entry.cont.continueWith (promise);
+          }
+          else
+          {
+            entry.cont.continueWithNull ();
+          }
         }
         catch (Exception e)
         {
