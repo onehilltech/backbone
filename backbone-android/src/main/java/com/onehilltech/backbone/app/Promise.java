@@ -159,7 +159,7 @@ public class Promise <T>
     }
   }
 
-  private static final ExecutorService DEFAULT_EXECUTOR;
+  private static final ExecutorService DEFAULT_EXECUTOR = Executors.newCachedThreadPool (new PromiseThreadFactory ());
 
   private final PromiseExecutor<T> impl_;
 
@@ -584,11 +584,5 @@ public class Promise <T>
       for (Promise <U> promise: promises)
         promise.then (onResolved, onRejected);
     });
-  }
-
-  static
-  {
-    int numThreads = Runtime.getRuntime ().availableProcessors ();
-    DEFAULT_EXECUTOR = Executors.newFixedThreadPool (numThreads, new PromiseThreadFactory ());
   }
 }
