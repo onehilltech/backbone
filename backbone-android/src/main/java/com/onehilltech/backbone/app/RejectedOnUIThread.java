@@ -3,8 +3,6 @@ package com.onehilltech.backbone.app;
 import android.support.annotation.NonNull;
 
 /**
- * @class RejectedOnUIThread
- *
  * Proxy that run the OnRejected handler on the UI thread.
  */
 public class RejectedOnUIThread extends OnUIThread
@@ -14,8 +12,8 @@ public class RejectedOnUIThread extends OnUIThread
    * Factory method that supports using a lambda function. It also removes the need
    * for using the new method so its usage in the Promise statements reads more fluid.
    *
-   * @param onRejected
-   * @return
+   * @param onRejected      The real handler
+   * @return                Promise.OnRejected object
    */
   public static Promise.OnRejected rejectOnUiThread (Promise.OnRejected onRejected)
   {
@@ -34,7 +32,7 @@ public class RejectedOnUIThread extends OnUIThread
   /**
    * Initializing constructor.
    *
-   * @param onRejected
+   * @param onRejected        The real object
    */
   private RejectedOnUIThread (@NonNull Promise.OnRejected onRejected)
   {
