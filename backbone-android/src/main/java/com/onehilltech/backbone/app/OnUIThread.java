@@ -20,17 +20,32 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 
+/**
+ * Base class for running a handler of the UI thread. The base class make it where
+ * we do not have to have separate messages types of each kind of handler. Instead,
+ * the subclass just needs to override the run() method, which is always run on the
+ * UI thread.
+ */
 public abstract class OnUIThread
 {
+  /**
+   * Method that must be implemented to run on the UI thread.
+   */
   protected abstract void run ();
 
+  /**
+   * Run the handler on the UI thread.
+   */
   protected void runOnUiThread ()
   {
     Message message = uiHandler_.obtainMessage (0, this);
     message.sendToTarget ();
   }
 
-  protected static final Handler uiHandler_ = new Handler (Looper.getMainLooper ()) {
+  /**
+   * Implementation of the Looper that runs the handler on the UI thread.
+   */
+  private static final Handler uiHandler_ = new Handler (Looper.getMainLooper ()) {
     @Override
     public void handleMessage (Message msg)
     {
