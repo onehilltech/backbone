@@ -36,6 +36,7 @@ public class ResolvedOnUIThread <T, U> extends OnUIThread
     this.onResolved_ = onResolved;
   }
 
+  @SuppressWarnings ("unchecked")
   @Override
   public Promise onResolved (T value)
   {
@@ -46,14 +47,18 @@ public class ResolvedOnUIThread <T, U> extends OnUIThread
     return this.cont_;
   }
 
+  @SuppressWarnings ("unchecked")
   @Override
   protected void run ()
   {
-    Promise <?> promise = this.onResolved_.onResolved (this.value_);
-
-    if (promise != null)
+    try
+    {
+      Promise<?> promise = this.onResolved_.onResolved (this.value_);
       this.cont_.continueWith (promise);
-    else
-      this.cont_.continueWith (Promise.resolve (null));
+    }
+    catch (Exception e)
+    {
+      this.cont_.continueWith (e);
+    }
   }
 }
