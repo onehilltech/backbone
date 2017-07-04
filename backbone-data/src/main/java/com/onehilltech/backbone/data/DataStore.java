@@ -6,9 +6,9 @@ import android.content.Loader;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 
-import com.onehilltech.backbone.app.Promise;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
 import com.onehilltech.backbone.http.retrofit.ResourceEndpoint;
+import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
@@ -20,8 +20,8 @@ import com.raizlabs.android.dbflow.structure.ModelAdapter;
 
 import retrofit2.Retrofit;
 
-import static com.onehilltech.backbone.app.Promise.rejected;
-import static com.onehilltech.backbone.app.Promise.resolved;
+import static com.onehilltech.promises.Promise.rejected;
+import static com.onehilltech.promises.Promise.resolved;
 
 public class DataStore
 {

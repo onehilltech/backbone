@@ -45,7 +45,7 @@ dependencies {
     compile project (':backbone-http')
     compile project (':backbone-android')
 
-    compile 'com.github.onehilltech.concurrent:concurrent-android:0.8.1'
+    compile 'com.onehilltech.promises:promises-android:0.2.0'
 
     compile 'com.squareup.retrofit2:retrofit:2.1.0'
 

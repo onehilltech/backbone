@@ -1,8 +1,8 @@
 package com.onehilltech.backbone.http.retrofit;
 
-import com.onehilltech.backbone.app.Promise;
 import com.onehilltech.backbone.http.HttpError;
 import com.onehilltech.backbone.http.Resource;
+import com.onehilltech.promises.Promise;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
