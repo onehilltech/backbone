@@ -11,6 +11,7 @@ import com.google.gson.GsonBuilder;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
 import com.onehilltech.backbone.http.HttpError;
 import com.onehilltech.backbone.http.Resource;
+import com.onehilltech.backbone.http.retrofit.ResourceCacheInterceptor;
 import com.onehilltech.backbone.http.retrofit.ResourceEndpoint;
 import com.onehilltech.backbone.http.retrofit.gson.GsonResourceManager;
 import com.onehilltech.backbone.http.retrofit.gson.GsonResourceMarshaller;
@@ -30,6 +31,7 @@ import java.util.List;
 
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
@@ -44,6 +46,8 @@ public class DataStore
 
     private OkHttpClient httpClient_;
 
+    private String baseUrl_;
+
     public Builder (Context context)
     {
       this.context_ = context;
@@ -52,6 +56,12 @@ public class DataStore
     public Builder setDatabaseClass (Class <?> databaseClass)
     {
       this.databaseClass_ = databaseClass;
+      return this;
+    }
+
+    public Builder setBaseUrl (String baseUrl)
+    {
+      this.baseUrl_ = baseUrl;
       return this;
     }
 
@@ -66,10 +76,15 @@ public class DataStore
       if (this.databaseClass_ == null)
         throw new IllegalStateException ("You must set a database class");
 
-      Retrofit.Builder builder = new Retrofit.Builder ();
+      // We need to create our own HttpClient, but we need to use the provided on
+      // as the foundation. This allows us to merge the client's configuration with
+      // the required configuration for the data store.
+      OkHttpClient.Builder httpClientBuilder =
+          this.httpClient_ != null ?
+              this.httpClient_.newBuilder () :
+              new OkHttpClient.Builder ();
 
-      if (this.httpClient_ != null)
-        builder.client (this.httpClient_);
+      httpClientBuilder.addInterceptor (new ResourceCacheInterceptor ());
 
       // Register the different models in the database with Gson, and then register the
       // Gson instance with the Retrofit builder.
@@ -89,7 +104,21 @@ public class DataStore
 
       resourceMarshaller.setGson (gson);
 
-      return new DataStore (this.context_, this.databaseClass_, builder.build ());
+      // Build the Retrofit instance for the data store.
+      Retrofit.Builder retrofitBuilder = new Retrofit.Builder ();
+
+      if (this.httpClient_ != null)
+        retrofitBuilder.client (this.httpClient_);
+
+      if (this.baseUrl_ != null)
+        retrofitBuilder.baseUrl (this.baseUrl_);
+
+      Retrofit retrofit =
+          retrofitBuilder
+              .addConverterFactory (GsonConverterFactory.create (gson))
+              .build ();
+
+      return new DataStore (this.context_, this.databaseClass_, retrofit);
     }
 
     private GsonResourceManager makeResourceManagerFromDatabase ()
@@ -124,6 +153,10 @@ public class DataStore
 
   private final Retrofit retrofit_;
 
+  public interface OnModelLoaded <T extends BaseModel>
+  {
+    void onModelLoaded (T model);
+  }
   private DataStore (@NonNull Context context, @NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
   {
     this.context_ = context;
@@ -135,10 +168,6 @@ public class DataStore
       throw new IllegalArgumentException ("Cannot locate database for " + databaseClass.getName ());
   }
 
-  public interface OnModelLoaded <T extends BaseModel>
-  {
-    void onModelLoaded (T model);
-  }
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
   createSingleModelLoaderCallback (@NonNull Class <T> modelClass, @NonNull String id, @NonNull OnModelLoaded <T> onModelLoaded)
