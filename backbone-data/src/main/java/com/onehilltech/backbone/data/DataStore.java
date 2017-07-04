@@ -6,9 +6,14 @@ import android.content.Loader;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
 import com.onehilltech.backbone.http.HttpError;
+import com.onehilltech.backbone.http.Resource;
 import com.onehilltech.backbone.http.retrofit.ResourceEndpoint;
+import com.onehilltech.backbone.http.retrofit.gson.GsonResourceManager;
+import com.onehilltech.backbone.http.retrofit.gson.GsonResourceMarshaller;
 import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
@@ -19,6 +24,11 @@ import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
 import com.raizlabs.android.dbflow.structure.ModelAdapter;
 
+import org.joda.time.DateTime;
+
+import java.util.List;
+
+import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 
 import static com.onehilltech.promises.Promise.rejected;
@@ -26,6 +36,84 @@ import static com.onehilltech.promises.Promise.resolved;
 
 public class DataStore
 {
+  public static class Builder
+  {
+    private final Context context_;
+
+    private Class <?> databaseClass_;
+
+    private OkHttpClient httpClient_;
+
+    public Builder (Context context)
+    {
+      this.context_ = context;
+    }
+
+    public Builder setDatabaseClass (Class <?> databaseClass)
+    {
+      this.databaseClass_ = databaseClass;
+      return this;
+    }
+
+    public Builder setHttpClient (OkHttpClient httpClient)
+    {
+      this.httpClient_ = httpClient;
+      return this;
+    }
+
+    public DataStore build ()
+    {
+      if (this.databaseClass_ == null)
+        throw new IllegalStateException ("You must set a database class");
+
+      Retrofit.Builder builder = new Retrofit.Builder ();
+
+      if (this.httpClient_ != null)
+        builder.client (this.httpClient_);
+
+      // Register the different models in the database with Gson, and then register the
+      // Gson instance with the Retrofit builder.
+      GsonResourceManager resourceManager = this.makeResourceManagerFromDatabase ();
+
+      GsonResourceMarshaller resourceMarshaller =
+          new GsonResourceMarshaller.Builder ()
+              .setResourceManager (resourceManager)
+              .build ();
+
+      Gson gson =
+          new GsonBuilder ()
+              .registerTypeAdapter (Resource.class, resourceMarshaller)
+              .registerTypeAdapter (DateTime.class, new DateTimeTypeAdapter ())
+              .registerTypeAdapterFactory (new DataModelTypeAdapterFactory ())
+              .create ();
+
+      resourceMarshaller.setGson (gson);
+
+      return new DataStore (this.context_, this.databaseClass_, builder.build ());
+    }
+
+    private GsonResourceManager makeResourceManagerFromDatabase ()
+    {
+      GsonResourceManager manager = new GsonResourceManager ();
+
+      DatabaseDefinition databaseDefinition = FlowManager.getDatabase (this.databaseClass_);
+      List<ModelAdapter> modelAdapters = databaseDefinition.getModelAdapters ();
+
+      for (ModelAdapter modelAdapter : modelAdapters)
+      {
+        String tableName = modelAdapter.getTableName ();
+        String singular = Pluralize.singularize (tableName);
+        Class <?> modelClass = modelAdapter.getModelClass ();
+
+        // Register the a single model and a list of models based on the name of the
+        // model table.
+        manager.registerType (singular, modelClass);
+      }
+
+      return manager;
+    }
+  }
+
   private static final Property <String> _ID = PropertyFactory.from ("_id");
 
   private final Context context_;
@@ -36,7 +124,7 @@ public class DataStore
 
   private final Retrofit retrofit_;
 
-  public DataStore (@NonNull Context context, @NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
+  private DataStore (@NonNull Context context, @NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
   {
     this.context_ = context;
     this.databaseClass_ = databaseClass;

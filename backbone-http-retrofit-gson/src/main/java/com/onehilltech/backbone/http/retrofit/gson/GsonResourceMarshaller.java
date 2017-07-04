@@ -21,17 +21,39 @@ import java.util.Map;
 public class GsonResourceMarshaller
     implements JsonDeserializer <Resource>, JsonSerializer <Resource>
 {
-  private Gson gson_ = new Gson ();
-
-  private final GsonResourceManager resourceManager_ = GsonResourceManager.getInstance ();
-
-  public GsonResourceMarshaller ()
+  public static class Builder
   {
+    private Gson gson_;
+    private GsonResourceManager manager_;
 
+    public Builder setGson (Gson gson)
+    {
+      this.gson_ = gson;
+      return this;
+    }
+
+    public Builder setResourceManager (GsonResourceManager manager)
+    {
+      this.manager_ = manager;
+      return this;
+    }
+
+    public GsonResourceMarshaller build ()
+    {
+      Gson gson = this.gson_ != null ? this.gson_ : new Gson ();
+      GsonResourceManager manager = this.manager_ != null ? this.manager_ : GsonResourceManager.getInstance ();
+
+      return new GsonResourceMarshaller (manager, gson);
+    }
   }
 
-  public GsonResourceMarshaller (Gson gson)
+  private Gson gson_;
+
+  private final GsonResourceManager resourceManager_;
+
+  private GsonResourceMarshaller (GsonResourceManager manager, Gson gson)
   {
+    this.resourceManager_ = manager;
     this.gson_ = gson;
   }
 

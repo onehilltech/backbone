@@ -29,6 +29,14 @@ public class GsonResourceManager
   }
 
   /**
+   * Create a new resource manager.
+   */
+  public GsonResourceManager ()
+  {
+
+  }
+
+  /**
    * Register a resource type.
    *
    * @param name
