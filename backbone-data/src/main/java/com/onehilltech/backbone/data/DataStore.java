@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
+import com.onehilltech.backbone.http.HttpError;
 import com.onehilltech.backbone.http.retrofit.ResourceEndpoint;
 import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
@@ -35,7 +36,7 @@ public class DataStore
 
   private final Retrofit retrofit_;
 
-  public DataStore (Context context, @NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
+  public DataStore (@NonNull Context context, @NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
   {
     this.context_ = context;
     this.databaseClass_ = databaseClass;
@@ -91,27 +92,32 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> get (Class <T> dataClass, String id)
   {
+    ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
+
+    if (modelAdapter != null)
+      return Promise.reject (new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ()));
+
     return new Promise<> (settlement -> {
-      ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
+      String tableName = modelAdapter.getTableName ();
+      String singular = Pluralize.singularize (tableName);
 
-      if (modelAdapter != null)
-      {
-        String tableName = modelAdapter.getTableName ();
-        String singular = Pluralize.singularize (tableName);
+      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
 
-        ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+      endpoint.get (id)
+              .then (resolved (r -> {
+                // Get the result, and save to the database.
+                T model = r.get (singular);
+                model.save ();
 
-        endpoint.get (id)
-                .then (resolved (r -> {
-                  // Get the result, and save to the database.
-                  T model = r.get (singular);
-                  model.save ();
+                // Resolve the result.
+                settlement.resolve (model);
+              }))
+              ._catch (rejected (reason -> {
+                if ((reason instanceof HttpError))
+                {
+                  HttpError httpError = (HttpError)reason;
 
-                  // Resolve the result.
-                  settlement.resolve (model);
-                }))
-                ._catch (rejected (reason -> {
-                  if (reason.getLocalizedMessage ().toLowerCase ().equals ("not modified"))
+                  if (httpError.getStatusCode () == 304)
                   {
                     // The server said that the data has not been modified. This means we
                     // already have the data cached locally. Let's use the peek () method
@@ -125,12 +131,12 @@ public class DataStore
                   {
                     settlement.reject (reason);
                   }
-                }));
-      }
-      else
-      {
-        settlement.reject (new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ()));
-      }
+                }
+                else
+                {
+                  settlement.reject (reason);
+                }
+              }));
     });
   }
 
