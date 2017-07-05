@@ -1,4 +1,4 @@
-package com.onehilltech.backbone.data;
+package com.onehilltech.backbone.data.serializers;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -12,7 +12,7 @@ import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class InetAddressTypeAdapter
+public class InetAddressSerializer
     implements JsonDeserializer<InetAddress>, JsonSerializer<InetAddress>
 {
   @Override

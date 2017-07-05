@@ -47,11 +47,11 @@ dependencies {
 
     compile 'com.onehilltech.promises:promises-android:0.2.0'
 
-    compile 'com.squareup.retrofit2:retrofit:2.1.0'
+    compile 'com.squareup.retrofit2:retrofit:2.3.0'
 
     androidTestCompile 'junit:junit:4.11'
-    androidTestCompile 'com.squareup.okhttp:mockwebserver:2.1.0'
-    androidTestCompile 'com.squareup.retrofit2:converter-scalars:2.1.0'
+    androidTestCompile 'com.squareup.okhttp:mockwebserver:2.3.0'
+    androidTestCompile 'com.squareup.retrofit2:converter-scalars:2.3.0'
 
     androidTestCompile('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'

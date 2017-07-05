@@ -8,6 +8,7 @@ import android.support.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.onehilltech.backbone.data.serializers.DateTimeSerializer;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
 import com.onehilltech.backbone.http.HttpError;
 import com.onehilltech.backbone.http.Resource;
@@ -18,9 +19,9 @@ import com.onehilltech.backbone.http.retrofit.gson.GsonResourceMarshaller;
 import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
+import com.raizlabs.android.dbflow.sql.language.Condition;
+import com.raizlabs.android.dbflow.sql.language.NameAlias;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
-import com.raizlabs.android.dbflow.sql.language.property.Property;
-import com.raizlabs.android.dbflow.sql.language.property.PropertyFactory;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
 import com.raizlabs.android.dbflow.structure.ModelAdapter;
@@ -76,6 +77,9 @@ public class DataStore
       if (this.databaseClass_ == null)
         throw new IllegalStateException ("You must set a database class");
 
+      if (this.baseUrl_ == null)
+        throw new IllegalStateException ("You must provide a base URL for the data store");
+
       // We need to create our own HttpClient, but we need to use the provided on
       // as the foundation. This allows us to merge the client's configuration with
       // the required configuration for the data store.
@@ -98,20 +102,19 @@ public class DataStore
       Gson gson =
           new GsonBuilder ()
               .registerTypeAdapter (Resource.class, resourceMarshaller)
-              .registerTypeAdapter (DateTime.class, new DateTimeTypeAdapter ())
+              .registerTypeAdapter (DateTime.class, new DateTimeSerializer ())
               .registerTypeAdapterFactory (new DataModelTypeAdapterFactory ())
               .create ();
 
       resourceMarshaller.setGson (gson);
 
       // Build the Retrofit instance for the data store.
-      Retrofit.Builder retrofitBuilder = new Retrofit.Builder ();
+      Retrofit.Builder retrofitBuilder =
+          new Retrofit.Builder ()
+              .baseUrl (this.baseUrl_);
 
       if (this.httpClient_ != null)
         retrofitBuilder.client (this.httpClient_);
-
-      if (this.baseUrl_ != null)
-        retrofitBuilder.baseUrl (this.baseUrl_);
 
       Retrofit retrofit =
           retrofitBuilder
@@ -130,20 +133,20 @@ public class DataStore
 
       for (ModelAdapter modelAdapter : modelAdapters)
       {
-        String tableName = modelAdapter.getTableName ();
-        String singular = Pluralize.singularize (tableName);
+        String rawTableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+        String rcName = Pluralize.singular (rawTableName);
         Class <?> modelClass = modelAdapter.getModelClass ();
 
         // Register the a single model and a list of models based on the name of the
         // model table.
-        manager.registerType (singular, modelClass);
+        manager.registerType (rcName, modelClass);
       }
 
       return manager;
     }
   }
 
-  private static final Property <String> _ID = PropertyFactory.from ("_id");
+  private static final NameAlias _ID = NameAlias.builder ("_id").build ();
 
   private final Context context_;
 
@@ -170,7 +173,7 @@ public class DataStore
 
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
-  createSingleModelLoaderCallback (@NonNull Class <T> modelClass, @NonNull String id, @NonNull OnModelLoaded <T> onModelLoaded)
+  createSingleModelLoaderCallback (@NonNull Class <T> modelClass, @NonNull Object id, @NonNull OnModelLoaded <T> onModelLoaded)
   {
     return new LoaderManager.LoaderCallbacks<T> ()
     {
@@ -180,7 +183,7 @@ public class DataStore
         Queriable queriable =
             SQLite.select ()
                   .from (modelClass)
-                  .where (DataStore._ID.eq (id));
+                  .where (Condition.column (_ID).eq (id));
 
         return new FlowModelLoader<> (context_, modelClass, queriable);
       }
@@ -211,12 +214,12 @@ public class DataStore
   {
     ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
 
-    if (modelAdapter != null)
+    if (modelAdapter == null)
       return Promise.reject (new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ()));
 
     return new Promise<> (settlement -> {
-      String tableName = modelAdapter.getTableName ();
-      String singular = Pluralize.singularize (tableName);
+      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+      String singular = Pluralize.singular (tableName);
 
       ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
 
@@ -224,7 +227,9 @@ public class DataStore
               .then (resolved (r -> {
                 // Get the result, and save to the database.
                 T model = r.get (singular);
-                model.save ();
+
+                if (model != null)
+                  model.save ();
 
                 // Resolve the result.
                 settlement.resolve (model);
@@ -264,15 +269,15 @@ public class DataStore
    *
    * @param dataClass           Data model class
    * @param id                  Id of model
-   * @return                    The model, or null
+   * @return                    Promise object
    */
-  public <T extends DataModel> Promise <T> peek (Class <T> dataClass, String id)
+  public <T extends DataModel> Promise <T> peek (Class <T> dataClass, Object id)
   {
     return new Promise<> (settlement -> {
       T dataModel =
           SQLite.select ()
                 .from (dataClass)
-                .where (_ID.eq (id))
+                .where (Condition.column (_ID).eq (id))
                 .querySingle ();
 
       settlement.resolve (dataModel);
