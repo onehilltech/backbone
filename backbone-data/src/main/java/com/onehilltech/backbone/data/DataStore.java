@@ -12,10 +12,6 @@ import com.onehilltech.backbone.data.serializers.DateTimeSerializer;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
 import com.onehilltech.backbone.http.HttpError;
 import com.onehilltech.backbone.http.Resource;
-import com.onehilltech.backbone.http.retrofit.ResourceCacheInterceptor;
-import com.onehilltech.backbone.http.retrofit.ResourceEndpoint;
-import com.onehilltech.backbone.http.retrofit.gson.GsonResourceManager;
-import com.onehilltech.backbone.http.retrofit.gson.GsonResourceMarshaller;
 import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
@@ -137,9 +133,11 @@ public class DataStore
         String rcName = Pluralize.singular (rawTableName);
         Class <?> modelClass = modelAdapter.getModelClass ();
 
-        // Register the a single model and a list of models based on the name of the
-        // model table.
-        manager.registerType (rcName, modelClass);
+
+        // Register the a single model and a list of models based on the name
+        // of the model table.
+        manager.registerType (rcName, new ObjectAdapter (modelClass));
+        manager.registerType (rawTableName, new ArrayAdapter (modelClass));
       }
 
       return manager;
@@ -281,6 +279,51 @@ public class DataStore
                 .querySingle ();
 
       settlement.resolve (dataModel);
+    });
+  }
+
+  public <T extends DataModel> Promise <DataModelList <T>> query (Class <T> dataClass)
+  {
+    ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
+
+    if (modelAdapter == null)
+      return Promise.reject (new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ()));
+
+    return new Promise<> (settlement -> {
+      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+      String singular = Pluralize.singular (tableName);
+      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+
+      endpoint.get ().then (resolved (r -> {
+        DataModelList <T> list = r.get (tableName);
+
+        if (list != null && !list.isEmpty ())
+          list.save ();
+
+        settlement.resolve (list);
+      }))._catch (rejected (reason -> {
+        if ((reason instanceof HttpError))
+        {
+          HttpError httpError = (HttpError) reason;
+
+          if (httpError.getStatusCode () == 304)
+          {
+            // The server said that the data has not been modified. This means we
+            // already have the data cached locally. Let's use the peek () method
+            // to load the data from disk, and resolve our promise.
+
+            settlement.resolve (null);
+          }
+          else
+          {
+            settlement.reject (reason);
+          }
+        }
+        else
+        {
+          settlement.reject (reason);
+        }
+      }));
     });
   }
 }

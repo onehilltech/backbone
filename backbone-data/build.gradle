@@ -44,8 +44,12 @@ android {
 }
 
 dependencies {
-    compile project (':backbone-http-retrofit-gson')
+    compile project (':backbone-http')
     compile project (':backbone-dbflow')
+
+    compile 'com.onehilltech.promises:promises-android:0.2.0'
+    compile 'com.squareup.retrofit2:retrofit:2.3.0'
+    compile 'com.squareup.retrofit2:converter-gson:2.3.0'
 
     androidTestApt "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ("dbflow.version")
     androidTestCompile 'junit:junit:4.11'

@@ -1,6 +1,5 @@
-package com.onehilltech.backbone.http.retrofit.gson;
+package com.onehilltech.backbone.data;
 
-import java.lang.reflect.Type;
 import java.util.HashMap;
 
 /**
@@ -12,7 +11,7 @@ public class GsonResourceManager
 {
   private static GsonResourceManager instance_;
 
-  private final HashMap<String, Type> types_ = new HashMap<> ();
+  private final HashMap<String, ElementAdapter> adapters_ = new HashMap<> ();
 
   /**
    * Get the singleton instance.
@@ -40,11 +39,11 @@ public class GsonResourceManager
    * Register a resource type.
    *
    * @param name
-   * @param type
+   * @param adapter
    */
-  public void registerType (String name, Type type)
+  public void registerType (String name, ElementAdapter adapter)
   {
-    types_.put (name, type);
+    this.adapters_.put (name, adapter);
   }
 
   /**
@@ -53,8 +52,8 @@ public class GsonResourceManager
    * @param name
    * @return
    */
-  public Type getType (String name)
+  public ElementAdapter getAdapter (String name)
   {
-    return this.types_.get (name);
+    return this.adapters_.get (name);
   }
 }

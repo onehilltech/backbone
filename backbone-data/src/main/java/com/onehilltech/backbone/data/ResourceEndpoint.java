@@ -1,4 +1,4 @@
-package com.onehilltech.backbone.http.retrofit;
+package com.onehilltech.backbone.data;
 
 import com.onehilltech.backbone.http.HttpError;
 import com.onehilltech.backbone.http.Resource;

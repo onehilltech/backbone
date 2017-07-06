@@ -1,4 +1,4 @@
-package com.onehilltech.backbone.http.retrofit.gson;
+package com.onehilltech.backbone.data;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonDeserializationContext;
@@ -24,6 +24,7 @@ public class GsonResourceMarshaller
   public static class Builder
   {
     private Gson gson_;
+
     private GsonResourceManager manager_;
 
     public Builder setGson (Gson gson)
@@ -74,12 +75,14 @@ public class GsonResourceMarshaller
     for (Map.Entry <String, JsonElement> entry : obj.entrySet ())
     {
       String name = entry.getKey ();
-      Type type = this.resourceManager_.getType (name);
+      ElementAdapter adapter = this.resourceManager_.getAdapter (name);
 
-      if (type == null)
-        throw new JsonParseException (String.format ("%s type not registered", name));
+      if (adapter == null)
+        throw new JsonParseException (String.format ("%s is not registered", name));
 
-      Object value = this.gson_.fromJson (entry.getValue (), type);
+      JsonElement element = entry.getValue ();
+      Object value = adapter.fromJson (this.gson_, element);
+
       resource.add (name, value);
     }
 
@@ -94,13 +97,13 @@ public class GsonResourceMarshaller
     for (Map.Entry <String, Object> entry: src.entitySet ())
     {
       String name = entry.getKey ();
-      Type type = this.resourceManager_.getType (name);
+      ElementAdapter type = this.resourceManager_.getAdapter (name);
 
       if (type == null)
         throw new JsonParseException (String.format ("%s type not registered", name));
 
-      JsonElement element = this.gson_.toJsonTree (entry.getValue (), type);
-      obj.add (name, element);
+      //JsonElement element = this.gson_.toJsonTree (entry.getValue (), type);
+      //obj.add (name, element);
     }
 
     return obj;

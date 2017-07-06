@@ -56,7 +56,7 @@ public class DataStoreTest
   {
     // Schedule some responses.
     DateTime today = DateTime.now ();
-    this.server_.enqueue (new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toString () + "\"}}"));
+    this.server_.enqueue (new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toDateTimeISO () + "\"}}"));
 
     synchronized (this.lock_)
     {
@@ -81,11 +81,35 @@ public class DataStoreTest
   }
 
   @Test
+  public void testQuery () throws Exception
+  {
+    // Schedule some responses.
+    DateTime today = DateTime.now ();
+    this.server_.enqueue (new MockResponse ().setBody ("{\"users\": [{\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toDateTimeISO () + "\"}]}"));
+
+    synchronized (this.lock_)
+    {
+      this.dataStore_.query (User.class)
+                     .then (resolved (users -> {
+                       Assert.assertEquals (1, users.size ());
+
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait ();
+    }
+  }
+
+  @Test
   public void testGetNotModified () throws Exception
   {
     // Schedule some responses.
     DateTime today = DateTime.now ();
-    this.server_.enqueue (new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toString () + "\"}}"));
+    this.server_.enqueue (new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toDateTimeISO () + "\"}}"));
     this.server_.enqueue (new MockResponse ().setResponseCode (304).setBody ("Not Modified"));
 
     synchronized (this.lock_)
