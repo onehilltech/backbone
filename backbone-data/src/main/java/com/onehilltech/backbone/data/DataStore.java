@@ -24,6 +24,7 @@ import com.raizlabs.android.dbflow.structure.ModelAdapter;
 
 import org.joda.time.DateTime;
 
+import java.util.HashMap;
 import java.util.List;
 
 import okhttp3.OkHttpClient;
@@ -279,6 +280,51 @@ public class DataStore
                 .querySingle ();
 
       settlement.resolve (dataModel);
+    });
+  }
+
+  public <T extends DataModel> Promise <DataModelList <T>> query (Class <T> dataClass, HashMap <String, Object> query)
+  {
+    ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
+
+    if (modelAdapter == null)
+      return Promise.reject (new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ()));
+
+    return new Promise<> (settlement -> {
+      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+      String singular = Pluralize.singular (tableName);
+      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+
+      endpoint.get (query).then (resolved (r -> {
+        DataModelList <T> list = r.get (tableName);
+
+        if (list != null && !list.isEmpty ())
+          list.save ();
+
+        settlement.resolve (list);
+      }))._catch (rejected (reason -> {
+        if ((reason instanceof HttpError))
+        {
+          HttpError httpError = (HttpError) reason;
+
+          if (httpError.getStatusCode () == 304)
+          {
+            // The server said that the data has not been modified. This means we
+            // already have the data cached locally. Let's use the peek () method
+            // to load the data from disk, and resolve our promise.
+
+            settlement.resolve (null);
+          }
+          else
+          {
+            settlement.reject (reason);
+          }
+        }
+        else
+        {
+          settlement.reject (reason);
+        }
+      }));
     });
   }
 
