@@ -3,13 +3,13 @@ package com.onehilltech.backbone.data;
 import java.util.HashMap;
 
 /**
- * @class GsonResourceManager
+ * @class ElementAdapterManager
  *
  * Resource manager for the Gson serialization library.
  */
-public class GsonResourceManager
+public class ElementAdapterManager
 {
-  private static GsonResourceManager instance_;
+  private static ElementAdapterManager instance_;
 
   private final HashMap<String, ElementAdapter> adapters_ = new HashMap<> ();
 
@@ -18,19 +18,19 @@ public class GsonResourceManager
    *
    * @return
    */
-  public static GsonResourceManager getInstance ()
+  public static ElementAdapterManager getInstance ()
   {
     if (instance_ != null)
       return instance_;
 
-    instance_ = new GsonResourceManager ();
+    instance_ = new ElementAdapterManager ();
     return instance_;
   }
 
   /**
    * Create a new resource manager.
    */
-  public GsonResourceManager ()
+  public ElementAdapterManager ()
   {
 
   }

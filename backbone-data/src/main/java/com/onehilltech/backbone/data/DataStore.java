@@ -88,10 +88,10 @@ public class DataStore
 
       // Register the different models in the database with Gson, and then register the
       // Gson instance with the Retrofit builder.
-      GsonResourceManager resourceManager = this.makeResourceManagerFromDatabase ();
+      ElementAdapterManager resourceManager = this.makeResourceManagerFromDatabase ();
 
-      GsonResourceMarshaller resourceMarshaller =
-          new GsonResourceMarshaller.Builder ()
+      ResourceSerializer resourceMarshaller =
+          new ResourceSerializer.Builder ()
               .setResourceManager (resourceManager)
               .build ();
 
@@ -120,9 +120,9 @@ public class DataStore
       return new DataStore (this.context_, this.databaseClass_, retrofit);
     }
 
-    private GsonResourceManager makeResourceManagerFromDatabase ()
+    private ElementAdapterManager makeResourceManagerFromDatabase ()
     {
-      GsonResourceManager manager = new GsonResourceManager ();
+      ElementAdapterManager manager = new ElementAdapterManager ();
 
       DatabaseDefinition databaseDefinition = FlowManager.getDatabase (this.databaseClass_);
       List<ModelAdapter> modelAdapters = databaseDefinition.getModelAdapters ();

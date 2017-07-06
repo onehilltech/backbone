@@ -14,18 +14,18 @@ import java.lang.reflect.Type;
 import java.util.Map;
 
 /**
- * @class GsonResourceMarshaller
+ * @class ResourceSerializer
  *
  * Resource marshaller for Gson extensions.
  */
-public class GsonResourceMarshaller
+class ResourceSerializer
     implements JsonDeserializer <Resource>, JsonSerializer <Resource>
 {
   public static class Builder
   {
     private Gson gson_;
 
-    private GsonResourceManager manager_;
+    private ElementAdapterManager manager_;
 
     public Builder setGson (Gson gson)
     {
@@ -33,26 +33,26 @@ public class GsonResourceMarshaller
       return this;
     }
 
-    public Builder setResourceManager (GsonResourceManager manager)
+    public Builder setResourceManager (ElementAdapterManager manager)
     {
       this.manager_ = manager;
       return this;
     }
 
-    public GsonResourceMarshaller build ()
+    public ResourceSerializer build ()
     {
       Gson gson = this.gson_ != null ? this.gson_ : new Gson ();
-      GsonResourceManager manager = this.manager_ != null ? this.manager_ : GsonResourceManager.getInstance ();
+      ElementAdapterManager manager = this.manager_ != null ? this.manager_ : ElementAdapterManager.getInstance ();
 
-      return new GsonResourceMarshaller (manager, gson);
+      return new ResourceSerializer (manager, gson);
     }
   }
 
   private Gson gson_;
 
-  private final GsonResourceManager resourceManager_;
+  private final ElementAdapterManager resourceManager_;
 
-  private GsonResourceMarshaller (GsonResourceManager manager, Gson gson)
+  private ResourceSerializer (ElementAdapterManager manager, Gson gson)
   {
     this.resourceManager_ = manager;
     this.gson_ = gson;
