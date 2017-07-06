@@ -210,7 +210,7 @@ public class DataStore
    * @param id              Id of model
    * @return                The model, or null
    */
-  public <T extends DataModel> Promise <T> get (Class <T> dataClass, String id)
+  public <T extends DataModel> Promise <T> get (Class <T> dataClass, Object id)
   {
     ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
 
@@ -223,7 +223,7 @@ public class DataStore
 
       ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
 
-      endpoint.get (id)
+      endpoint.get (id.toString ())
               .then (resolved (r -> {
                 // Get the result, and save to the database.
                 T model = r.get (singular);

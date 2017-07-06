@@ -15,7 +15,7 @@ import org.joda.time.DateTime;
 import java.lang.reflect.Type;
 
 public class DateTimeSerializer
-    extends TypeConverter <String, DateTime>
+    extends TypeConverter <Long, DateTime>
     implements JsonDeserializer<DateTime>, JsonSerializer<DateTime>
 {
   @Override
@@ -31,14 +31,14 @@ public class DateTimeSerializer
   }
 
   @Override
-  public String getDBValue (DateTime model)
+  public Long getDBValue (DateTime model)
   {
-    return model.toDateTimeISO ().toString ();
+    return model.getMillis ();
   }
 
   @Override
-  public DateTime getModelValue (String data)
+  public DateTime getModelValue (Long data)
   {
-    return DateTime.parse (data);
+    return new DateTime (data);
   }
 }

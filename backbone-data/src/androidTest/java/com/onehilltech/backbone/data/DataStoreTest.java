@@ -5,6 +5,7 @@ import android.support.test.runner.AndroidJUnit4;
 
 import com.onehilltech.backbone.data.fixtures.TestDatabase;
 import com.onehilltech.backbone.data.fixtures.User;
+import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.FlowConfig;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.squareup.okhttp.mockwebserver.MockResponse;
@@ -28,9 +29,13 @@ public class DataStoreTest
 
   private MockWebServer server_;
 
+  private boolean isComplete_;
+
   @Before
   public void setup () throws Exception
   {
+    this.isComplete_ = false;
+
     FlowManager.init (
         new FlowConfig.Builder (InstrumentationRegistry.getContext ())
             .openDatabasesOnInit (true)
@@ -76,6 +81,37 @@ public class DataStoreTest
   }
 
   @Test
+  public void testGetNotModified () throws Exception
+  {
+    // Schedule some responses.
+    DateTime today = DateTime.now ();
+    this.server_.enqueue (new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toString () + "\"}}"));
+    this.server_.enqueue (new MockResponse ().setResponseCode (304).setBody ("Not Modified"));
+
+    synchronized (this.lock_)
+    {
+      Promise.all (
+          this.dataStore_.get (User.class, 1),
+          this.dataStore_.get (User.class, 1)
+      ).then (resolved (result -> {
+        Assert.assertEquals (result.get (0), result.get (1));
+
+        this.isComplete_ = true;
+
+        synchronized (this.lock_)
+        {
+          this.lock_.notify ();
+        }
+      }))._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait ();
+
+      Assert.assertTrue (this.isComplete_);
+    }
+  }
+
+
+  @Test
   public void testPeek () throws Exception
   {
     synchronized (this.lock_)
@@ -98,7 +134,7 @@ public class DataStoreTest
                      }))
                      ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
 
-      this.lock_.wait ();
+      this.lock_.wait (5000);
     }
   }
 }

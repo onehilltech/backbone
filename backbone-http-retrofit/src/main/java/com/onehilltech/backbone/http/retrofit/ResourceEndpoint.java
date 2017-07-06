@@ -243,7 +243,10 @@ public class ResourceEndpoint <T>
           }
           else if (response.code () == 304)
           {
-            settlement.resolve (null);
+            HttpError httpError = new HttpError ("NotModified", "Not Modified");
+            httpError.setStatusCode (response.code ());
+
+            settlement.reject (httpError);
           }
           else
           {
