@@ -9,6 +9,6 @@ import com.raizlabs.android.dbflow.annotation.Database;
     generatedClassSeparator = "$")
 public class TestDatabase
 {
-  static final String NAME = "backbone_data_test";
-  static final int VERSION = 1;
+  public static final String NAME = "backbone_data_test";
+  public static final int VERSION = 1;
 }

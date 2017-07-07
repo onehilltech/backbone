@@ -3,6 +3,7 @@ package com.onehilltech.backbone.data;
 import android.app.LoaderManager;
 import android.content.Context;
 import android.content.Loader;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 
@@ -16,6 +17,7 @@ import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.raizlabs.android.dbflow.sql.language.Condition;
+import com.raizlabs.android.dbflow.sql.language.From;
 import com.raizlabs.android.dbflow.sql.language.NameAlias;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
@@ -26,6 +28,7 @@ import org.joda.time.DateTime;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
@@ -201,6 +204,92 @@ public class DataStore
     };
   }
 
+
+  private interface OnNotModified <T>
+  {
+    void onNotMofified ();
+  }
+
+  private static <T> HandleErrorOrLoadFromCache<T> handleErrorOrLoadFromCache (Promise.Settlement <T> settlement, OnNotModified <T> onNotModified)
+  {
+    return new HandleErrorOrLoadFromCache <> (settlement, onNotModified);
+  }
+
+  private static class HandleErrorOrLoadFromCache <T> implements Promise.RejectNoReturn
+  {
+    private Promise.Settlement <T> settlement_;
+
+    private OnNotModified <T> onNotModified_;
+
+    HandleErrorOrLoadFromCache (Promise.Settlement <T> settlement, OnNotModified <T> onNotModified)
+    {
+      this.settlement_ = settlement;
+      this.onNotModified_ = onNotModified;
+    }
+
+    @Override
+    public void rejectNoReturn (Throwable reason)
+    {
+      if ((reason instanceof HttpError))
+      {
+        HttpError httpError = (HttpError) reason;
+
+        if (httpError.getStatusCode () == 304)
+        {
+          // The server said that the data has not been modified. This means we
+          // already have the data cached locally. Let's use the peek () method
+          // to load the data from disk, and resolve our promise.
+
+          this.onNotModified_.onNotMofified ();
+        }
+        else
+        {
+          this.settlement_.reject (reason);
+        }
+      }
+      else
+      {
+        this.settlement_.reject (reason);
+      }
+    }
+  }
+
+  /**
+   * Get all the models of a single data class. This method will make a network request
+   * to get the data.
+   *
+   * @param dataClass       Data model class
+   * @return                The model, or null
+   */
+  public <T extends DataModel> Promise <DataModelList <T>> get (Class <T> dataClass)
+  {
+    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+
+    return new Promise<> (settlement -> {
+      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+      String singular = Pluralize.singular (tableName);
+
+      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+
+      endpoint.get ()
+              .then (resolved (r -> {
+                // Get the result, and save to the database.
+                DataModelList <T> modelList = r.get (tableName);
+
+                if (modelList != null)
+                  modelList.save ();
+
+                // Resolve the result.
+                settlement.resolve (modelList);
+              }))
+              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
+                  this.peek (dataClass)
+                      .then (resolved (settlement::resolve))
+                      ._catch (rejected (settlement::reject))
+              )));
+    });
+  }
+
   /**
    * Get a single model element by making a network request. If the server returns that
    * the resource has not been modified, then we load the resource from our local disk.
@@ -211,10 +300,7 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> get (Class <T> dataClass, Object id)
   {
-    ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
-
-    if (modelAdapter == null)
-      return Promise.reject (new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ()));
+    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
     return new Promise<> (settlement -> {
       String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
@@ -233,32 +319,93 @@ public class DataStore
                 // Resolve the result.
                 settlement.resolve (model);
               }))
-              ._catch (rejected (reason -> {
-                if ((reason instanceof HttpError))
-                {
-                  HttpError httpError = (HttpError)reason;
-
-                  if (httpError.getStatusCode () == 304)
-                  {
-                    // The server said that the data has not been modified. This means we
-                    // already have the data cached locally. Let's use the peek () method
-                    // to load the data from disk, and resolve our promise.
-
-                    this.peek (dataClass, id)
-                        .then (resolved (settlement::resolve))
-                        ._catch (rejected (settlement::reject));
-                  }
-                  else
-                  {
-                    settlement.reject (reason);
-                  }
-                }
-                else
-                {
-                  settlement.reject (reason);
-                }
-              }));
+              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
+                this.peek (dataClass, id)
+                    .then (resolved (settlement::resolve))
+                    ._catch (rejected (settlement::reject))
+              )));
     });
+  }
+
+  /**
+   * Query for a list of models.
+   *
+   * @param dataClass
+   * @param query
+   * @param <T>
+   * @return
+   */
+  public <T extends DataModel> Promise <Cursor> getCursor (Class <T> dataClass, HashMap <String, Object> query)
+  {
+    ModelAdapter modelAdapter = this.getModelAdapter (dataClass);
+
+    return new Promise<> (settlement -> {
+      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+      String singular = Pluralize.singular (tableName);
+      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+
+      endpoint.get (query)
+              .then (resolved (r -> {
+                DataModelList <T> list = r.get (tableName);
+
+                if (list != null && !list.isEmpty ())
+                  list.save ();
+
+                this.peekCursor (dataClass, query)
+                    .then (resolved (settlement::resolve))
+                    ._catch (rejected (settlement::reject));
+              }))
+              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
+                  this.peekCursor (dataClass, query)
+                      .then (resolved (settlement::resolve))
+                      ._catch (rejected (settlement::reject))
+              )));
+    });
+  }
+
+  /**
+   * Get all the models without making a network request.
+   *
+   * @param dataClass           Data model class
+   * @return                    Promise object
+   */
+  public <T extends DataModel> Promise <Cursor> peekCursor (Class <T> dataClass)
+  {
+    return new Promise<> (settlement -> {
+      Cursor cursor =
+          SQLite.select ()
+                .from (dataClass)
+                .query ();
+
+      settlement.resolve (cursor);
+    });
+  }
+
+  /**
+   * Get all the models without making a network request.
+   *
+   * @param dataClass           Data model class
+   * @return                    Promise object
+   */
+  public <T extends DataModel> Promise <DataModelList <T>> peek (Class <T> dataClass)
+  {
+    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+
+    return new Promise<> (settlement ->
+      this.peekCursor (dataClass)
+          .then (resolved (cursor -> {
+            DataModelList <T> modelList = new DataModelList<> (cursor.getCount ());
+
+            while (cursor.moveToNext ())
+            {
+              T model = modelAdapter.loadFromCursor (cursor);
+              modelList.add (model);
+            }
+
+            settlement.resolve (modelList);
+          }))
+          ._catch (rejected (settlement::reject))
+    );
   }
 
   /**
@@ -272,6 +419,8 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> peek (Class <T> dataClass, Object id)
   {
+    this.getModelAdapter (dataClass);
+
     return new Promise<> (settlement -> {
       T dataModel =
           SQLite.select ()
@@ -283,93 +432,42 @@ public class DataStore
     });
   }
 
-  public <T extends DataModel> Promise <DataModelList <T>> query (Class <T> dataClass, HashMap <String, Object> query)
+  /**
+   * Get all model elements that meet the specified criteria without making a
+   * network request.
+   *
+   * @param dataClass       Data model class
+   * @param params          Criteria
+   * @return                Promise object
+   */
+  public <T extends DataModel> Promise <Cursor> peekCursor (Class <T> dataClass, HashMap <String, Object> params)
   {
-    ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
-
-    if (modelAdapter == null)
-      return Promise.reject (new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ()));
+    this.getModelAdapter (dataClass);
 
     return new Promise<> (settlement -> {
-      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-      String singular = Pluralize.singular (tableName);
-      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+      From<?> from = SQLite.select ().from (dataClass);
 
-      endpoint.get (query).then (resolved (r -> {
-        DataModelList <T> list = r.get (tableName);
+      for (Map.Entry <String, Object> param: params.entrySet ())
+        from.where (Condition.column (NameAlias.rawBuilder (param.getKey ()).build ()).eq (param.getValue ()));
 
-        if (list != null && !list.isEmpty ())
-          list.save ();
-
-        settlement.resolve (list);
-      }))._catch (rejected (reason -> {
-        if ((reason instanceof HttpError))
-        {
-          HttpError httpError = (HttpError) reason;
-
-          if (httpError.getStatusCode () == 304)
-          {
-            // The server said that the data has not been modified. This means we
-            // already have the data cached locally. Let's use the peek () method
-            // to load the data from disk, and resolve our promise.
-
-            settlement.resolve (null);
-          }
-          else
-          {
-            settlement.reject (reason);
-          }
-        }
-        else
-        {
-          settlement.reject (reason);
-        }
-      }));
+      Cursor cursor = from.query ();
+      settlement.resolve (cursor);
     });
   }
 
-  public <T extends DataModel> Promise <DataModelList <T>> query (Class <T> dataClass)
+  /**
+   * Get the model adapter for the database.
+   *
+   * @param dataClass       Data model class
+   * @return                ModelAdapter object
+   */
+  private <T extends DataModel> ModelAdapter getModelAdapter (Class <T> dataClass)
   {
     ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
 
-    if (modelAdapter == null)
-      return Promise.reject (new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ()));
+    if (modelAdapter != null)
+      return modelAdapter;
 
-    return new Promise<> (settlement -> {
-      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-      String singular = Pluralize.singular (tableName);
-      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
-
-      endpoint.get ().then (resolved (r -> {
-        DataModelList <T> list = r.get (tableName);
-
-        if (list != null && !list.isEmpty ())
-          list.save ();
-
-        settlement.resolve (list);
-      }))._catch (rejected (reason -> {
-        if ((reason instanceof HttpError))
-        {
-          HttpError httpError = (HttpError) reason;
-
-          if (httpError.getStatusCode () == 304)
-          {
-            // The server said that the data has not been modified. This means we
-            // already have the data cached locally. Let's use the peek () method
-            // to load the data from disk, and resolve our promise.
-
-            settlement.resolve (null);
-          }
-          else
-          {
-            settlement.reject (reason);
-          }
-        }
-        else
-        {
-          settlement.reject (reason);
-        }
-      }));
-    });
+    throw new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ());
   }
 }
