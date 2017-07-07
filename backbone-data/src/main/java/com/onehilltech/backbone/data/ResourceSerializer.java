@@ -18,7 +18,7 @@ import java.util.Map;
  *
  * Resource marshaller for Gson extensions.
  */
-class ResourceSerializer
+public class ResourceSerializer
     implements JsonDeserializer <Resource>, JsonSerializer <Resource>
 {
   public static class Builder
