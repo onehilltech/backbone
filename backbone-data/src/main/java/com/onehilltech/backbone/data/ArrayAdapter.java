@@ -24,4 +24,10 @@ public class ArrayAdapter implements ElementAdapter
 
     return list;
   }
+
+  @Override
+  public JsonElement toJson (Gson gson, Object value)
+  {
+    return gson.toJsonTree (value, this.elementType_);
+  }
 }

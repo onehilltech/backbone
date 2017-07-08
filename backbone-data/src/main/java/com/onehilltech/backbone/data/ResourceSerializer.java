@@ -97,13 +97,13 @@ public class ResourceSerializer
     for (Map.Entry <String, Object> entry: src.entitySet ())
     {
       String name = entry.getKey ();
-      ElementAdapter type = this.resourceManager_.getAdapter (name);
+      ElementAdapter adapter = this.resourceManager_.getAdapter (name);
 
-      if (type == null)
+      if (adapter == null)
         throw new JsonParseException (String.format ("%s type not registered", name));
 
-      //JsonElement element = this.gson_.toJsonTree (entry.getValue (), type);
-      //obj.add (name, element);
+      JsonElement element = adapter.toJson (this.gson_, entry.getValue ());
+      obj.add (name, element);
     }
 
     return obj;

@@ -17,4 +17,10 @@ public class ObjectAdapter implements ElementAdapter
   {
     return gson.fromJson (element, this.elementType_);
   }
+
+  @Override
+  public JsonElement toJson (Gson gson, Object value)
+  {
+    return gson.toJsonTree (value, this.elementType_);
+  }
 }

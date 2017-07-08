@@ -6,4 +6,5 @@ import com.google.gson.JsonElement;
 public interface ElementAdapter
 {
   Object fromJson (Gson gson, JsonElement element);
+  JsonElement toJson (Gson gson, Object value);
 }
