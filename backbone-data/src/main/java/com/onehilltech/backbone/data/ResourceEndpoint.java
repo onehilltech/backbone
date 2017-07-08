@@ -127,7 +127,19 @@ public class ResourceEndpoint <T>
           }
           else
           {
-            settlement.reject (new IllegalStateException (response.message ()));
+            try
+            {
+              // Get the errors from the response message.
+              Resource r = resourceConverter_.convert (response.errorBody ());
+              HttpError httpError = r.get ("errors");
+              httpError.setStatusCode (response.code ());
+
+              settlement.reject (httpError);
+            }
+            catch (IOException e)
+            {
+              settlement.reject (e);
+            }
           }
         }
 
