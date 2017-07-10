@@ -1,5 +1,7 @@
 package com.onehilltech.backbone.http;
 
+import java.util.HashMap;
+
 /**
  * @class HttpError
  *
@@ -12,6 +14,8 @@ public class HttpError extends RuntimeException
   private String code;
 
   private String message;
+
+  private HashMap <String, Object> details;
 
   public HttpError ()
   {
@@ -42,5 +46,10 @@ public class HttpError extends RuntimeException
   public String getMessage ()
   {
     return this.message;
+  }
+
+  public HashMap <String, Object> getDetails ()
+  {
+    return this.details;
   }
 }

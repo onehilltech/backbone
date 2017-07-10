@@ -92,21 +92,16 @@ public class DataStore
 
       // Register the different models in the database with Gson, and then register the
       // Gson instance with the Retrofit builder.
-      ElementAdapterManager resourceManager = this.makeResourceManagerFromDatabase ();
-
-      ResourceSerializer resourceMarshaller =
-          new ResourceSerializer.Builder ()
-              .setResourceManager (resourceManager)
-              .build ();
+      ResourceSerializer resourceSerializer = this.makeResourceSerializeFromDatabase ();
 
       Gson gson =
           new GsonBuilder ()
-              .registerTypeAdapter (Resource.class, resourceMarshaller)
+              .registerTypeAdapter (Resource.class, resourceSerializer)
               .registerTypeAdapter (DateTime.class, new DateTimeSerializer ())
               .registerTypeAdapterFactory (new DataModelTypeAdapterFactory ())
               .create ();
 
-      resourceMarshaller.setGson (gson);
+      resourceSerializer.setGson (gson);
 
       // Build the Retrofit instance for the data store.
       Retrofit.Builder retrofitBuilder =
@@ -124,10 +119,9 @@ public class DataStore
       return new DataStore (this.context_, this.databaseClass_, retrofit);
     }
 
-    private ElementAdapterManager makeResourceManagerFromDatabase ()
+    private ResourceSerializer makeResourceSerializeFromDatabase ()
     {
-      ElementAdapterManager manager = new ElementAdapterManager ();
-
+      ResourceSerializer serializer = new ResourceSerializer ();
       DatabaseDefinition databaseDefinition = FlowManager.getDatabase (this.databaseClass_);
       List<ModelAdapter> modelAdapters = databaseDefinition.getModelAdapters ();
 
@@ -137,14 +131,10 @@ public class DataStore
         String rcName = Pluralize.singular (rawTableName);
         Class <?> modelClass = modelAdapter.getModelClass ();
 
-
-        // Register the a single model and a list of models based on the name
-        // of the model table.
-        manager.registerType (rcName, new ObjectAdapter (modelClass));
-        manager.registerType (rawTableName, new ArrayAdapter (modelClass));
+        serializer.put (rcName, modelClass);
       }
 
-      return manager;
+      return serializer;
     }
   }
 
@@ -461,9 +451,10 @@ public class DataStore
    * @param dataClass       Data model class
    * @return                ModelAdapter object
    */
-  private <T extends DataModel> ModelAdapter getModelAdapter (Class <T> dataClass)
+  private <T extends DataModel> ModelAdapter <T> getModelAdapter (Class <T> dataClass)
   {
-    ModelAdapter modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
+    @SuppressWarnings ("unchecked")
+    ModelAdapter <T> modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
 
     if (modelAdapter != null)
       return modelAdapter;
