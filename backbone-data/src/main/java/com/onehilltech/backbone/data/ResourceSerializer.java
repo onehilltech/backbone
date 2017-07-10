@@ -81,6 +81,8 @@ public class ResourceSerializer
 
         for (JsonElement item: jsonArray)
           list.add (this.gson_.fromJson (item, dataClass));
+
+        resource.add (field, list);
       }
       else if (element.isJsonNull ())
       {
