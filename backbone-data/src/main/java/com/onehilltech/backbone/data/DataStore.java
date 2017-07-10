@@ -127,11 +127,14 @@ public class DataStore
 
       for (ModelAdapter modelAdapter : modelAdapters)
       {
-        String rawTableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-        String rcName = Pluralize.singular (rawTableName);
+        String pluralName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+        String signularName = Pluralize.singular (pluralName);
         Class <?> modelClass = modelAdapter.getModelClass ();
 
-        serializer.put (rcName, modelClass);
+        serializer.put (pluralName, modelClass);
+
+        if (!pluralName.equals (signularName))
+          serializer.put (signularName, modelClass);
       }
 
       return serializer;

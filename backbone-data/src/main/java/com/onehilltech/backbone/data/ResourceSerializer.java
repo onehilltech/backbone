@@ -64,8 +64,7 @@ public class ResourceSerializer
 
       // Get the name of the resource element, and locate its adapter. We need
       // the adapter to transform the JSON element to a Java object.
-      String typeName = element.isJsonObject () ? field : Pluralize.singular (field);
-      Class <?> dataClass = this.types_.get (typeName);
+      Class <?> dataClass = this.types_.get (field);
 
       if (dataClass == null)
         throw new JsonParseException (String.format ("%s does not have a registered type", field));
@@ -106,8 +105,7 @@ public class ResourceSerializer
 
       // Get the name of the resource element, and locate its adapter. We need
       // the adapter to transform the JSON element to a Java object.
-      String typeName = isCollection ? Pluralize.singular (field) : field;
-      Class <?> dataClass = this.types_.get (typeName);
+      Class <?> dataClass = this.types_.get (field);
 
       if (dataClass == null)
         throw new JsonParseException (String.format ("%s does not have a registered type", field));
@@ -134,5 +132,4 @@ public class ResourceSerializer
 
     return jsonObject;
   }
-
 }
