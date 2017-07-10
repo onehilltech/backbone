@@ -127,7 +127,7 @@ public class ResourceSerializer
       }
       else
       {
-        JsonElement element = this.gson_.toJsonTree (jsonObject, dataClass);
+        JsonElement element = this.gson_.toJsonTree (object, dataClass);
         jsonObject.add (field, element);
       }
     }
