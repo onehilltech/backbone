@@ -284,6 +284,44 @@ public class DataStore
   }
 
   /**
+   * Get a list of model elements for the data class that match the specified
+   * query criteria.
+   *
+   * @param dataClass
+   * @param query
+   * @param <T>
+   * @return
+   */
+  public <T extends DataModel> Promise <DataModelList <T>> get (Class <T> dataClass, HashMap <String, Object> query)
+  {
+    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+
+    return new Promise<> (settlement -> {
+      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+      String singular = Pluralize.singular (tableName);
+
+      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+
+      endpoint.get (query)
+              .then (resolved (r -> {
+                // Get the result, and save to the database.
+                DataModelList <T> modelList = r.get (tableName);
+
+                if (modelList != null)
+                  modelList.save ();
+
+                // Resolve the result.
+                settlement.resolve (modelList);
+              }))
+              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
+                  this.peek (dataClass, query)
+                      .then (resolved (settlement::resolve))
+                      ._catch (rejected (settlement::reject))
+              )));
+    });
+  }
+
+  /**
    * Get a single model element by making a network request. If the server returns that
    * the resource has not been modified, then we load the resource from our local disk.
    *
@@ -398,6 +436,35 @@ public class DataStore
             settlement.resolve (modelList);
           }))
           ._catch (rejected (settlement::reject))
+    );
+  }
+
+  /**
+   * Get the models for the data class from the local data store.
+   *
+   * @param dataClass
+   * @param query
+   * @param <T>
+   * @return
+   */
+  public <T extends DataModel> Promise <DataModelList <T>> peek (Class <T> dataClass, HashMap <String, Object> query)
+  {
+    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+
+    return new Promise<> (settlement ->
+                              this.peekCursor (dataClass, query)
+                                  .then (resolved (cursor -> {
+                                    DataModelList <T> modelList = new DataModelList<> (cursor.getCount ());
+
+                                    while (cursor.moveToNext ())
+                                    {
+                                      T model = modelAdapter.loadFromCursor (cursor);
+                                      modelList.add (model);
+                                    }
+
+                                    settlement.resolve (modelList);
+                                  }))
+                                  ._catch (rejected (settlement::reject))
     );
   }
 
