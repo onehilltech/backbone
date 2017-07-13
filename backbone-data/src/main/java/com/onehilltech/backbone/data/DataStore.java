@@ -16,9 +16,11 @@ import com.onehilltech.backbone.http.Resource;
 import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
+import com.raizlabs.android.dbflow.sql.SqlUtils;
 import com.raizlabs.android.dbflow.sql.language.Condition;
 import com.raizlabs.android.dbflow.sql.language.From;
 import com.raizlabs.android.dbflow.sql.language.NameAlias;
+import com.raizlabs.android.dbflow.sql.language.SQLCondition;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
@@ -26,6 +28,7 @@ import com.raizlabs.android.dbflow.structure.ModelAdapter;
 
 import org.joda.time.DateTime;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -516,6 +519,50 @@ public class DataStore
   }
 
   /**
+   * Delete a single model from the data store.
+   *
+   * @param dataClass
+   * @param id
+   * @param <T>
+   * @return
+   */
+  public <T extends DataModel> Promise <Boolean> delete (Class <T> dataClass, Object id)
+  {
+    return new Promise<> (settlement -> {
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+
+      endpoint.delete (id.toString ())
+              .then (resolved (result -> {
+                if (result)
+                {
+                  SQLCondition [] condition = {Condition.column (_ID).eq (id)};
+
+                  // Delete the object from our local cache, then notify all that the model
+                  // has indeed been deleted.
+                  SQLite.delete ()
+                        .from (dataClass)
+                        .where (condition)
+                        .execute ();
+
+                  SqlUtils.notifyModelChanged (dataClass, BaseModel.Action.DELETE, Arrays.asList (condition));
+                }
+
+                settlement.resolve (result);
+              }))
+              ._catch (rejected (settlement::reject));
+    });
+  }
+
+  private <T extends DataModel> ResourceEndpoint <T> getEndpoint (Class <T> dataClass)
+  {
+    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+    String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+    String singular = Pluralize.singular (tableName);
+
+    return ResourceEndpoint.create (this.retrofit_, singular, tableName);
+  }
+
+  /**
    * Get the model adapter for the database.
    *
    * @param dataClass       Data model class
@@ -531,4 +578,5 @@ public class DataStore
 
     throw new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ());
   }
+
 }
