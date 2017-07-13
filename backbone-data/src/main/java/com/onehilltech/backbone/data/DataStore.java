@@ -116,7 +116,7 @@ public class DataStore
               .addConverterFactory (GsonConverterFactory.create (gson))
               .build ();
 
-      return new DataStore (this.context_, this.databaseClass_, retrofit);
+      return new DataStore (this.databaseClass_, retrofit);
     }
 
     private ResourceSerializer makeResourceSerializeFromDatabase ()
@@ -143,8 +143,6 @@ public class DataStore
 
   private static final NameAlias _ID = NameAlias.builder ("_id").build ();
 
-  private final Context context_;
-
   private final Class <?> databaseClass_;
 
   private final DatabaseDefinition databaseDefinition_;
@@ -155,9 +153,8 @@ public class DataStore
   {
     void onModelLoaded (T model);
   }
-  private DataStore (@NonNull Context context, @NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
+  private DataStore (@NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
   {
-    this.context_ = context;
     this.databaseClass_ = databaseClass;
     this.retrofit_ = retrofit;
     this.databaseDefinition_ = FlowManager.getDatabase (this.databaseClass_);
@@ -168,7 +165,10 @@ public class DataStore
 
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
-  createSingleModelLoaderCallback (@NonNull Class <T> modelClass, @NonNull Object id, @NonNull OnModelLoaded <T> onModelLoaded)
+  createSingleModelLoaderCallback (@NonNull Context context,
+                                   @NonNull Class <T> modelClass,
+                                   @NonNull Object id,
+                                   @NonNull OnModelLoaded <T> onModelLoaded)
   {
     return new LoaderManager.LoaderCallbacks<T> ()
     {
@@ -180,7 +180,7 @@ public class DataStore
                   .from (modelClass)
                   .where (Condition.column (_ID).eq (id));
 
-        return new FlowModelLoader<> (context_, modelClass, queriable);
+        return new FlowModelLoader<> (context, modelClass, queriable);
       }
 
       @Override
