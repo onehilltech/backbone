@@ -339,7 +339,6 @@ public class DataStore
     return new Promise<> (settlement -> {
       String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
       String singular = Pluralize.singular (tableName);
-
       ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
 
       endpoint.get (id.toString ())
@@ -376,7 +375,7 @@ public class DataStore
     return new Promise<> (settlement -> {
       String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
       String singular = Pluralize.singular (tableName);
-      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
       endpoint.get (query)
               .then (resolved (r -> {
@@ -455,19 +454,19 @@ public class DataStore
     ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
     return new Promise<> (settlement ->
-                              this.peekCursor (dataClass, query)
-                                  .then (resolved (cursor -> {
-                                    DataModelList <T> modelList = new DataModelList<> (cursor.getCount ());
+      this.peekCursor (dataClass, query)
+          .then (resolved (cursor -> {
+            DataModelList<T> modelList = new DataModelList<> (cursor.getCount ());
 
-                                    while (cursor.moveToNext ())
-                                    {
-                                      T model = modelAdapter.loadFromCursor (cursor);
-                                      modelList.add (model);
-                                    }
+            while (cursor.moveToNext ())
+            {
+              T model = modelAdapter.loadFromCursor (cursor);
+              modelList.add (model);
+            }
 
-                                    settlement.resolve (modelList);
-                                  }))
-                                  ._catch (rejected (settlement::reject))
+            settlement.resolve (modelList);
+          }))
+          ._catch (rejected (settlement::reject))
     );
   }
 
@@ -550,6 +549,20 @@ public class DataStore
                 settlement.resolve (result);
               }))
               ._catch (rejected (settlement::reject));
+    });
+  }
+
+  public <T extends DataModel> Promise <T> create (Class <T> dataClass, T value)
+  {
+    ModelAdapter modelAdapter = this.getModelAdapter (dataClass);
+
+    return new Promise<> (settlement -> {
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+      endpoint.getName ();
+      endpoint.getP
+      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+      String singular = Pluralize.singular (tableName);
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
     });
   }
 

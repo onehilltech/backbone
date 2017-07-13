@@ -94,6 +94,11 @@ public class ResourceEndpoint <T>
     return this.name_;
   }
 
+  public String getPath ()
+  {
+    return this.path_;
+  }
+
   /**
    * Create a new resource in the endpoint.
    *
