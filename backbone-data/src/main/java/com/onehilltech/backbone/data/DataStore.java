@@ -265,6 +265,8 @@ public class DataStore
       endpoint.create (value)
               .then (resolved (resource -> {
                 T newValue = resource.get (endpoint.getName ());
+                newValue.save ();
+
                 settlement.resolve (newValue);
               }))
               ._catch (rejected (settlement::reject));
@@ -405,6 +407,33 @@ public class DataStore
                       .then (resolved (settlement::resolve))
                       ._catch (rejected (settlement::reject))
               )));
+    });
+  }
+
+  /**
+   * Update an existing model element.
+   *
+   * @param dataClass
+   * @param model
+   * @param <T>
+   * @return
+   */
+  public <T extends DataModel> Promise <T> update (Class <T> dataClass, T model)
+  {
+    return new Promise<> (settlement -> {
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+
+      endpoint.update (model.getId (), model)
+              .then (resolved (resource -> {
+                // Get the new value and save it to the database. We do this just in
+                // case the update value is not the same as the value we receive from
+                // the service.
+                T newValue = resource.get (endpoint.getName ());
+                newValue.save ();
+
+                settlement.resolve (newValue);
+              }))
+              ._catch (rejected (settlement::reject));
     });
   }
 
