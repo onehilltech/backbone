@@ -552,17 +552,24 @@ public class DataStore
     });
   }
 
+  /**
+   * Create a new object in the data store.
+   *
+   * @param dataClass           The data class
+   * @param value               The new value
+   * @return                    Promise object
+   */
   public <T extends DataModel> Promise <T> create (Class <T> dataClass, T value)
   {
-    ModelAdapter modelAdapter = this.getModelAdapter (dataClass);
-
     return new Promise<> (settlement -> {
       ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-      endpoint.getName ();
-      endpoint.getP
-      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-      String singular = Pluralize.singular (tableName);
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+
+      endpoint.create (value)
+              .then (resolved (resource -> {
+                T newValue = resource.get (endpoint.getName ());
+                settlement.resolve (newValue);
+              }))
+              ._catch (rejected (settlement::reject));
     });
   }
 
