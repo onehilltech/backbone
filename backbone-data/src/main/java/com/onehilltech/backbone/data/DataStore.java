@@ -251,6 +251,27 @@ public class DataStore
   }
 
   /**
+   * Create a new object in the data store.
+   *
+   * @param dataClass           The data class
+   * @param value               The new value
+   * @return                    Promise object
+   */
+  public <T extends DataModel> Promise <T> create (Class <T> dataClass, T value)
+  {
+    return new Promise<> (settlement -> {
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+
+      endpoint.create (value)
+              .then (resolved (resource -> {
+                T newValue = resource.get (endpoint.getName ());
+                settlement.resolve (newValue);
+              }))
+              ._catch (rejected (settlement::reject));
+    });
+  }
+
+  /**
    * Get all the models of a single data class. This method will make a network request
    * to get the data.
    *
@@ -259,18 +280,13 @@ public class DataStore
    */
   public <T extends DataModel> Promise <DataModelList <T>> get (Class <T> dataClass)
   {
-    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
-
     return new Promise<> (settlement -> {
-      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-      String singular = Pluralize.singular (tableName);
-
-      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
       endpoint.get ()
               .then (resolved (r -> {
                 // Get the result, and save to the database.
-                DataModelList <T> modelList = r.get (tableName);
+                DataModelList <T> modelList = r.get (endpoint.getName ());
 
                 if (modelList != null)
                   modelList.save ();
@@ -337,14 +353,12 @@ public class DataStore
     ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
     return new Promise<> (settlement -> {
-      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-      String singular = Pluralize.singular (tableName);
-      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
       endpoint.get (id.toString ())
               .then (resolved (r -> {
                 // Get the result, and save to the database.
-                T model = r.get (singular);
+                T model = r.get (endpoint.getName ());
 
                 if (model != null)
                   model.save ();
@@ -363,10 +377,9 @@ public class DataStore
   /**
    * Query for a list of models.
    *
-   * @param dataClass
-   * @param query
-   * @param <T>
-   * @return
+   * @param dataClass         Data class
+   * @param query             Query parameters
+   * @return                  Promise object
    */
   public <T extends DataModel> Promise <Cursor> getCursor (Class <T> dataClass, HashMap <String, Object> query)
   {
@@ -374,7 +387,6 @@ public class DataStore
 
     return new Promise<> (settlement -> {
       String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-      String singular = Pluralize.singular (tableName);
       ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
       endpoint.get (query)
@@ -393,6 +405,40 @@ public class DataStore
                       .then (resolved (settlement::resolve))
                       ._catch (rejected (settlement::reject))
               )));
+    });
+  }
+
+  /**
+   * Delete a single model from the data store.
+   *
+   * @param dataClass           Data class
+   * @param id                  Model id
+   * @return                    Promise object
+   */
+  public <T extends DataModel> Promise <Boolean> delete (Class <T> dataClass, Object id)
+  {
+    return new Promise<> (settlement -> {
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+
+      endpoint.delete (id.toString ())
+              .then (resolved (result -> {
+                if (result)
+                {
+                  SQLCondition [] condition = {Condition.column (_ID).eq (id)};
+
+                  // Delete the object from our local cache, then notify all that the model
+                  // has indeed been deleted.
+                  SQLite.delete ()
+                        .from (dataClass)
+                        .where (condition)
+                        .execute ();
+
+                  SqlUtils.notifyModelChanged (dataClass, BaseModel.Action.DELETE, Arrays.asList (condition));
+                }
+
+                settlement.resolve (result);
+              }))
+              ._catch (rejected (settlement::reject));
     });
   }
 
@@ -514,62 +560,6 @@ public class DataStore
 
       Cursor cursor = from.query ();
       settlement.resolve (cursor);
-    });
-  }
-
-  /**
-   * Delete a single model from the data store.
-   *
-   * @param dataClass
-   * @param id
-   * @param <T>
-   * @return
-   */
-  public <T extends DataModel> Promise <Boolean> delete (Class <T> dataClass, Object id)
-  {
-    return new Promise<> (settlement -> {
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-
-      endpoint.delete (id.toString ())
-              .then (resolved (result -> {
-                if (result)
-                {
-                  SQLCondition [] condition = {Condition.column (_ID).eq (id)};
-
-                  // Delete the object from our local cache, then notify all that the model
-                  // has indeed been deleted.
-                  SQLite.delete ()
-                        .from (dataClass)
-                        .where (condition)
-                        .execute ();
-
-                  SqlUtils.notifyModelChanged (dataClass, BaseModel.Action.DELETE, Arrays.asList (condition));
-                }
-
-                settlement.resolve (result);
-              }))
-              ._catch (rejected (settlement::reject));
-    });
-  }
-
-  /**
-   * Create a new object in the data store.
-   *
-   * @param dataClass           The data class
-   * @param value               The new value
-   * @return                    Promise object
-   */
-  public <T extends DataModel> Promise <T> create (Class <T> dataClass, T value)
-  {
-    return new Promise<> (settlement -> {
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-
-      endpoint.create (value)
-              .then (resolved (resource -> {
-                T newValue = resource.get (endpoint.getName ());
-                settlement.resolve (newValue);
-              }))
-              ._catch (rejected (settlement::reject));
     });
   }
 
