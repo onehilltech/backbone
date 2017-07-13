@@ -29,7 +29,6 @@ import com.raizlabs.android.dbflow.structure.ModelAdapter;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -313,7 +312,7 @@ public class DataStore
    * @param <T>
    * @return
    */
-  public <T extends DataModel> Promise <DataModelList <T>> get (Class <T> dataClass, HashMap <String, Object> query)
+  public <T extends DataModel> Promise <DataModelList <T>> get (Class <T> dataClass, Map <String, Object> query)
   {
     ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
@@ -383,7 +382,7 @@ public class DataStore
    * @param query             Query parameters
    * @return                  Promise object
    */
-  public <T extends DataModel> Promise <Cursor> getCursor (Class <T> dataClass, HashMap <String, Object> query)
+  public <T extends DataModel> Promise <Cursor> getCursor (Class <T> dataClass, Map <String, Object> query)
   {
     ModelAdapter modelAdapter = this.getModelAdapter (dataClass);
 
@@ -524,7 +523,7 @@ public class DataStore
    * @param <T>
    * @return
    */
-  public <T extends DataModel> Promise <DataModelList <T>> peek (Class <T> dataClass, HashMap <String, Object> query)
+  public <T extends DataModel> Promise <DataModelList <T>> peek (Class <T> dataClass, Map <String, Object> query)
   {
     ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
@@ -577,7 +576,7 @@ public class DataStore
    * @param params          Criteria
    * @return                Promise object
    */
-  public <T extends DataModel> Promise <Cursor> peekCursor (Class <T> dataClass, HashMap <String, Object> params)
+  public <T extends DataModel> Promise <Cursor> peekCursor (Class <T> dataClass, Map <String, Object> params)
   {
     this.getModelAdapter (dataClass);
 
