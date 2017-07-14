@@ -43,23 +43,15 @@ public class DataStore
 {
   public static class Builder
   {
-    private final Context context_;
-
     private Class <?> databaseClass_;
 
     private OkHttpClient httpClient_;
 
     private String baseUrl_;
 
-    public Builder (Context context)
-    {
-      this.context_ = context;
-    }
-
-    public Builder setDatabaseClass (Class <?> databaseClass)
+    public Builder (Class <?> databaseClass)
     {
       this.databaseClass_ = databaseClass;
-      return this;
     }
 
     public Builder setBaseUrl (String baseUrl)
