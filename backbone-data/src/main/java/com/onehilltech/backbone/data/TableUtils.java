@@ -1,13 +1,11 @@
 package com.onehilltech.backbone.data;
 
-/**
- * Created by hilljh on 7/5/17.
- */
+import com.raizlabs.android.dbflow.sql.QueryBuilder;
 
 public class TableUtils
 {
   public static String getRawTableName (String tableName)
   {
-    return tableName.substring (1, tableName.length () - 1);
+    return QueryBuilder.stripQuotes (tableName);
   }
 }
