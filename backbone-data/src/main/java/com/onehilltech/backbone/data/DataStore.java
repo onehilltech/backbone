@@ -160,7 +160,7 @@ public class DataStore
 
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
-  createSingleModelLoaderCallback (@NonNull Context context,
+  createSimpleModelLoaderCallback (@NonNull Context context,
                                    @NonNull Class <T> modelClass,
                                    @NonNull Object id,
                                    @NonNull OnModelLoaded <T> onModelLoaded)
