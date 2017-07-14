@@ -147,6 +147,7 @@ public class DataStore
   {
     void onModelLoaded (T model);
   }
+
   private DataStore (@NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
   {
     this.databaseClass_ = databaseClass;
@@ -189,6 +190,11 @@ public class DataStore
 
       }
     };
+  }
+
+  public Class <?> getDatabaseClass ()
+  {
+    return this.databaseClass_;
   }
 
   /**
