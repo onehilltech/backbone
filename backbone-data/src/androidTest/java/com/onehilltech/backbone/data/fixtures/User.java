@@ -2,12 +2,9 @@ package com.onehilltech.backbone.data.fixtures;
 
 import com.google.gson.annotations.SerializedName;
 import com.onehilltech.backbone.data.DataModel;
-import com.onehilltech.backbone.data.serializers.DateTimeSerializer;
 import com.raizlabs.android.dbflow.annotation.Column;
 import com.raizlabs.android.dbflow.annotation.PrimaryKey;
 import com.raizlabs.android.dbflow.annotation.Table;
-
-import org.joda.time.DateTime;
 
 @Table (name = "users", database = TestDatabase.class)
 public class User extends DataModel
@@ -22,9 +19,6 @@ public class User extends DataModel
   @Column(name = "last_name")
   @SerializedName ("last_name")
   public String lastName;
-
-  @Column(typeConverter = DateTimeSerializer.class)
-  public DateTime birthday;
 
   public User ()
   {
@@ -55,10 +49,6 @@ public class User extends DataModel
       return false;
 
     User user = (User)obj;
-
-    return
-        user.firstName.equals (this.firstName) &&
-            user.lastName.equals (this.lastName) &&
-            user.birthday.isEqual (this.birthday);
+    return user.firstName.equals (this.firstName) && user.lastName.equals (this.lastName);
   }
 }

@@ -25,9 +25,11 @@ import com.raizlabs.android.dbflow.sql.language.SQLite;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
 import com.raizlabs.android.dbflow.structure.ModelAdapter;
+import com.raizlabs.android.dbflow.structure.container.ForeignKeyContainer;
 
 import org.joda.time.DateTime;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -156,8 +158,29 @@ public class DataStore
 
     if (this.databaseDefinition_ == null)
       throw new IllegalArgumentException ("Cannot locate database for " + databaseClass.getName ());
+
+    this.initDependencyGraph ();
   }
 
+  private void initDependencyGraph ()
+  {
+    for (ModelAdapter modelAdapter: this.databaseDefinition_.getModelAdapters ())
+    {
+      Class <?> modelClass = modelAdapter.getModelClass ();
+
+      Field [] fields = modelClass.getDeclaredFields ();
+
+      for (Field field : fields)
+      {
+        System.err.println (field.getName () + ": " + field.getType ().getName ());
+
+        if (field.getType ().equals (ForeignKeyContainer.class))
+        {
+
+        }
+      }
+    }
+  }
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
   createSimpleModelLoaderCallback (@NonNull Context context,

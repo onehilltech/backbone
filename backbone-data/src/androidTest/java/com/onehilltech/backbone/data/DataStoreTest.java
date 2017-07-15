@@ -53,9 +53,8 @@ public class DataStoreTest
     this.server_.start ();
 
     this.dataStore_ =
-        new DataStore.Builder (InstrumentationRegistry.getContext ())
+        new DataStore.Builder (TestDatabase.class)
             .setBaseUrl (this.server_.getUrl ("/").toString ())
-            .setDatabaseClass (TestDatabase.class)
             .build ();
   }
 
@@ -82,7 +81,6 @@ public class DataStoreTest
                        Assert.assertEquals (1, user._id);
                        Assert.assertEquals ("John", user.firstName);
                        Assert.assertEquals ("Doe", user.lastName);
-                       Assert.assertTrue (today.isEqual (user.birthday));
 
                        synchronized (this.lock_)
                        {
@@ -98,10 +96,7 @@ public class DataStoreTest
   @Test
   public void testGetAll () throws Exception
   {
-    // Schedule some responses.
-    DateTime today = DateTime.now ();
-
-    this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"users\": [{\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toDateTimeISO () + "\"}]}"));
+    this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"users\": [{\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\"}]}"));
 
     synchronized (this.lock_)
     {
@@ -123,10 +118,7 @@ public class DataStoreTest
   @Test
   public void testGetNotModified () throws Exception
   {
-    // Schedule some responses.
-    DateTime today = DateTime.now ();
-
-    this.dispatcher_.add ("/users/1", new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toDateTimeISO () + "\"}}"));
+    this.dispatcher_.add ("/users/1", new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
     this.dispatcher_.add ("/users/1", new MockResponse ().setResponseCode (304).setBody ("Not Modified"));
 
     synchronized (this.lock_)
@@ -159,7 +151,6 @@ public class DataStoreTest
       User user = new User ();
       user.firstName = "Jane";
       user.lastName = "Doe";
-      user.birthday = DateTime.now ();
       user.save ();
 
       this.dataStore_.peek (User.class, user._id)
@@ -186,7 +177,6 @@ public class DataStoreTest
       User user = new User ();
       user.firstName = "Jane";
       user.lastName = "Doe";
-      user.birthday = DateTime.now ();
       user.save ();
 
       this.dataStore_.peek (User.class)
