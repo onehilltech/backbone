@@ -218,7 +218,9 @@ public class DataStore
 
       endpoint.create (value)
               .then (resolved (resource -> {
+                // Get the new value, and associate it with this data store.
                 T newValue = resource.get (endpoint.getName ());
+                newValue.setDataStore (this);
 
                 newValue.save ()
                         .then (resolved (result -> settlement.resolve (newValue)))
@@ -249,6 +251,8 @@ public class DataStore
 
                 if (modelList != null)
                 {
+                  modelList.setDataStore (this);
+
                   // Either we store all the models in the database, or we store nothing.
                   FlowManager.getDatabase (this.databaseClass_)
                              .beginTransactionAsync (databaseWrapper ->
@@ -294,6 +298,10 @@ public class DataStore
 
                 if (model != null)
                 {
+                  // Set the data store for this model.
+                  model.setDataStore (this);
+
+                  // Save this model to our local cache.
                   model.save ()
                        .then (resolved (value -> settlement.resolve (model)))
                        ._catch (rejected (settlement::reject));
@@ -335,6 +343,9 @@ public class DataStore
 
                 if (modelList != null)
                 {
+                  // Set the data store for all the models.
+                  modelList.setDataStore (this);
+
                   // Either we store all the models in the database, or we store nothing.
                   FlowManager.getDatabase (this.databaseClass_)
                              .beginTransactionAsync (databaseWrapper ->
@@ -381,6 +392,8 @@ public class DataStore
                   return Promise.resolve (null);
 
                 return new Promise<> (settle -> {
+                  list.setDataStore (this);
+
                   FlowManager.getDatabase (this.databaseClass_)
                              .beginTransactionAsync (databaseWrapper -> {
                                list.save (databaseWrapper)
@@ -429,6 +442,7 @@ public class DataStore
                   // case the update value is not the same as the value we receive from
                   // the service.
                   T newValue = resource.get (endpoint.getName ());
+                  newValue.setDataStore (this);
                   newValue.save ();
 
                   settlement.resolve (newValue);
@@ -519,6 +533,8 @@ public class DataStore
             while (cursor.moveToNext ())
             {
               T model = modelAdapter.loadFromCursor (cursor);
+              model.setDataStore (this);
+
               modelList.add (model);
             }
 
@@ -548,6 +564,8 @@ public class DataStore
             while (cursor.moveToNext ())
             {
               T model = modelAdapter.loadFromCursor (cursor);
+              model.setDataStore (this);
+
               modelList.add (model);
             }
 
@@ -576,6 +594,9 @@ public class DataStore
                 .from (dataClass)
                 .where (Operator.op (_ID).eq (id))
                 .querySingle ();
+
+      if (dataModel != null)
+        dataModel.setDataStore (this);
 
       settlement.resolve (dataModel);
     });
