@@ -3,7 +3,6 @@ package com.onehilltech.backbone.data;
 import android.app.LoaderManager;
 import android.content.Context;
 import android.content.Loader;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -239,17 +238,26 @@ public class DataStore
   {
     return new Promise<> (settlement -> {
       ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
 
       endpoint.get ()
               .then (resolved (r -> {
                 // Get the result, and save to the database.
-                DataModelList <T> modelList = r.get (endpoint.getName ());
+                DataModelList <T> modelList = r.get (tableName);
 
                 if (modelList != null)
                 {
-                  modelList.save ()
-                           .then (resolved (value -> settlement.resolve (modelList)))
-                           ._catch (rejected (settlement::reject));
+                  // Either we store all the models in the database, or we store nothing.
+                  FlowManager.getDatabase (this.databaseClass_)
+                             .beginTransactionAsync (databaseWrapper ->
+                               modelList.save (databaseWrapper)
+                                        .then (resolved (value -> settlement.resolve (modelList)))
+                                        ._catch (rejected (settlement::reject)))
+                             .success (transaction -> settlement.resolve (modelList))
+                             .error ((transaction, error) -> settlement.reject (error))
+                             .build ()
+                             .execute ();
                 }
                 else
                 {
@@ -325,10 +333,22 @@ public class DataStore
                 DataModelList <T> modelList = r.get (tableName);
 
                 if (modelList != null)
-                  modelList.save ();
-
-                // Resolve the result.
-                settlement.resolve (modelList);
+                {
+                  // Either we store all the models in the database, or we store nothing.
+                  FlowManager.getDatabase (this.databaseClass_)
+                             .beginTransactionAsync (databaseWrapper ->
+                                                         modelList.save (databaseWrapper)
+                                                                  .then (resolved (value -> settlement.resolve (modelList)))
+                                                                  ._catch (rejected (settlement::reject)))
+                             .success (transaction -> settlement.resolve (modelList))
+                             .error ((transaction, error) -> settlement.reject (error))
+                             .build ()
+                             .execute ();
+                }
+                else
+                {
+                  settlement.resolve (new DataModelList<> ());
+                }
               }))
               ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
                   this.select (dataClass, query)
@@ -345,7 +365,7 @@ public class DataStore
    * @param query             Query parameters
    * @return                  Promise object
    */
-  public <T extends DataModel> Promise <Cursor> queryCursor (Class <T> dataClass, Map <String, Object> query)
+  public <T extends DataModel> Promise <FlowCursor> queryCursor (Class <T> dataClass, Map <String, Object> query)
   {
     return new Promise<> (settlement -> {
       ModelAdapter modelAdapter = this.getModelAdapter (dataClass);
@@ -353,16 +373,30 @@ public class DataStore
       ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
       endpoint.get (query)
-              .then (resolved (r -> {
+              .then (r -> {
                 DataModelList <T> list = r.get (tableName);
 
-                if (list != null && !list.isEmpty ())
-                  list.save ();
+                if (list == null)
+                  return Promise.resolve (null);
 
+                return new Promise<> (settle -> {
+                  FlowManager.getDatabase (this.databaseClass_)
+                             .beginTransactionAsync (databaseWrapper -> {
+                               list.save (databaseWrapper)
+                                   .then (resolved (value -> settlement.resolve (null)))
+                                   ._catch (rejected (settlement::reject));
+                             })
+                             .success (transaction -> settlement.resolve (null))
+                             .error ((transaction, error) -> settlement.reject (error))
+                             .build ()
+                             .execute ();
+                });
+              })
+              .then (resolved (result ->
                 this.selectCursor (dataClass, query)
                     .then (resolved (settlement::resolve))
-                    ._catch (rejected (settlement::reject));
-              }))
+                    ._catch (rejected (settlement::reject))
+              ))
               ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
                   this.selectCursor (dataClass, query)
                       .then (resolved (settlement::resolve))
@@ -441,10 +475,10 @@ public class DataStore
    * @param dataClass           Data model class
    * @return                    Promise object
    */
-  public <T extends DataModel> Promise <Cursor> peekCursor (Class <T> dataClass)
+  public <T extends DataModel> Promise <FlowCursor> peekCursor (Class <T> dataClass)
   {
     return new Promise<> (settlement -> {
-      Cursor cursor =
+      FlowCursor cursor =
           SQLite.select ()
                 .from (dataClass)
                 .query ();
@@ -466,12 +500,11 @@ public class DataStore
     return new Promise<> (settlement ->
       this.peekCursor (dataClass)
           .then (resolved (cursor -> {
-            FlowCursor flowCursor = FlowCursor.from (cursor);
-            DataModelList <T> modelList = new DataModelList<> (flowCursor.getCount ());
+            DataModelList <T> modelList = new DataModelList<> (cursor.getCount ());
 
-            while (flowCursor.moveToNext ())
+            while (cursor.moveToNext ())
             {
-              T model = modelAdapter.loadFromCursor (flowCursor);
+              T model = modelAdapter.loadFromCursor (cursor);
               modelList.add (model);
             }
 
@@ -496,12 +529,11 @@ public class DataStore
     return new Promise<> (settlement ->
       this.selectCursor (dataClass, query)
           .then (resolved (cursor -> {
-            FlowCursor flowCursor = FlowCursor.from (cursor);
-            DataModelList<T> modelList = new DataModelList<> (flowCursor.getCount ());
+            DataModelList<T> modelList = new DataModelList<> (cursor.getCount ());
 
-            while (flowCursor.moveToNext ())
+            while (cursor.moveToNext ())
             {
-              T model = modelAdapter.loadFromCursor (flowCursor);
+              T model = modelAdapter.loadFromCursor (cursor);
               modelList.add (model);
             }
 
@@ -543,7 +575,7 @@ public class DataStore
    * @param params          Criteria
    * @return                Promise object
    */
-  public <T extends DataModel> Promise <Cursor> selectCursor (Class <T> dataClass, Map <String, Object> params)
+  public <T extends DataModel> Promise <FlowCursor> selectCursor (Class <T> dataClass, Map <String, Object> params)
   {
     this.getModelAdapter (dataClass);
 
@@ -553,7 +585,7 @@ public class DataStore
       for (Map.Entry <String, Object> param: params.entrySet ())
         from.where (Operator.op (NameAlias.of (param.getKey ())).eq (param.getValue ()));
 
-      Cursor cursor = from.query ();
+      FlowCursor cursor = from.query ();
       settlement.resolve (cursor);
     });
   }

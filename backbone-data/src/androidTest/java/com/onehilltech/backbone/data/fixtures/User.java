@@ -49,6 +49,6 @@ public class User extends DataModel
       return false;
 
     User user = (User)obj;
-    return user.firstName.equals (this.firstName) && user.lastName.equals (this.lastName);
+    return this._id == user._id && user.firstName.equals (this.firstName) && user.lastName.equals (this.lastName);
   }
 }

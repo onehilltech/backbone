@@ -6,7 +6,6 @@ import android.support.test.runner.AndroidJUnit4;
 import com.onehilltech.backbone.data.fixtures.Book;
 import com.onehilltech.backbone.data.fixtures.TestDatabase;
 import com.onehilltech.backbone.data.fixtures.User;
-import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
@@ -145,19 +144,21 @@ public class DataStoreTest
 
     synchronized (this.lock_)
     {
-      Promise.all (
-          this.dataStore_.get (User.class, 1),
-          this.dataStore_.get (User.class, 1)
-      ).then (resolved (result -> {
-        Assert.assertEquals (result.get (0), result.get (1));
+      this.dataStore_.get (User.class, 1)
+                     .then (resolved (user -> {
+                       this.dataStore_.get (User.class, 1)
+                                      .then (resolved (cached -> {
+                                        Assert.assertEquals (user, cached);
 
-        this.isComplete_ = true;
+                                        this.isComplete_ = true;
 
-        synchronized (this.lock_)
-        {
-          this.lock_.notify ();
-        }
-      }))._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+                                        synchronized (this.lock_)
+                                        {
+                                          this.lock_.notify ();
+                                        }
+                                      }));
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
 
       this.lock_.wait ();
 
@@ -170,22 +171,22 @@ public class DataStoreTest
   {
     synchronized (this.lock_)
     {
-      User user = new User ();
+      User user = new User (25);
       user.firstName = "Jane";
       user.lastName = "Doe";
-      user.save ();
 
-      this.dataStore_.peek (User.class, user._id)
-                     .then (resolved (actual -> {
-                       Assert.assertEquals (user, actual);
+      user.save ()
+          .then (value -> this.dataStore_.peek (User.class, user._id))
+          .then (resolved (actual -> {
+            Assert.assertEquals (user, actual);
 
-                       synchronized (this.lock_)
-                       {
-                         this.lock_.notify ();
-                       }
+            synchronized (this.lock_)
+            {
+              this.lock_.notify ();
+            }
 
-                     }))
-                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+          }))
+          ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
 
       this.lock_.wait (5000);
     }
@@ -196,25 +197,24 @@ public class DataStoreTest
   {
     synchronized (this.lock_)
     {
-      User user = new User ();
+      User user = new User (35);
       user.firstName = "Jane";
       user.lastName = "Doe";
-      user.save ();
 
-      this.dataStore_.peek (User.class)
-                     .then (resolved (actual -> {
-                       Assert.assertEquals (1, actual.size ());
-                       Assert.assertEquals (user, actual.get (0));
+      user.save ()
+          .then (value -> this.dataStore_.peek (User.class))
+          .then (resolved (actual -> {
+            Assert.assertEquals (1, actual.size ());
+            Assert.assertEquals (user, actual.get (0));
 
-                       synchronized (this.lock_)
-                       {
-                         this.lock_.notify ();
-                       }
+            synchronized (this.lock_)
+            {
+              this.lock_.notify ();
+            }
+          }))
+          ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
 
-                     }))
-                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
-
-      this.lock_.wait (5000);
+      this.lock_.wait ();
     }
   }
 }
