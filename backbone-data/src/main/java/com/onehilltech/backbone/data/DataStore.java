@@ -4,6 +4,7 @@ import android.app.LoaderManager;
 import android.content.Context;
 import android.content.Loader;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 
@@ -17,19 +18,17 @@ import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.raizlabs.android.dbflow.sql.SqlUtils;
-import com.raizlabs.android.dbflow.sql.language.Condition;
 import com.raizlabs.android.dbflow.sql.language.From;
 import com.raizlabs.android.dbflow.sql.language.NameAlias;
-import com.raizlabs.android.dbflow.sql.language.SQLCondition;
+import com.raizlabs.android.dbflow.sql.language.Operator;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
 import com.raizlabs.android.dbflow.structure.ModelAdapter;
-import com.raizlabs.android.dbflow.structure.container.ForeignKeyContainer;
+import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
 import org.joda.time.DateTime;
 
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -145,7 +144,7 @@ public class DataStore
 
   private final Retrofit retrofit_;
 
-  public interface OnModelLoaded <T extends BaseModel>
+  public interface OnModelLoaded <T>
   {
     void onModelLoaded (T model);
   }
@@ -164,22 +163,7 @@ public class DataStore
 
   private void initDependencyGraph ()
   {
-    for (ModelAdapter modelAdapter: this.databaseDefinition_.getModelAdapters ())
-    {
-      Class <?> modelClass = modelAdapter.getModelClass ();
 
-      Field [] fields = modelClass.getDeclaredFields ();
-
-      for (Field field : fields)
-      {
-        System.err.println (field.getName () + ": " + field.getType ().getName ());
-
-        if (field.getType ().equals (ForeignKeyContainer.class))
-        {
-
-        }
-      }
-    }
   }
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
@@ -196,7 +180,7 @@ public class DataStore
         Queriable queriable =
             SQLite.select ()
                   .from (modelClass)
-                  .where (Condition.column (_ID).eq (id));
+                  .where (Operator.op (_ID).eq (id));
 
         return new FlowModelLoader<> (context, modelClass, queriable);
       }
@@ -235,9 +219,10 @@ public class DataStore
       endpoint.create (value)
               .then (resolved (resource -> {
                 T newValue = resource.get (endpoint.getName ());
-                newValue.save ();
 
-                settlement.resolve (newValue);
+                newValue.save ()
+                        .then (resolved (result -> settlement.resolve (newValue)))
+                        ._catch (rejected (settlement::reject));
               }))
               ._catch (rejected (settlement::reject));
     });
@@ -261,10 +246,15 @@ public class DataStore
                 DataModelList <T> modelList = r.get (endpoint.getName ());
 
                 if (modelList != null)
-                  modelList.save ();
-
-                // Resolve the result.
-                settlement.resolve (modelList);
+                {
+                  modelList.save ()
+                           .then (resolved (value -> settlement.resolve (modelList)))
+                           ._catch (rejected (settlement::reject));
+                }
+                else
+                {
+                  settlement.resolve (new DataModelList<> ());
+                }
               }))
               ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
                   this.peek (dataClass)
@@ -284,9 +274,8 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> get (Class <T> dataClass, Object id)
   {
-    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
-
     return new Promise<> (settlement -> {
+      this.getModelAdapter (dataClass);
       ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
       endpoint.get (id.toString ())
@@ -295,10 +284,15 @@ public class DataStore
                 T model = r.get (endpoint.getName ());
 
                 if (model != null)
-                  model.save ();
-
-                // Resolve the result.
-                settlement.resolve (model);
+                {
+                  model.save ()
+                       .then (resolved (value -> settlement.resolve (model)))
+                       ._catch (rejected (settlement::reject));
+                }
+                else
+                {
+                  settlement.resolve (null);
+                }
               }))
               ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
                   this.peek (dataClass, id)
@@ -420,7 +414,7 @@ public class DataStore
               .then (resolved (result -> {
                 if (result)
                 {
-                  SQLCondition [] condition = {Condition.column (_ID).eq (id)};
+                  Operator [] condition = {Operator.op (_ID).eq (id)};
 
                   // Delete the object from our local cache, then notify all that the model
                   // has indeed been deleted.
@@ -429,7 +423,10 @@ public class DataStore
                         .where (condition)
                         .execute ();
 
-                  SqlUtils.notifyModelChanged (dataClass, BaseModel.Action.DELETE, Arrays.asList (condition));
+                  Uri changeUri = SqlUtils.getNotificationUri (dataClass, BaseModel.Action.DELETE, Arrays.asList (condition));
+                  FlowManager.getContext()
+                             .getContentResolver()
+                             .notifyChange (changeUri, null, true);
                 }
 
                 settlement.resolve (result);
@@ -469,11 +466,12 @@ public class DataStore
     return new Promise<> (settlement ->
       this.peekCursor (dataClass)
           .then (resolved (cursor -> {
-            DataModelList <T> modelList = new DataModelList<> (cursor.getCount ());
+            FlowCursor flowCursor = FlowCursor.from (cursor);
+            DataModelList <T> modelList = new DataModelList<> (flowCursor.getCount ());
 
-            while (cursor.moveToNext ())
+            while (flowCursor.moveToNext ())
             {
-              T model = modelAdapter.loadFromCursor (cursor);
+              T model = modelAdapter.loadFromCursor (flowCursor);
               modelList.add (model);
             }
 
@@ -498,11 +496,12 @@ public class DataStore
     return new Promise<> (settlement ->
       this.selectCursor (dataClass, query)
           .then (resolved (cursor -> {
-            DataModelList<T> modelList = new DataModelList<> (cursor.getCount ());
+            FlowCursor flowCursor = FlowCursor.from (cursor);
+            DataModelList<T> modelList = new DataModelList<> (flowCursor.getCount ());
 
-            while (cursor.moveToNext ())
+            while (flowCursor.moveToNext ())
             {
-              T model = modelAdapter.loadFromCursor (cursor);
+              T model = modelAdapter.loadFromCursor (flowCursor);
               modelList.add (model);
             }
 
@@ -529,7 +528,7 @@ public class DataStore
       T dataModel =
           SQLite.select ()
                 .from (dataClass)
-                .where (Condition.column (_ID).eq (id))
+                .where (Operator.op (_ID).eq (id))
                 .querySingle ();
 
       settlement.resolve (dataModel);
@@ -552,7 +551,7 @@ public class DataStore
       From<?> from = SQLite.select ().from (dataClass);
 
       for (Map.Entry <String, Object> param: params.entrySet ())
-        from.where (Condition.column (NameAlias.rawBuilder (param.getKey ()).build ()).eq (param.getValue ()));
+        from.where (Operator.op (NameAlias.of (param.getKey ())).eq (param.getValue ()));
 
       Cursor cursor = from.query ();
       settlement.resolve (cursor);
