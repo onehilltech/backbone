@@ -13,11 +13,14 @@ import com.raizlabs.android.dbflow.structure.InvalidDBConfiguration;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class DataModelTypeAdapterFactory implements TypeAdapterFactory
 {
+  private final Map <Class <?>, TypeAdapter <?>> cache_ = new HashMap<> ();
+
   @SuppressWarnings("unchecked")
   @Override
   public <T> TypeAdapter<T> create (Gson gson, TypeToken<T> type)
@@ -29,11 +32,22 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
 
     try
     {
+      // Check our cache first so we are not creating the type adapter multiple
+      // times throughout the lifetime of the application.
       Class<?> rawType = type.getRawType ();
+      TypeAdapter<T> typeAdapter = (TypeAdapter <T>)this.cache_.get (rawType);
+
+      if (typeAdapter != null)
+        return typeAdapter;
+
+      // Create a new type adapter for this element.
       InstanceAdapter<? extends DataModel> instanceAdapter =
           (InstanceAdapter<? extends DataModel>) FlowManager.getInstanceAdapter (rawType);
 
-      return (TypeAdapter<T>) this.newDataModelTypeAdapter (gson, instanceAdapter);
+      typeAdapter = (TypeAdapter <T>)this.newDataModelTypeAdapter (gson, instanceAdapter);
+      this.cache_.put (rawType, typeAdapter);
+
+      return typeAdapter;
     }
     catch (IllegalArgumentException | InvalidDBConfiguration e)
     {
