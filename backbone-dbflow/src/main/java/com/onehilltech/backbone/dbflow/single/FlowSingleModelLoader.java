@@ -10,6 +10,7 @@ import com.raizlabs.android.dbflow.runtime.FlowContentObserver;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.InstanceAdapter;
 import com.raizlabs.android.dbflow.structure.Model;
+import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
 import java.util.HashSet;
 
@@ -19,12 +20,12 @@ import java.util.HashSet;
  * @param <TModel>
  */
 @TargetApi(11)
-public abstract class FlowSingleModelLoader <TModel extends Model, TTable extends Model>
+public abstract class FlowSingleModelLoader <TModel>
     extends AsyncTaskLoader<TModel>
 {
   /// Models to be observed for changes.
   private final Class<TModel> mModel;
-  private final InstanceAdapter<TModel, TTable> mAdapter;
+  private final InstanceAdapter<TModel> mAdapter;
 
   /// Queriable operation that the loader executes.
   private Queriable mQueriable;
@@ -67,7 +68,7 @@ public abstract class FlowSingleModelLoader <TModel extends Model, TTable extend
 
   protected FlowSingleModelLoader (Context context,
                                    Class<TModel> model,
-                                   InstanceAdapter <TModel, TTable> adapter,
+                                   InstanceAdapter <TModel> adapter,
                                    Queriable queriable)
   {
     super (context);
@@ -86,8 +87,10 @@ public abstract class FlowSingleModelLoader <TModel extends Model, TTable extend
     if (cursor == null || !cursor.moveToFirst ())
       return null;
 
+    FlowCursor flowCursor = FlowCursor.from (cursor);
+
     TModel model = this.mAdapter.newInstance ();
-    this.mAdapter.loadFromCursor (cursor, model);
+    this.mAdapter.loadFromCursor (flowCursor, model);
 
     return model;
   }
@@ -157,7 +160,7 @@ public abstract class FlowSingleModelLoader <TModel extends Model, TTable extend
     this.mObserveModel = observeModel;
   }
 
-  public void registerForContentChanges (Class<? extends Model> model)
+  public void registerForContentChanges (Class<?> model)
   {
     if (this.mModels.contains (model))
       return;

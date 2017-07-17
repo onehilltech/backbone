@@ -5,7 +5,6 @@ import android.content.Context;
 
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
-import com.raizlabs.android.dbflow.structure.BaseQueryModel;
 
 /**
  * Utility class to be added to DBFlow.
@@ -13,8 +12,8 @@ import com.raizlabs.android.dbflow.structure.BaseQueryModel;
  * @param <TQueryModel>
  */
 @TargetApi(11)
-public class FlowQueryModelLoader <TQueryModel extends BaseQueryModel>
-  extends FlowSingleModelLoader<TQueryModel, TQueryModel>
+public class FlowQueryModelLoader <TQueryModel>
+  extends FlowSingleModelLoader<TQueryModel>
 {
   public FlowQueryModelLoader (Context context,
                                Class <TQueryModel> model,

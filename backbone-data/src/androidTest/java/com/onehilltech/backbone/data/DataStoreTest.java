@@ -3,15 +3,14 @@ package com.onehilltech.backbone.data;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 
+import com.onehilltech.backbone.data.fixtures.Book;
 import com.onehilltech.backbone.data.fixtures.TestDatabase;
 import com.onehilltech.backbone.data.fixtures.User;
 import com.onehilltech.promises.Promise;
-import com.raizlabs.android.dbflow.config.FlowConfig;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
 
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,11 +39,7 @@ public class DataStoreTest
     this.isComplete_ = false;
 
     InstrumentationRegistry.getContext ().deleteDatabase (TestDatabase.NAME + ".db");
-
-    FlowManager.init (
-        new FlowConfig.Builder (InstrumentationRegistry.getContext ())
-            .openDatabasesOnInit (true)
-            .build ());
+    FlowManager.init (InstrumentationRegistry.getContext ());
 
     this.dispatcher_ = new SimpleDispatcher ();
 
@@ -67,10 +62,7 @@ public class DataStoreTest
   @Test
   public void testGetOne () throws Exception
   {
-    // Schedule some responses.
-    DateTime today = DateTime.now ();
-
-    this.dispatcher_.add ("/users/1", new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\", \"birthday\": \"" + today.toDateTimeISO () + "\"}}"));
+    this.dispatcher_.add ("/users/1", new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
 
     synchronized (this.lock_)
     {
@@ -90,6 +82,36 @@ public class DataStoreTest
                      ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
 
       this.lock_.wait (5000);
+    }
+  }
+
+  @Test
+  public void testGetOneWithRelation () throws Exception
+  {
+    // We need this for the foreign relation.
+    User user = new User (25);
+    user.save ();
+
+    this.dispatcher_.add ("/books/1", new MockResponse ().setBody ("{\"book\": {\"_id\": 1, \"author\": 25, \"title\": \"Book Title\"}}"));
+
+    synchronized (this.lock_)
+    {
+      this.dataStore_.get (Book.class, 1)
+                     .then (resolved (book -> {
+                       Assert.assertNotNull (book);
+
+                       Assert.assertEquals (1, book._id);
+                       Assert.assertEquals (25, book.author._id);
+                       Assert.assertEquals ("Book Title", book.title);
+
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait ();
     }
   }
 

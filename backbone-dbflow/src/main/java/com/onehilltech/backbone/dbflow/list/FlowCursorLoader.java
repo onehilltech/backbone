@@ -5,9 +5,11 @@ import android.content.AsyncTaskLoader;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.raizlabs.android.dbflow.runtime.FlowContentObserver;
-import com.raizlabs.android.dbflow.sql.language.SQLCondition;
+import com.raizlabs.android.dbflow.sql.language.SQLOperator;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
 import com.raizlabs.android.dbflow.structure.Model;
@@ -21,8 +23,6 @@ import java.util.HashSet;
 @TargetApi (11)
 public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
 {
-  private static final String TAG = "FlowCursorLoader";
-
   /// Models to be observed for changes.
   private HashSet<Class<? extends Model>> mModels = new HashSet<> ();
 
@@ -182,9 +182,7 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
     }
 
     @Override
-    public void onModelStateChanged (Class<? extends Model> table,
-                                     BaseModel.Action action,
-                                     SQLCondition[] primaryKeyValues)
+    public void onModelStateChanged (@Nullable Class<?> table, BaseModel.Action action, @NonNull SQLOperator[] primaryKeyValues)
     {
       if (!this.endOfTransaction)
       {

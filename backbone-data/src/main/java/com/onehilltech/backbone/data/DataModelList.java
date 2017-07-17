@@ -2,10 +2,13 @@ package com.onehilltech.backbone.data;
 
 import android.support.annotation.NonNull;
 
-import com.raizlabs.android.dbflow.structure.database.DatabaseWrapper;
+import com.onehilltech.promises.Promise;
 
 import java.util.ArrayList;
 import java.util.Collection;
+
+import static com.onehilltech.promises.Promise.rejected;
+import static com.onehilltech.promises.Promise.resolved;
 
 public class DataModelList <T extends DataModel> extends ArrayList <T>
 {
@@ -23,15 +26,17 @@ public class DataModelList <T extends DataModel> extends ArrayList <T>
     super (c);
   }
 
-  public void save ()
+  public Promise <Void> save ()
   {
-    for (T t : this)
-      t.save ();
-  }
+    return new Promise<> (settlement -> {
+      ArrayList <Promise <?>> promises = new ArrayList<> (this.size ());
 
-  public void save (DatabaseWrapper databaseWrapper)
-  {
-    for (T t : this)
-      t.save (databaseWrapper);
+      for (T model : this)
+        promises.add (model.save ());
+
+      Promise.all (promises)
+             .then (resolved (value -> settlement.resolve (null)))
+             ._catch (rejected (settlement::reject));
+    });
   }
 }

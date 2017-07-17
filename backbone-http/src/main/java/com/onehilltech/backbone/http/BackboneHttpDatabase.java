@@ -4,8 +4,7 @@ import com.raizlabs.android.dbflow.annotation.Database;
 
 @Database (
     name= BackboneHttpDatabase.DATABASE_NAME,
-    version= BackboneHttpDatabase.DATABASE_VERSION,
-    generatedClassSeparator="$")
+    version= BackboneHttpDatabase.DATABASE_VERSION)
 public class BackboneHttpDatabase
 {
   static final String DATABASE_NAME = "backbone_http";

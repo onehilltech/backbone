@@ -39,7 +39,7 @@ public final class ResourceCache
     return
         SQLite.select ()
               .from (ResourceCacheModel.class)
-              .where (ResourceCacheModel$Table.url.eq (url))
+              .where (ResourceCacheModel_Table.url.eq (url))
               .querySingle ();
   }
 
@@ -53,7 +53,7 @@ public final class ResourceCache
     try
     {
       SQLite.insert (ResourceCacheModel.class)
-            .columns (ResourceCacheModel$Table.url, ResourceCacheModel$Table.etag, ResourceCacheModel$Table.last_modified)
+            .columns (ResourceCacheModel_Table.url, ResourceCacheModel_Table.etag, ResourceCacheModel_Table.last_modified)
             .values (url, eTag, utcDateTime)
             .execute ();
     }
@@ -61,9 +61,9 @@ public final class ResourceCache
     {
       // The insert failed, lets do an update.
       SQLite.update (ResourceCacheModel.class)
-            .set (ResourceCacheModel$Table.etag.eq (eTag),
-                  ResourceCacheModel$Table.last_modified.eq (lastModified))
-            .where (ResourceCacheModel$Table.url.eq (url))
+            .set (ResourceCacheModel_Table.etag.eq (eTag),
+                  ResourceCacheModel_Table.last_modified.eq (lastModified))
+            .where (ResourceCacheModel_Table.url.eq (url))
             .execute ();
     }
   }
@@ -72,7 +72,7 @@ public final class ResourceCache
   {
     SQLite.delete ()
           .from (ResourceCacheModel.class)
-          .where (ResourceCacheModel$Table.url.eq (url))
+          .where (ResourceCacheModel_Table.url.eq (url))
           .execute ();
   }
 

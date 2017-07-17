@@ -8,6 +8,7 @@ import android.widget.CursorAdapter;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.raizlabs.android.dbflow.structure.Model;
 import com.raizlabs.android.dbflow.structure.ModelAdapter;
+import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
 /**
  * Specialization of CursorAdapter for DBFLow models.
@@ -40,6 +41,11 @@ public abstract class FlowCursorAdapter <TModel extends Model> extends CursorAda
   public TModel getItem (int position)
   {
     Cursor cursor = (Cursor) super.getItem (position);
-    return cursor != null ? this.modelAdapter_.loadFromCursor (cursor) : null;
+
+    if (cursor == null)
+      return null;
+
+    FlowCursor flowCursor = FlowCursor.from (cursor);
+    return this.modelAdapter_.loadFromCursor (flowCursor);
   }
 }

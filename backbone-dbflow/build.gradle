@@ -16,7 +16,7 @@ android {
         versionCode = project.property('build.versionCode').toInteger()
         versionName = project.property('build.version')
 
-        testApplicationId project.property('android.testApplicationId')
+        testApplicationId "com.onehilltech.backbone.dbflow.test"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 

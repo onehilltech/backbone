@@ -1,26 +1,23 @@
 package com.onehilltech.backbone.data;
 
-import com.raizlabs.android.dbflow.structure.BaseModel;
-import com.raizlabs.android.dbflow.structure.database.DatabaseWrapper;
+import com.onehilltech.promises.Promise;
+import com.raizlabs.android.dbflow.config.FlowManager;
+import com.raizlabs.android.dbflow.structure.ModelAdapter;
 
-public abstract class DataModel extends BaseModel
+public abstract class DataModel
 {
   public abstract String getId ();
 
   public abstract void setId (String id);
 
-  @Override
-  public void delete ()
+  @SuppressWarnings ("unchecked")
+  public Promise <Void> save ()
   {
-    // We need to delete the data object remotely, then delete it locally.
-    // DataStore dataStore = DataStore.lookup (this.getClass ());
+    return new Promise<> (settlement -> {
+      ModelAdapter modelAdapter = FlowManager.getModelAdapter (this.getClass ());
+      modelAdapter.save (this);
 
-    super.delete ();
-  }
-
-  @Override
-  public void delete (DatabaseWrapper databaseWrapper)
-  {
-    super.delete (databaseWrapper);
+      settlement.resolve (null);
+    });
   }
 }

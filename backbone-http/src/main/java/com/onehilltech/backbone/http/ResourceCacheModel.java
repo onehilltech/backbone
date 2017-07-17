@@ -11,7 +11,7 @@ import org.joda.time.DateTime;
 
 import java.net.URL;
 
-@Table (name="backbone_resource_cache", database = BackboneHttpDatabase.class)
+@Table (name="resources", database = BackboneHttpDatabase.class)
 public class ResourceCacheModel extends BaseModel
 {
   @PrimaryKey(autoincrement = true)
