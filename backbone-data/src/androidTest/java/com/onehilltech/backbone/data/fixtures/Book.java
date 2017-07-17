@@ -28,16 +28,4 @@ public class Book extends DataModel
   {
     this._id = _id;
   }
-
-  @Override
-  public String getId ()
-  {
-    return Long.toString (this._id);
-  }
-
-  @Override
-  public void setId (String id)
-  {
-    this._id = Long.parseLong (id);
-  }
 }

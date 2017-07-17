@@ -31,18 +31,6 @@ public class User extends DataModel
   }
 
   @Override
-  public String getId ()
-  {
-    return Long.toString (this._id);
-  }
-
-  @Override
-  public void setId (String id)
-  {
-    this._id = Long.parseLong (id);
-  }
-
-  @Override
   public boolean equals (Object obj)
   {
     if (!(obj instanceof User))

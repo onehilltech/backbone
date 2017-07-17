@@ -28,6 +28,7 @@ import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
 import org.joda.time.DateTime;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -416,19 +417,32 @@ public class DataStore
   public <T extends DataModel> Promise <T> update (Class <T> dataClass, T model)
   {
     return new Promise<> (settlement -> {
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+      try
+      {
+        ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+        Field idField = dataClass.getField ("_id");
+        Object id = idField.get (model);
 
-      endpoint.update (model.getId (), model)
-              .then (resolved (resource -> {
-                // Get the new value and save it to the database. We do this just in
-                // case the update value is not the same as the value we receive from
-                // the service.
-                T newValue = resource.get (endpoint.getName ());
-                newValue.save ();
+        endpoint.update (id.toString (), model)
+                .then (resolved (resource -> {
+                  // Get the new value and save it to the database. We do this just in
+                  // case the update value is not the same as the value we receive from
+                  // the service.
+                  T newValue = resource.get (endpoint.getName ());
+                  newValue.save ();
 
-                settlement.resolve (newValue);
-              }))
-              ._catch (rejected (settlement::reject));
+                  settlement.resolve (newValue);
+                }))
+                ._catch (rejected (settlement::reject));
+      }
+      catch (IllegalAccessException e)
+      {
+        throw new AssertionError (e);
+      }
+      catch (NoSuchFieldException e)
+      {
+        throw new AssertionError (e);
+      }
     });
   }
 

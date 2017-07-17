@@ -7,10 +7,6 @@ import com.raizlabs.android.dbflow.structure.database.DatabaseWrapper;
 
 public abstract class DataModel
 {
-  public abstract String getId ();
-
-  public abstract void setId (String id);
-
   @SuppressWarnings ("unchecked")
   public Promise <Void> save (DatabaseWrapper databaseWrapper)
   {
