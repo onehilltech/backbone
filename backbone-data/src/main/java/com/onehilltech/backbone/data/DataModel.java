@@ -12,6 +12,11 @@ public abstract class DataModel <T extends DataModel>
   /// Data store associated with the data model.
   private DataStore store_;
 
+  /**
+   * Assign the model to a data store.
+   *
+   * @param store         DataStore object
+   */
   void assignTo (DataStore store)
   {
     this.store_ = store;
