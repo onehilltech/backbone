@@ -457,6 +457,18 @@ public class DataStore
   }
 
   /**
+   * Push an existing model into the data store.
+   *
+   * @param model           Model to push
+   */
+  public <T extends DataModel> Promise <T> push (T model)
+  {
+    @SuppressWarnings ("unchecked")
+    Class <T> dataClass = (Class <T>)model.getClass ();
+    return this.insertIntoDatabase (dataClass, model);
+  }
+
+  /**
    * Helper method for deleting a model from the database.
    *
    * @param dataClass         Data class
@@ -477,7 +489,7 @@ public class DataStore
             .execute ();
 
       // Unset the data store for the model.
-      model.setDataStore (null);
+      model.assignTo (null);
 
       Uri changeUri = SqlUtils.getNotificationUri (dataClass,
                                                    BaseModel.Action.DELETE,
@@ -527,7 +539,7 @@ public class DataStore
             while (cursor.moveToNext ())
             {
               T model = modelAdapter.loadFromCursor (cursor);
-              model.setDataStore (this);
+              model.assignTo (this);
 
               modelList.add (model);
             }
@@ -557,7 +569,7 @@ public class DataStore
             while (cursor.moveToNext ())
             {
               T model = modelAdapter.loadFromCursor (cursor);
-              model.setDataStore (this);
+              model.assignTo (this);
 
               modelList.add (model);
             }
@@ -589,7 +601,7 @@ public class DataStore
                 .querySingle ();
 
       if (dataModel != null)
-        dataModel.setDataStore (this);
+        dataModel.assignTo (this);
 
       settlement.resolve (dataModel);
     });
@@ -675,7 +687,7 @@ public class DataStore
       modelAdapter.save (model);
 
       // Set the data store for the model.
-      model.setDataStore (this);
+      model.assignTo (this);
 
       settlement.resolve (model);
     });
@@ -699,7 +711,7 @@ public class DataStore
                    {
                      // Save the model to our local database, then set its data store.
                      modelAdapter.save (dataModel, databaseWrapper);
-                     dataModel.setDataStore (this);
+                     dataModel.assignTo (this);
                    }
                  })
                  .success (transaction -> settlement.resolve (modelList))

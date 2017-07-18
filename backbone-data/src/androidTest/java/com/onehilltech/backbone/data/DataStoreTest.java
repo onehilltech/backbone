@@ -191,6 +191,51 @@ public class DataStoreTest
     }
   }
 
+  @Test (expected = IllegalStateException.class)
+  public void testDeleteNonExistentModel () throws Exception
+  {
+    User user = new User ();
+    user.firstName = "John";
+    user.lastName = "Doe";
+    user.delete ();
+  }
+
+  @Test (expected = IllegalStateException.class)
+  public void testUpdateNonExistentModel () throws Exception
+  {
+    User user = new User ();
+    user.firstName = "John";
+    user.lastName = "Doe";
+    user.update ();
+  }
+
+  @Test
+  public void testPush () throws Exception
+  {
+    synchronized (this.lock_)
+    {
+      User user = new User (56);
+      user.firstName = "John";
+      user.lastName = "Doe";
+
+      this.dataStore_.push (user)
+                     .then (newUser -> this.dataStore_.peek (User.class, newUser._id))
+                     .then (resolved (cachedUser ->  {
+                       Assert.assertEquals (user.firstName, cachedUser.firstName);
+                       Assert.assertEquals (user.lastName, cachedUser.lastName);
+                       Assert.assertEquals (user._id, cachedUser._id);
+
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait (5000);
+    }
+  }
+
   @Test
   public void testGetOne () throws Exception
   {
@@ -330,26 +375,26 @@ public class DataStoreTest
   @Test
   public void testPeekAll () throws Exception
   {
+    this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"user\": {\"_id\": 45, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
+
     synchronized (this.lock_)
     {
-      User user = new User (35);
-      user.firstName = "Jane";
-      user.lastName = "Doe";
+      this.dataStore_.peek (User.class)
+                     .then (resolved (actual -> {
+                       Assert.assertEquals (1, actual.size ());
 
-      /*
-      user.insert ()
-          .then (value -> this.dataStore_.peek (User.class))
-          .then (resolved (actual -> {
-            Assert.assertEquals (1, actual.size ());
-            Assert.assertEquals (user, actual.get (0));
+                       User user = actual.get (0);
 
-            synchronized (this.lock_)
-            {
-              this.lock_.notify ();
-            }
-          }))
-          ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
-      */
+                       Assert.assertEquals ("John", user.firstName);
+                       Assert.assertEquals ("Doe", user.lastName);
+
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
 
       this.lock_.wait ();
     }

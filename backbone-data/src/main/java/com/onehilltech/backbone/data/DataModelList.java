@@ -19,7 +19,7 @@ public class DataModelList <T extends DataModel> extends ArrayList <T>
   void setDataStore (DataStore store)
   {
     for (DataModel model: this)
-      model.setDataStore (store);
+      model.assignTo (store);
   }
 
   public DataModelList (@NonNull Collection<? extends T> c)

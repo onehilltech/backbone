@@ -12,7 +12,7 @@ public abstract class DataModel <T extends DataModel>
   /// Data store associated with the data model.
   private DataStore store_;
 
-  void setDataStore (DataStore store)
+  void assignTo (DataStore store)
   {
     this.store_ = store;
   }
@@ -36,6 +36,9 @@ public abstract class DataModel <T extends DataModel>
   @SuppressWarnings ("unchecked")
   public Promise <T> update ()
   {
+    if (this.store_ == null)
+      throw new IllegalStateException ("You must first create the model using the data store.");
+
     Class <T> dataClass = (Class <T>)this.getClass ();
     T model = (T)this;
 
@@ -50,6 +53,7 @@ public abstract class DataModel <T extends DataModel>
   @SuppressWarnings ("unchecked")
   public Promise <Boolean> delete ()
   {
+
     Class <T> dataClass = (Class <T>)this.getClass ();
     T model = (T)this;
 
