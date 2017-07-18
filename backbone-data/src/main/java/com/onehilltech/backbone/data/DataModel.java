@@ -53,6 +53,8 @@ public abstract class DataModel <T extends DataModel>
   @SuppressWarnings ("unchecked")
   public Promise <Boolean> delete ()
   {
+    if (this.store_ == null)
+      throw new IllegalStateException ("You must first create the model using the data store.");
 
     Class <T> dataClass = (Class <T>)this.getClass ();
     T model = (T)this;

@@ -218,7 +218,7 @@ public class DataStoreTest
       user.firstName = "John";
       user.lastName = "Doe";
 
-      this.dataStore_.push (user)
+      this.dataStore_.push (User.class, user)
                      .then (newUser -> this.dataStore_.peek (User.class, newUser._id))
                      .then (resolved (cachedUser ->  {
                        Assert.assertEquals (user.firstName, cachedUser.firstName);
@@ -267,13 +267,13 @@ public class DataStoreTest
   {
     // We need this for the foreign relation.
     User user = new User (25);
-    //user.insert ();
 
     this.dispatcher_.add ("/books/1", new MockResponse ().setBody ("{\"book\": {\"_id\": 1, \"author\": 25, \"title\": \"Book Title\"}}"));
 
     synchronized (this.lock_)
     {
-      this.dataStore_.get (Book.class, 1)
+      this.dataStore_.push (User.class, user)
+                     .then (newUser -> this.dataStore_.get (Book.class, 1))
                      .then (resolved (book -> {
                        Assert.assertNotNull (book);
 
@@ -353,20 +353,18 @@ public class DataStoreTest
       user.firstName = "Jane";
       user.lastName = "Doe";
 
-      /*
-      user.insert ()
-          .then (value -> this.dataStore_.peek (User.class, user._id))
-          .then (resolved (actual -> {
-            Assert.assertEquals (user, actual);
+      this.dataStore_.push (User.class, user)
+                     .then (newUser -> this.dataStore_.peek (User.class, newUser._id))
+                     .then (resolved (actual -> {
+                       Assert.assertEquals (user, actual);
 
-            synchronized (this.lock_)
-            {
-              this.lock_.notify ();
-            }
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
 
-          }))
-          ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
-      */
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
 
       this.lock_.wait (5000);
     }
@@ -375,18 +373,19 @@ public class DataStoreTest
   @Test
   public void testPeekAll () throws Exception
   {
-    this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"user\": {\"_id\": 45, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
+    User user = new User (54);
+    user.firstName = "John";
+    user.lastName = "Doe";
 
     synchronized (this.lock_)
     {
-      this.dataStore_.peek (User.class)
+      this.dataStore_.push (User.class, user)
+                     .then (newUser -> this.dataStore_.peek (User.class))
                      .then (resolved (actual -> {
                        Assert.assertEquals (1, actual.size ());
 
-                       User user = actual.get (0);
-
-                       Assert.assertEquals ("John", user.firstName);
-                       Assert.assertEquals ("Doe", user.lastName);
+                       User cachedUser = actual.get (0);
+                       Assert.assertEquals (user, cachedUser);
 
                        synchronized (this.lock_)
                        {
@@ -396,7 +395,7 @@ public class DataStoreTest
                      ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
 
 
-      this.lock_.wait ();
+      this.lock_.wait (5000);
     }
   }
 }

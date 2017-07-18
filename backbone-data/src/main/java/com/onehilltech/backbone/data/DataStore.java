@@ -228,7 +228,7 @@ public class DataStore
                 T newValue = resource.get (endpoint.getName ());
 
                 // Insert the created value in our database.
-                this.insertIntoDatabase (dataClass, newValue)
+                this.push (dataClass, newValue)
                     .then (resolved (settlement::resolve))
                     ._catch (rejected (settlement::reject));
               }))
@@ -296,7 +296,7 @@ public class DataStore
 
                 if (model != null)
                 {
-                  this.insertIntoDatabase (dataClass, model)
+                  this.push (dataClass, model)
                       .then (resolved (settlement::resolve))
                       ._catch (rejected (settlement::reject));
                 }
@@ -408,7 +408,7 @@ public class DataStore
                   // the service.
                   T newValue = resource.get (endpoint.getName ());
 
-                  this.insertIntoDatabase (dataClass, newValue)
+                  this.push (dataClass, newValue)
                       .then (resolved (settlement::resolve))
                       ._catch (rejected (settlement::reject));
                 }))
@@ -454,18 +454,6 @@ public class DataStore
         settlement.reject (new AssertionError (e));
       }
     });
-  }
-
-  /**
-   * Push an existing model into the data store.
-   *
-   * @param model           Model to push
-   */
-  public <T extends DataModel> Promise <T> push (T model)
-  {
-    @SuppressWarnings ("unchecked")
-    Class <T> dataClass = (Class <T>)model.getClass ();
-    return this.insertIntoDatabase (dataClass, model);
   }
 
   /**
@@ -673,13 +661,13 @@ public class DataStore
   }
 
   /**
-   * Insert a single model into the database.
+   * Push a single model onto the data store.
    *
    * @param dataClass         Class object
    * @param model             Model to save
    * @return                  Promise object
    */
-  private <T extends DataModel> Promise <T> insertIntoDatabase (Class <T> dataClass, T model)
+  public <T extends DataModel> Promise <T> push (Class <T> dataClass, T model)
   {
     return new Promise<> (settlement -> {
       // Save the model to our local database.
@@ -694,7 +682,7 @@ public class DataStore
   }
 
   /**
-   * Helper method for inserting a collection of model elements into the database.
+   * Push a collection of models onto the data store.
    *
    * @param dataClass       Class object
    * @param modelList       List of model elements
