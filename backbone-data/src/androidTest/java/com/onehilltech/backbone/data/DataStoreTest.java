@@ -144,7 +144,7 @@ public class DataStoreTest
   }
 
   @Test
-  public void update () throws Exception
+  public void testUpdate () throws Exception
   {
     this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"user\": {\"_id\": 45, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
     this.dispatcher_.add ("/users/45", new MockResponse ().setBody ("{\"user\": {\"_id\": 45, \"first_name\": \"Jane\", \"last_name\": \"Doe\"}}"));
