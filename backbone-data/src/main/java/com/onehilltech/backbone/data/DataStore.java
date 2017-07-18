@@ -30,6 +30,7 @@ import org.joda.time.DateTime;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +41,13 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
 
+/**
+ * @class DataStore
+ *
+ * The DataStore is an abstraction that manages different data objects. The DataStore has
+ * methods for retrieving data from both local and remote storage. Data from remote storage
+ * is stored locally for faster access.
+ */
 public class DataStore
 {
   public static class Builder
@@ -136,13 +144,16 @@ public class DataStore
     }
   }
 
-  private static final NameAlias _ID = NameAlias.builder ("_id").build ();
+  private static final String FIELD_ID = "_id";
+  private static final NameAlias _ID = NameAlias.of (FIELD_ID);
 
   private final Class <?> databaseClass_;
 
   private final DatabaseDefinition databaseDefinition_;
 
   private final Retrofit retrofit_;
+
+  private final Map <Class <?>, ResourceEndpoint <?>> endpoints_ = new LinkedHashMap<> ();
 
   public interface OnModelLoaded <T>
   {
@@ -154,10 +165,6 @@ public class DataStore
     this.databaseClass_ = databaseClass;
     this.retrofit_ = retrofit;
     this.databaseDefinition_ = FlowManager.getDatabase (this.databaseClass_);
-
-    if (this.databaseDefinition_ == null)
-      throw new IllegalArgumentException ("Cannot locate database for " + databaseClass.getName ());
-
     this.initDependencyGraph ();
   }
 
@@ -172,8 +179,7 @@ public class DataStore
                                    @NonNull Object id,
                                    @NonNull OnModelLoaded <T> onModelLoaded)
   {
-    return new LoaderManager.LoaderCallbacks<T> ()
-    {
+    return new LoaderManager.LoaderCallbacks<T> () {
       @Override
       public Loader<T> onCreateLoader (int i, Bundle bundle)
       {
@@ -220,15 +226,16 @@ public class DataStore
               .then (resolved (resource -> {
                 // Get the new value, and associate it with this data store.
                 T newValue = resource.get (endpoint.getName ());
-                newValue.setDataStore (this);
 
-                newValue.save ()
-                        .then (resolved (result -> settlement.resolve (newValue)))
-                        ._catch (rejected (settlement::reject));
+                // Insert the created value in our database.
+                this.insertIntoDatabase (dataClass, newValue)
+                    .then (resolved (settlement::resolve))
+                    ._catch (rejected (settlement::reject));
               }))
               ._catch (rejected (settlement::reject));
     });
   }
+
 
   /**
    * Get all the models of a single data class. This method will make a network request
@@ -246,23 +253,14 @@ public class DataStore
 
       endpoint.get ()
               .then (resolved (r -> {
-                // Get the result, and save to the database.
+                // Get the result, and insert to the database.
                 DataModelList <T> modelList = r.get (tableName);
 
                 if (modelList != null)
                 {
-                  modelList.setDataStore (this);
-
-                  // Either we store all the models in the database, or we store nothing.
-                  FlowManager.getDatabase (this.databaseClass_)
-                             .beginTransactionAsync (databaseWrapper ->
-                               modelList.save (databaseWrapper)
-                                        .then (resolved (value -> settlement.resolve (modelList)))
-                                        ._catch (rejected (settlement::reject)))
-                             .success (transaction -> settlement.resolve (modelList))
-                             .error ((transaction, error) -> settlement.reject (error))
-                             .build ()
-                             .execute ();
+                  this.insertIntoDatabase (dataClass, modelList)
+                      .then (resolved (settlement::resolve))
+                      ._catch (rejected (settlement::reject));
                 }
                 else
                 {
@@ -293,18 +291,14 @@ public class DataStore
 
       endpoint.get (id.toString ())
               .then (resolved (r -> {
-                // Get the result, and save to the database.
+                // Get the result, and insert to the database.
                 T model = r.get (endpoint.getName ());
 
                 if (model != null)
                 {
-                  // Set the data store for this model.
-                  model.setDataStore (this);
-
-                  // Save this model to our local cache.
-                  model.save ()
-                       .then (resolved (value -> settlement.resolve (model)))
-                       ._catch (rejected (settlement::reject));
+                  this.insertIntoDatabase (dataClass, model)
+                      .then (resolved (settlement::resolve))
+                      ._catch (rejected (settlement::reject));
                 }
                 else
                 {
@@ -323,39 +317,27 @@ public class DataStore
    * Query for a set of models by making a network request. If the server returns that the
    * list of models has not be modified, then we load the list of models from local disk.
    *
-   * @param dataClass
-   * @param query
-   * @param <T>
-   * @return
+   * @param dataClass           Class object
+   * @param query               Query strings
+   * @return                    Promise object
    */
   public <T extends DataModel> Promise <DataModelList <T>> query (Class <T> dataClass, Map <String, Object> query)
   {
     return new Promise<> (settlement -> {
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
       ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
       String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-      String singular = Pluralize.singular (tableName);
-      ResourceEndpoint <T> endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
 
       endpoint.get (query)
               .then (resolved (r -> {
-                // Get the result, and save to the database.
+                // Get the result, and insert to the database.
                 DataModelList <T> modelList = r.get (tableName);
 
                 if (modelList != null)
                 {
-                  // Set the data store for all the models.
-                  modelList.setDataStore (this);
-
-                  // Either we store all the models in the database, or we store nothing.
-                  FlowManager.getDatabase (this.databaseClass_)
-                             .beginTransactionAsync (databaseWrapper ->
-                                                         modelList.save (databaseWrapper)
-                                                                  .then (resolved (value -> settlement.resolve (modelList)))
-                                                                  ._catch (rejected (settlement::reject)))
-                             .success (transaction -> settlement.resolve (modelList))
-                             .error ((transaction, error) -> settlement.reject (error))
-                             .build ()
-                             .execute ();
+                  this.insertIntoDatabase (dataClass, modelList)
+                      .then (resolved (settlement::resolve))
+                      ._catch (rejected (settlement::reject));
                 }
                 else
                 {
@@ -380,31 +362,14 @@ public class DataStore
   public <T extends DataModel> Promise <FlowCursor> queryCursor (Class <T> dataClass, Map <String, Object> query)
   {
     return new Promise<> (settlement -> {
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
       ModelAdapter modelAdapter = this.getModelAdapter (dataClass);
       String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
       endpoint.get (query)
               .then (r -> {
                 DataModelList <T> list = r.get (tableName);
-
-                if (list == null)
-                  return Promise.resolve (null);
-
-                return new Promise<> (settle -> {
-                  list.setDataStore (this);
-
-                  FlowManager.getDatabase (this.databaseClass_)
-                             .beginTransactionAsync (databaseWrapper -> {
-                               list.save (databaseWrapper)
-                                   .then (resolved (value -> settlement.resolve (null)))
-                                   ._catch (rejected (settlement::reject));
-                             })
-                             .success (transaction -> settlement.resolve (null))
-                             .error ((transaction, error) -> settlement.reject (error))
-                             .build ()
-                             .execute ();
-                });
+                return list != null ? this.insertIntoDatabase (dataClass, list) : Promise.resolve (null);
               })
               .then (resolved (result ->
                 this.selectCursor (dataClass, query)
@@ -422,10 +387,9 @@ public class DataStore
   /**
    * Update an existing model element.
    *
-   * @param dataClass
-   * @param model
-   * @param <T>
-   * @return
+   * @param dataClass       Class object
+   * @param model           Updated model
+   * @return                Promise object
    */
   public <T extends DataModel> Promise <T> update (Class <T> dataClass, T model)
   {
@@ -433,19 +397,20 @@ public class DataStore
       try
       {
         ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-        Field idField = dataClass.getField ("_id");
+
+        Field idField = dataClass.getField (FIELD_ID);
         Object id = idField.get (model);
 
         endpoint.update (id.toString (), model)
                 .then (resolved (resource -> {
-                  // Get the new value and save it to the database. We do this just in
+                  // Get the new value and insert it to the database. We do this just in
                   // case the update value is not the same as the value we receive from
                   // the service.
                   T newValue = resource.get (endpoint.getName ());
-                  newValue.setDataStore (this);
-                  newValue.save ();
 
-                  settlement.resolve (newValue);
+                  this.insertIntoDatabase (dataClass, newValue)
+                      .then (resolved (settlement::resolve))
+                      ._catch (rejected (settlement::reject));
                 }))
                 ._catch (rejected (settlement::reject));
       }
@@ -464,36 +429,65 @@ public class DataStore
    * Delete a single model from the data store.
    *
    * @param dataClass           Data class
-   * @param id                  Model id
    * @return                    Promise object
    */
-  public <T extends DataModel> Promise <Boolean> delete (Class <T> dataClass, Object id)
+  public <T extends DataModel> Promise <Boolean> delete (Class <T> dataClass, T model)
   {
     return new Promise<> (settlement -> {
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+      try
+      {
+        ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+        Field idField = dataClass.getField (FIELD_ID);
+        Object id = idField.get (model);
 
-      endpoint.delete (id.toString ())
-              .then (resolved (result -> {
-                if (result)
-                {
-                  Operator [] condition = {Operator.op (_ID).eq (id)};
+        endpoint.delete (id.toString ())
+                .then (result -> result ? this.deleteFromDatabase (dataClass, id, model) : Promise.resolve (false))
+                .then (resolved (settlement::resolve))
+                ._catch (rejected (settlement::reject));
+      }
+      catch (NoSuchFieldException e)
+      {
+        settlement.reject (new AssertionError (e));
+      }
+      catch (IllegalAccessException e)
+      {
+        settlement.reject (new AssertionError (e));
+      }
+    });
+  }
 
-                  // Delete the object from our local cache, then notify all that the model
-                  // has indeed been deleted.
-                  SQLite.delete ()
-                        .from (dataClass)
-                        .where (condition)
-                        .execute ();
+  /**
+   * Helper method for deleting a model from the database.
+   *
+   * @param dataClass         Data class
+   * @param id                Id of the object to delete
+   * @param model             Model to delete
+   * @return                  Promise object
+   */
+  private <T extends DataModel> Promise <Boolean> deleteFromDatabase (Class <T> dataClass, Object id, T model)
+  {
+    return new Promise<> (settlement -> {
+      Operator [] condition = {Operator.op (_ID).eq (id)};
 
-                  Uri changeUri = SqlUtils.getNotificationUri (dataClass, BaseModel.Action.DELETE, Arrays.asList (condition));
-                  FlowManager.getContext()
-                             .getContentResolver()
-                             .notifyChange (changeUri, null, true);
-                }
+      // Delete the object from our local cache, then notify all that the model
+      // has indeed been deleted.
+      SQLite.delete ()
+            .from (dataClass)
+            .where (condition)
+            .execute ();
 
-                settlement.resolve (result);
-              }))
-              ._catch (rejected (settlement::reject));
+      // Unset the data store for the model.
+      model.setDataStore (null);
+
+      Uri changeUri = SqlUtils.getNotificationUri (dataClass,
+                                                   BaseModel.Action.DELETE,
+                                                   Arrays.asList (condition));
+
+      FlowManager.getContext()
+                 .getContentResolver()
+                 .notifyChange (changeUri, null, true);
+
+      settlement.resolve (true);
     });
   }
 
@@ -523,9 +517,9 @@ public class DataStore
    */
   public <T extends DataModel> Promise <DataModelList <T>> peek (Class <T> dataClass)
   {
-    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+    return new Promise<> (settlement -> {
+      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
-    return new Promise<> (settlement ->
       this.peekCursor (dataClass)
           .then (resolved (cursor -> {
             DataModelList <T> modelList = new DataModelList<> (cursor.getCount ());
@@ -540,23 +534,22 @@ public class DataStore
 
             settlement.resolve (modelList);
           }))
-          ._catch (rejected (settlement::reject))
-    );
+          ._catch (rejected (settlement::reject));
+    });
   }
 
   /**
    * Get the models for the data class from the local data store.
    *
-   * @param dataClass
-   * @param query
-   * @param <T>
-   * @return
+   * @param dataClass       Class object
+   * @param query           Query string
+   * @return                Promise object
    */
   public <T extends DataModel> Promise <DataModelList <T>> select (Class <T> dataClass, Map <String, Object> query)
   {
-    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+    return new Promise<> (settlement -> {
+      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
-    return new Promise<> (settlement ->
       this.selectCursor (dataClass, query)
           .then (resolved (cursor -> {
             DataModelList<T> modelList = new DataModelList<> (cursor.getCount ());
@@ -571,8 +564,8 @@ public class DataStore
 
             settlement.resolve (modelList);
           }))
-          ._catch (rejected (settlement::reject))
-    );
+          ._catch (rejected (settlement::reject));
+    });
   }
 
   /**
@@ -586,9 +579,9 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> peek (Class <T> dataClass, Object id)
   {
-    this.getModelAdapter (dataClass);
-
     return new Promise<> (settlement -> {
+      this.getModelAdapter (dataClass);
+
       T dataModel =
           SQLite.select ()
                 .from (dataClass)
@@ -612,9 +605,9 @@ public class DataStore
    */
   public <T extends DataModel> Promise <FlowCursor> selectCursor (Class <T> dataClass, Map <String, Object> params)
   {
-    this.getModelAdapter (dataClass);
-
     return new Promise<> (settlement -> {
+      this.getModelAdapter (dataClass);
+
       From<?> from = SQLite.select ().from (dataClass);
 
       for (Map.Entry <String, Object> param: params.entrySet ())
@@ -625,13 +618,29 @@ public class DataStore
     });
   }
 
-  private <T extends DataModel> ResourceEndpoint <T> getEndpoint (Class <T> dataClass)
+  /**
+   * Get the resource endpoint for the data class.
+   *
+   * @param dataClass         Class object
+   * @return                  ResourceEndpoint object
+   */
+  private <T> ResourceEndpoint <T> getEndpoint (Class <T> dataClass)
   {
+    @SuppressWarnings ("unchecked")
+    ResourceEndpoint <T> endpoint = (ResourceEndpoint <T>)this.endpoints_.get (dataClass);
+
+    if (endpoint != null)
+      return endpoint;
+
     ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
     String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
     String singular = Pluralize.singular (tableName);
 
-    return ResourceEndpoint.create (this.retrofit_, singular, tableName);
+    // Cache the endpoint for later lookup.
+    endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
+    this.endpoints_.put (dataClass, endpoint);
+
+    return endpoint;
   }
 
   /**
@@ -640,7 +649,7 @@ public class DataStore
    * @param dataClass       Data model class
    * @return                ModelAdapter object
    */
-  private <T extends DataModel> ModelAdapter <T> getModelAdapter (Class <T> dataClass)
+  private <T> ModelAdapter <T> getModelAdapter (Class <T> dataClass)
   {
     @SuppressWarnings ("unchecked")
     ModelAdapter <T> modelAdapter = this.databaseDefinition_.getModelAdapterForTable (dataClass);
@@ -651,13 +660,61 @@ public class DataStore
     throw new IllegalArgumentException ("Cannot locate model adapter for " + dataClass.getName ());
   }
 
-
-  private interface OnNotModified <T>
+  /**
+   * Insert a single model into the database.
+   *
+   * @param dataClass         Class object
+   * @param model             Model to save
+   * @return                  Promise object
+   */
+  private <T extends DataModel> Promise <T> insertIntoDatabase (Class <T> dataClass, T model)
   {
-    void onNotMofified ();
+    return new Promise<> (settlement -> {
+      // Save the model to our local database.
+      ModelAdapter <T> modelAdapter = FlowManager.getModelAdapter (dataClass);
+      modelAdapter.save (model);
+
+      // Set the data store for the model.
+      model.setDataStore (this);
+
+      settlement.resolve (model);
+    });
   }
 
-  private static <T> HandleErrorOrLoadFromCache<T> handleErrorOrLoadFromCache (Promise.Settlement <T> settlement, OnNotModified <T> onNotModified)
+  /**
+   * Helper method for inserting a collection of model elements into the database.
+   *
+   * @param dataClass       Class object
+   * @param modelList       List of model elements
+   * @return                Promise object
+   */
+  private <T extends DataModel> Promise <DataModelList <T>> insertIntoDatabase (Class <T> dataClass, DataModelList <T> modelList)
+  {
+    return new Promise<> (settlement -> {
+      ModelAdapter <T> modelAdapter = FlowManager.getModelAdapter (dataClass);
+
+      FlowManager.getDatabase (this.databaseClass_)
+                 .beginTransactionAsync (databaseWrapper -> {
+                   for (T dataModel: modelList)
+                   {
+                     // Save the model to our local database, then set its data store.
+                     modelAdapter.save (dataModel, databaseWrapper);
+                     dataModel.setDataStore (this);
+                   }
+                 })
+                 .success (transaction -> settlement.resolve (modelList))
+                 .error ((transaction, error) -> settlement.reject (error))
+                 .build ()
+                 .execute ();
+    });
+  }
+
+  private interface OnNotModified
+  {
+    void onNotModified ();
+  }
+
+  private static <T> HandleErrorOrLoadFromCache<T> handleErrorOrLoadFromCache (Promise.Settlement <T> settlement, OnNotModified onNotModified)
   {
     return new HandleErrorOrLoadFromCache <> (settlement, onNotModified);
   }
@@ -666,9 +723,9 @@ public class DataStore
   {
     private Promise.Settlement <T> settlement_;
 
-    private OnNotModified <T> onNotModified_;
+    private OnNotModified onNotModified_;
 
-    HandleErrorOrLoadFromCache (Promise.Settlement <T> settlement, OnNotModified <T> onNotModified)
+    HandleErrorOrLoadFromCache (Promise.Settlement <T> settlement, OnNotModified onNotModified)
     {
       this.settlement_ = settlement;
       this.onNotModified_ = onNotModified;
@@ -687,7 +744,7 @@ public class DataStore
           // already have the data cached locally. Let's use the peek () method
           // to load the data from disk, and resolve our promise.
 
-          this.onNotModified_.onNotMofified ();
+          this.onNotModified_.onNotModified ();
         }
         else
         {

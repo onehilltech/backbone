@@ -7,7 +7,7 @@ import com.raizlabs.android.dbflow.annotation.PrimaryKey;
 import com.raizlabs.android.dbflow.annotation.Table;
 
 @Table (name = "users", database = TestDatabase.class)
-public class User extends DataModel
+public class User extends DataModel <User>
 {
   @PrimaryKey
   public long _id;

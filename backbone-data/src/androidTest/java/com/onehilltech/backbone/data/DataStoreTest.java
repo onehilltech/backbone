@@ -9,6 +9,7 @@ import com.onehilltech.backbone.data.fixtures.User;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
+import com.squareup.okhttp.mockwebserver.RecordedRequest;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -59,6 +60,138 @@ public class DataStoreTest
   }
 
   @Test
+  public void testCreate () throws Exception
+  {
+    this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"user\": {\"_id\": 45, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
+
+    synchronized (this.lock_)
+    {
+      User user = new User ();
+      user.firstName = "John";
+      user.lastName = "Doe";
+
+      this.dataStore_.create (User.class, user)
+                     .then (newUser -> {
+                       Assert.assertEquals (45, newUser._id);
+                       Assert.assertEquals ("John", newUser.firstName);
+                       Assert.assertEquals ("Doe", newUser.lastName);
+                       Assert.assertSame (this.dataStore_, newUser.getStore ());
+
+                       return this.dataStore_.peek (User.class, newUser._id);
+                     })
+                     .then (resolved (cachedUser -> {
+                       Assert.assertEquals (45, cachedUser._id);
+                       Assert.assertEquals ("John", cachedUser.firstName);
+                       Assert.assertEquals ("Doe", cachedUser.lastName);
+                       Assert.assertSame (this.dataStore_, cachedUser.getStore ());
+
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait (5000);
+
+      Assert.assertEquals (1, this.server_.getRequestCount ());
+
+      RecordedRequest createRequest = this.server_.takeRequest ();
+      Assert.assertEquals ("POST", createRequest.getMethod ());
+      Assert.assertEquals ("/users", createRequest.getPath ());
+    }
+  }
+
+  @Test
+  public void testDelete () throws Exception
+  {
+    this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"user\": {\"_id\": 45, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
+    this.dispatcher_.add ("/users/45", new MockResponse ().setBody ("true"));
+
+    synchronized (this.lock_)
+    {
+      User user = new User ();
+      user.firstName = "John";
+      user.lastName = "Doe";
+
+      this.dataStore_.create (User.class, user)
+                     .then (User::delete)
+                     .then (result -> {
+                       Assert.assertTrue (result);
+                       return this.dataStore_.peek (User.class, 45);
+                     })
+                     .then (resolved (cachedUser -> {
+                       Assert.assertNull (cachedUser);
+
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait (5000);
+
+      Assert.assertEquals (2, this.server_.getRequestCount ());
+
+      // Ignore the first request.
+      this.server_.takeRequest ();
+
+      RecordedRequest createRequest = this.server_.takeRequest ();
+      Assert.assertEquals ("DELETE", createRequest.getMethod ());
+      Assert.assertEquals ("/users/45", createRequest.getPath ());
+    }
+  }
+
+  @Test
+  public void update () throws Exception
+  {
+    this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"user\": {\"_id\": 45, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
+    this.dispatcher_.add ("/users/45", new MockResponse ().setBody ("{\"user\": {\"_id\": 45, \"first_name\": \"Jane\", \"last_name\": \"Doe\"}}"));
+
+    synchronized (this.lock_)
+    {
+      User user = new User ();
+      user.firstName = "John";
+      user.lastName = "Doe";
+
+      this.dataStore_.create (User.class, user)
+                     .then (newUser -> {
+                       newUser.firstName = "Jane";
+
+                       return newUser.update ();
+                     })
+                     .then (updatedUser -> {
+                       Assert.assertEquals ("Jane", updatedUser.firstName);
+
+                       return this.dataStore_.peek (User.class, 45);
+                     })
+                     .then (resolved (cachedUser -> {
+                       Assert.assertEquals (45, cachedUser._id);
+                       Assert.assertEquals ("Jane", cachedUser.firstName);
+                       Assert.assertEquals ("Doe", cachedUser.lastName);
+
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait (5000);
+
+      Assert.assertEquals (2, this.server_.getRequestCount ());
+
+      // Ignore the first request.
+      this.server_.takeRequest ();
+
+      RecordedRequest createRequest = this.server_.takeRequest ();
+      Assert.assertEquals ("PUT", createRequest.getMethod ());
+      Assert.assertEquals ("/users/45", createRequest.getPath ());
+    }
+  }
+
+  @Test
   public void testGetOne () throws Exception
   {
     this.dispatcher_.add ("/users/1", new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
@@ -89,7 +222,7 @@ public class DataStoreTest
   {
     // We need this for the foreign relation.
     User user = new User (25);
-    user.save ();
+    //user.insert ();
 
     this.dispatcher_.add ("/books/1", new MockResponse ().setBody ("{\"book\": {\"_id\": 1, \"author\": 25, \"title\": \"Book Title\"}}"));
 
@@ -175,7 +308,8 @@ public class DataStoreTest
       user.firstName = "Jane";
       user.lastName = "Doe";
 
-      user.save ()
+      /*
+      user.insert ()
           .then (value -> this.dataStore_.peek (User.class, user._id))
           .then (resolved (actual -> {
             Assert.assertEquals (user, actual);
@@ -187,6 +321,7 @@ public class DataStoreTest
 
           }))
           ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+      */
 
       this.lock_.wait (5000);
     }
@@ -201,7 +336,8 @@ public class DataStoreTest
       user.firstName = "Jane";
       user.lastName = "Doe";
 
-      user.save ()
+      /*
+      user.insert ()
           .then (value -> this.dataStore_.peek (User.class))
           .then (resolved (actual -> {
             Assert.assertEquals (1, actual.size ());
@@ -213,6 +349,7 @@ public class DataStoreTest
             }
           }))
           ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+      */
 
       this.lock_.wait ();
     }
