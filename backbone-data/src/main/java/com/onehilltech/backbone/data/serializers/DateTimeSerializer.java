@@ -14,6 +14,7 @@ import org.joda.time.DateTime;
 
 import java.lang.reflect.Type;
 
+@com.raizlabs.android.dbflow.annotation.TypeConverter
 public class DateTimeSerializer
     extends TypeConverter <Long, DateTime>
     implements JsonDeserializer<DateTime>, JsonSerializer<DateTime>
@@ -21,7 +22,17 @@ public class DateTimeSerializer
   @Override
   public DateTime deserialize (JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException
   {
-    return DateTime.parse (json.getAsString ());
+    if (!json.isJsonPrimitive ())
+      throw new JsonParseException ("Date must be a primitive type");
+
+    JsonPrimitive jsonPrimitive = json.getAsJsonPrimitive ();
+
+    if (jsonPrimitive.isString ())
+      return DateTime.parse (json.getAsString ());
+    else if (jsonPrimitive.isNumber ())
+      return new DateTime (jsonPrimitive.getAsLong ());
+    else
+      throw new JsonParseException ("Date must be either a String or a Number");
   }
 
   @Override

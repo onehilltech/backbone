@@ -46,6 +46,7 @@ android {
 dependencies {
     compile project (':backbone-http')
     compile project (':backbone-dbflow')
+    compile project (':backbone-android-objectid')
 
     compile 'com.onehilltech.promises:promises-android:0.2.0'
     compile 'com.squareup.retrofit2:retrofit:2.3.0'
