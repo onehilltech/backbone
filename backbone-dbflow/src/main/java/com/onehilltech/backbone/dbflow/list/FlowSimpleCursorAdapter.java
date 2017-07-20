@@ -6,7 +6,6 @@ import android.database.Cursor;
 import android.widget.SimpleCursorAdapter;
 
 import com.raizlabs.android.dbflow.config.FlowManager;
-import com.raizlabs.android.dbflow.structure.Model;
 import com.raizlabs.android.dbflow.structure.ModelAdapter;
 import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
@@ -15,7 +14,7 @@ import com.raizlabs.android.dbflow.structure.database.FlowCursor;
  *
  * @param <TModel>
  */
-public class FlowSimpleCursorAdapter <TModel extends Model> extends SimpleCursorAdapter
+public class FlowSimpleCursorAdapter <TModel> extends SimpleCursorAdapter
 {
     private final Class<TModel> mModel;
     private final ModelAdapter<TModel> mModelAdapter;

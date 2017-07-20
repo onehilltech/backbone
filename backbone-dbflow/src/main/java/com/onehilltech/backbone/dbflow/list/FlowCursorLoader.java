@@ -24,7 +24,7 @@ import java.util.HashSet;
 public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
 {
   /// Models to be observed for changes.
-  private HashSet<Class<? extends Model>> mModels = new HashSet<> ();
+  private HashSet<Class<?>> mModels = new HashSet<> ();
 
   /// Queriable operation that the loader executes.
   private Queriable mQueriable;
@@ -160,7 +160,7 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
     }
   }
 
-  public Collection<Class<? extends Model>> getModels ()
+  public Collection<Class<?>> getModels ()
   {
     return this.mModels;
   }
