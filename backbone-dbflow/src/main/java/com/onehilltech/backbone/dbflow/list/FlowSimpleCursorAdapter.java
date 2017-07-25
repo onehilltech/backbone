@@ -2,7 +2,6 @@ package com.onehilltech.backbone.dbflow.list;
 
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.database.Cursor;
 import android.widget.SimpleCursorAdapter;
 
 import com.raizlabs.android.dbflow.config.FlowManager;
@@ -20,7 +19,7 @@ public class FlowSimpleCursorAdapter <TModel> extends SimpleCursorAdapter
     private final ModelAdapter<TModel> mModelAdapter;
 
     @TargetApi (11)
-    public FlowSimpleCursorAdapter (Context context, Class<TModel> modelClass, int layout, Cursor c, String[] from, int[] to, int flags)
+    public FlowSimpleCursorAdapter (Context context, Class<TModel> modelClass, int layout, FlowCursor c, String[] from, int[] to, int flags)
     {
         super (context, layout, c, from, to, flags);
 
@@ -31,12 +30,11 @@ public class FlowSimpleCursorAdapter <TModel> extends SimpleCursorAdapter
     @Override
     public TModel getItem (int position)
     {
-        Cursor cursor = (Cursor) super.getItem (position);
+        FlowCursor cursor = (FlowCursor) super.getItem (position);
 
         if (cursor == null)
             return null;
 
-        FlowCursor flowCursor = FlowCursor.from (cursor);
-        return this.mModelAdapter.loadFromCursor (flowCursor);
+        return this.mModelAdapter.loadFromCursor (cursor);
     }
 }

@@ -3,7 +3,6 @@ package com.onehilltech.backbone.dbflow.list;
 import android.annotation.TargetApi;
 import android.content.AsyncTaskLoader;
 import android.content.Context;
-import android.database.Cursor;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -13,15 +12,16 @@ import com.raizlabs.android.dbflow.sql.language.SQLOperator;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
 import com.raizlabs.android.dbflow.structure.Model;
+import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
 import java.util.Collection;
 import java.util.HashSet;
 
 /**
- * Specialization of AsyncTaskLoader for Cursor objects in DBFlow.
+ * Specialization of AsyncTaskLoader for FlowCursor objects in DBFlow.
  */
 @TargetApi (11)
-public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
+public class FlowCursorLoader extends AsyncTaskLoader<FlowCursor>
 {
   /// Models to be observed for changes.
   private HashSet<Class<?>> mModels = new HashSet<> ();
@@ -29,8 +29,8 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
   /// Queriable operation that the loader executes.
   private Queriable mQueriable;
 
-  /// Cursor for the loader.
-  private Cursor mCursor;
+  /// FlowCursor for the loader.
+  private FlowCursor mCursor;
 
   private final ForceLoadContentObserver mObserver = new ForceLoadContentObserver ();
 
@@ -49,18 +49,13 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
   }
 
   @Override
-  public Cursor loadInBackground ()
+  public FlowCursor loadInBackground ()
   {
-    Cursor cursor = this.mQueriable.query ();
-
-    if (cursor != null)
-      cursor.getCount ();
-
-    return cursor;
+    return this.mQueriable.query ();
   }
 
   @Override
-  public void deliverResult (Cursor cursor)
+  public void deliverResult (FlowCursor cursor)
   {
     if (this.isReset ())
     {
@@ -71,7 +66,7 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
       return;
     }
 
-    Cursor oldCursor = this.mCursor;
+    FlowCursor oldCursor = this.mCursor;
     this.mCursor = cursor;
 
     if (this.isStarted ())
@@ -119,7 +114,7 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
   }
 
   @Override
-  public void onCanceled (Cursor cursor)
+  public void onCanceled (FlowCursor cursor)
   {
     if (cursor != null && !cursor.isClosed ())
       cursor.close ();
