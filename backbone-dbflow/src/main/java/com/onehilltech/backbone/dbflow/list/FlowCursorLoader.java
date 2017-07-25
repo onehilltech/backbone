@@ -11,7 +11,6 @@ import com.raizlabs.android.dbflow.runtime.FlowContentObserver;
 import com.raizlabs.android.dbflow.sql.language.SQLOperator;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
-import com.raizlabs.android.dbflow.structure.Model;
 import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
 import java.util.Collection;
@@ -87,7 +86,7 @@ public class FlowCursorLoader extends AsyncTaskLoader<FlowCursor>
    *
    * @param model
    */
-  public void registerForContentChanges (Class<? extends Model> model)
+  public void registerForContentChanges (Class<?> model)
   {
     if (this.mModels.contains (model))
       return;
