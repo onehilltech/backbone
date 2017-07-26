@@ -9,6 +9,8 @@ import android.support.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAdapterFactory;
 import com.onehilltech.backbone.data.serializers.DateTimeSerializer;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
 import com.onehilltech.backbone.http.HttpError;
@@ -29,6 +31,7 @@ import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 import org.joda.time.DateTime;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,6 +61,10 @@ public class DataStore
 
     private String baseUrl_;
 
+    private final LinkedHashMap <Class <?>, TypeAdapter <?>> typeAdapters_ = new LinkedHashMap <> ();
+
+    private final ArrayList <TypeAdapterFactory> typeAdapterFactories_ = new ArrayList<> ();
+
     public Builder (Class <?> databaseClass)
     {
       this.databaseClass_ = databaseClass;
@@ -72,6 +79,18 @@ public class DataStore
     public Builder setHttpClient (OkHttpClient httpClient)
     {
       this.httpClient_ = httpClient;
+      return this;
+    }
+
+    public <T> Builder addTypeAdapter (Class <T> typeClass, TypeAdapter <T> typeAdapter)
+    {
+      this.typeAdapters_.put (typeClass, typeAdapter);
+      return this;
+    }
+
+    public Builder addTypeAdapterFactory (TypeAdapterFactory typeAdapterFactory)
+    {
+      this.typeAdapterFactories_.add (typeAdapterFactory);
       return this;
     }
 
@@ -97,13 +116,19 @@ public class DataStore
       // Gson instance with the Retrofit builder.
       ResourceSerializer resourceSerializer = this.makeResourceSerializeFromDatabase ();
 
-      Gson gson =
+      GsonBuilder gsonBuilder =
           new GsonBuilder ()
               .registerTypeAdapter (Resource.class, resourceSerializer)
               .registerTypeAdapter (DateTime.class, new DateTimeSerializer ())
-              .registerTypeAdapterFactory (new DataModelTypeAdapterFactory ())
-              .create ();
+              .registerTypeAdapterFactory (new DataModelTypeAdapterFactory ());
 
+      for (Map.Entry <Class <?>, TypeAdapter <?>> entry: this.typeAdapters_.entrySet ())
+        gsonBuilder.registerTypeAdapter (entry.getKey (), entry.getValue ());
+
+      for (TypeAdapterFactory typeAdapterFactory: this.typeAdapterFactories_)
+        gsonBuilder.registerTypeAdapterFactory (typeAdapterFactory);
+
+      Gson gson = gsonBuilder.create ();
       resourceSerializer.setGson (gson);
 
       // Build the Retrofit instance for the data store.
