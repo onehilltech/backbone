@@ -596,6 +596,20 @@ public class DataStore
   }
 
   /**
+   * Load the contents of a model. It is assume the id of the model already
+   * exists in the target model object.
+   *
+   * @param model
+   * @param <T>
+   */
+  public <T> void loadModel (T model)
+  {
+    @SuppressWarnings ("unchecked")
+    ModelAdapter <T> modelAdapter = (ModelAdapter <T>)this.getModelAdapter (model.getClass ());
+    modelAdapter.load (model);
+  }
+
+  /**
    * Get all model elements that meet the specified criteria without making a
    * network request.
    *
