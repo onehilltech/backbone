@@ -2,12 +2,11 @@ package com.onehilltech.backbone.data.serializers;
 
 import android.location.Location;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.raizlabs.android.dbflow.converter.TypeConverter;
@@ -45,20 +44,14 @@ public class LocationSerializer extends TypeConverter <String, Location>
   @Override
   public Location deserialize (JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException
   {
-    if (!json.isJsonArray ())
-      throw new JsonParseException ("The location must be an array.");
+    if (!json.isJsonObject ())
+      throw new JsonParseException ("The location must be an object.");
 
-    JsonArray jsonLocation = json.getAsJsonArray ();
-
-    if (jsonLocation.size () != 2)
-      throw new JsonParseException ("The location array must contain two elements.");
-
-    double longitude = jsonLocation.get (0).getAsDouble ();
-    double latitude = jsonLocation.get (1).getAsDouble ();
+    JsonObject jsonLocation = json.getAsJsonObject ();
 
     Location location = new Location ("");
-    location.setLatitude (latitude);
-    location.setLongitude (longitude);
+    location.setLatitude (jsonLocation.get ("latitude").getAsDouble ());
+    location.setLongitude (jsonLocation.get ("longitude").getAsDouble ());
 
     return location;
   }
@@ -66,9 +59,9 @@ public class LocationSerializer extends TypeConverter <String, Location>
   @Override
   public JsonElement serialize (Location src, Type typeOfSrc, JsonSerializationContext context)
   {
-    JsonArray jsonLocation = new JsonArray ();
-    jsonLocation.add (new JsonPrimitive (src.getLongitude ()));
-    jsonLocation.add (new JsonPrimitive (src.getLatitude ()));
+    JsonObject jsonLocation = new JsonObject ();
+    jsonLocation.addProperty ("latitude", src.getLatitude ());
+    jsonLocation.addProperty ("longitude", src.getLongitude ());
 
     return jsonLocation;
   }
