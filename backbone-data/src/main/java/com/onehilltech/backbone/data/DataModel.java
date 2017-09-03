@@ -71,14 +71,10 @@ public abstract class DataModel <T extends DataModel>
   @SuppressWarnings ("unchecked")
   public Promise <T> load ()
   {
+    this.checkStore ();
+
     T model = (T)this;
-
-    return new Promise<> (settlement -> {
-      this.checkStore ();
-      this.store_.load (model);
-
-      settlement.resolve (model);
-    });
+    return this.store_.load (model);
   }
 
   private void checkStore ()
