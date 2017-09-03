@@ -631,12 +631,14 @@ public class DataStore
    * @param model
    * @param <T>
    */
-  public <T> Promise <T> load (T model)
+  public <T extends DataModel> Promise <T> load (T model)
   {
     return new Promise<> (settlement -> {
       @SuppressWarnings ("unchecked")
       ModelAdapter <T> modelAdapter = (ModelAdapter <T>)this.getModelAdapter (model.getClass ());
       modelAdapter.load (model);
+
+      model.assignTo (this);
 
       settlement.resolve (model);
     });
