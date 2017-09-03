@@ -85,7 +85,5 @@ public abstract class DataModel <T extends DataModel>
   {
     if (this.store_ == null)
       throw new IllegalStateException ("You must first create the model using the data store.");
-
-    this.store_.
   }
 }
