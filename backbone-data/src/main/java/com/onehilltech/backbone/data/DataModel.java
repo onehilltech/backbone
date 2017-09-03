@@ -75,7 +75,7 @@ public abstract class DataModel <T extends DataModel>
 
     return new Promise<> (settlement -> {
       this.checkStore ();
-      this.store_.loadModel (model);
+      this.store_.load (model);
 
       settlement.resolve (model);
     });

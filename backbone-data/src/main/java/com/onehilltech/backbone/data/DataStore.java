@@ -355,6 +355,10 @@ public class DataStore
 
       endpoint.get (query)
               .then (resolved (r -> {
+                // Check the dependencies for this data class. Make sure we input all
+                // the dependent models first before we insert the models for this data
+                // class.
+
                 // Get the result, and insert to the database.
                 DataModelList <T> modelList = r.get (tableName);
 
@@ -627,11 +631,33 @@ public class DataStore
    * @param model
    * @param <T>
    */
-  public <T> void loadModel (T model)
+  public <T> Promise <T> load (T model)
   {
-    @SuppressWarnings ("unchecked")
-    ModelAdapter <T> modelAdapter = (ModelAdapter <T>)this.getModelAdapter (model.getClass ());
-    modelAdapter.load (model);
+    return new Promise<> (settlement -> {
+      @SuppressWarnings ("unchecked")
+      ModelAdapter <T> modelAdapter = (ModelAdapter <T>)this.getModelAdapter (model.getClass ());
+      modelAdapter.load (model);
+
+      settlement.resolve (model);
+    });
+  }
+
+  /**
+   * Load a model from a cursor.
+   *
+   * @param dataClass
+   * @param cursor
+   * @param <T>
+   * @return
+   */
+  public <T> Promise <T> loadFromCursor (Class <T> dataClass, FlowCursor cursor)
+  {
+    return new Promise<> (settlement -> {
+      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+      T model = modelAdapter.loadFromCursor (cursor);
+
+      settlement.resolve (model);
+    });
   }
 
   /**
@@ -746,6 +772,11 @@ public class DataStore
                  .build ()
                  .execute ();
     });
+  }
+
+  private <T> void insertDependencies (Class <T> dataClass, String root, Resource r)
+  {
+
   }
 
   private interface OnNotModified
