@@ -140,6 +140,8 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
 
           if (boundField != null)
             boundField.read (in, model);
+          else
+            in.skipValue ();
         }
       }
       catch (IllegalAccessException e)
