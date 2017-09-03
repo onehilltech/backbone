@@ -650,11 +650,12 @@ public class DataStore
    * @param <T>
    * @return
    */
-  public <T> Promise <T> loadFromCursor (Class <T> dataClass, FlowCursor cursor)
+  public <T extends DataModel> Promise <T> loadFromCursor (Class <T> dataClass, FlowCursor cursor)
   {
     return new Promise<> (settlement -> {
       ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
       T model = modelAdapter.loadFromCursor (cursor);
+      model.assignTo (this);
 
       settlement.resolve (model);
     });
