@@ -41,8 +41,7 @@ public abstract class DataModel <T extends DataModel>
   @SuppressWarnings ("unchecked")
   public Promise <T> update ()
   {
-    if (this.store_ == null)
-      throw new IllegalStateException ("You must first create the model using the data store.");
+    this.checkStore ();
 
     Class <T> dataClass = (Class <T>)this.getClass ();
     T model = (T)this;
@@ -58,12 +57,35 @@ public abstract class DataModel <T extends DataModel>
   @SuppressWarnings ("unchecked")
   public Promise <Boolean> delete ()
   {
-    if (this.store_ == null)
-      throw new IllegalStateException ("You must first create the model using the data store.");
+    this.checkStore ();
 
     Class <T> dataClass = (Class <T>)this.getClass ();
     T model = (T)this;
 
     return this.store_.delete (dataClass, model);
+  }
+
+  /**
+   * Load the existing model from the database.
+   */
+  @SuppressWarnings ("unchecked")
+  public Promise <T> load ()
+  {
+    T model = (T)this;
+
+    return new Promise<> (settlement -> {
+      this.checkStore ();
+      this.store_.loadModel (model);
+
+      settlement.resolve (model);
+    });
+  }
+
+  private void checkStore ()
+  {
+    if (this.store_ == null)
+      throw new IllegalStateException ("You must first create the model using the data store.");
+
+    this.store_.
   }
 }
