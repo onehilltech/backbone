@@ -13,6 +13,9 @@ public class PluralizeTest
   @Test
   public void testSingular ()
   {
+    Assert.assertEquals ("favorite", Pluralize.getInstance ().singular ("favorites"));
+    Assert.assertEquals ("ant", Pluralize.getInstance ().singular ("ants"));
+
     Assert.assertEquals ("bunny", Pluralize.getInstance ().singular ("bunnies"));
 
     Assert.assertEquals ("person", Pluralize.getInstance ().singular ("person"));

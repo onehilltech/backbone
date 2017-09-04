@@ -68,11 +68,12 @@ public class Pluralize
    */
   public String singular (String s)
   {
-    for (SingularRule rule: this.singularRules_)
+    for (int i = this.singularRules_.size () - 1; i >= 0; -- i)
     {
+      SingularRule rule = this.singularRules_.get (i);
       Matcher matcher = rule.getPattern ().matcher (s);
 
-      if (matcher.matches ())
+      if (matcher.find ())
         return matcher.replaceAll (rule.getReplacement ());
     }
 
