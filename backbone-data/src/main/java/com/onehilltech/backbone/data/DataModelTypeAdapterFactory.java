@@ -260,7 +260,11 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
         throws IllegalAccessException, IOException
     {
       Object value = this.field_.get (target);
-      this.typeAdapter_.write (out, value);
+
+      if (value != null)
+        this.typeAdapter_.write (out, value);
+      else
+        out.nullValue ();
     }
   }
 }
