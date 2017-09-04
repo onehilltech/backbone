@@ -64,6 +64,9 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
 
     for (Field field : fields)
     {
+      if (field.isSynthetic ())
+        continue;
+
       String fieldName = field.getName ();
       SerializedName serializedName = field.getAnnotation (SerializedName.class);
 
