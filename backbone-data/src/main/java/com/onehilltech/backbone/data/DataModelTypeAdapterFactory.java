@@ -122,7 +122,24 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
     @Override
     public void write (JsonWriter out, T value) throws IOException
     {
+      try
+      {
+        out.beginObject ();
 
+        for (Map.Entry<String, BoundField> entry : this.fields_.entrySet ())
+        {
+          BoundField boundField = entry.getValue ();
+          out.name (entry.getKey ());
+
+          boundField.write (out, value);
+        }
+
+        out.endObject ();
+      }
+      catch (IllegalAccessException e)
+      {
+        throw new IOException ("Failed to write object", e);
+      }
     }
 
     @Override
@@ -168,33 +185,48 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
   {
     private final InstanceAdapter <E> instanceAdapter_;
     private final Field idField_;
+    private final Class <?> idType_;
 
     ForeignKeyTypeAdapter (InstanceAdapter <E> instanceAdapter, Field idField)
     {
       this.instanceAdapter_ = instanceAdapter;
       this.idField_ = idField;
+      this.idType_ = idField.getType ();
     }
 
     @Override
     public void write (JsonWriter out, E value) throws IOException
     {
+      try
+      {
+        Object id = this.idField_.get (value);
 
+        if (this.idType_.equals (String.class))
+          out.value ((String)id);
+        else if (this.idType_.equals (long.class) || this.idType_.equals (Long.class))
+          out.value ((Number)id);
+        else
+          throw new IOException ("Foreign key value must be a String or Long [type=" + this.idType_ + "]");
+      }
+      catch (IllegalAccessException e)
+      {
+        throw new IOException ("Failed to read id", e);
+      }
     }
 
     @Override
     public E read (JsonReader in) throws IOException
     {
       E refModel = this.instanceAdapter_.newInstance ();
-      Class<?> fieldType = this.idField_.getType ();
 
       try
       {
-        if (fieldType.equals (String.class))
+        if (this.idType_.equals (String.class))
           this.idField_.set (refModel, in.nextString ());
-        else if (fieldType.equals (long.class) || fieldType.equals (Long.class))
+        else if (this.idType_.equals (long.class) || this.idType_.equals (Long.class))
           this.idField_.set (refModel, in.nextLong ());
         else
-          throw new IOException ("Foreign key value must be a String or Long [type=" + fieldType + "]");
+          throw new IOException ("Foreign key value must be a String or Long [type=" + this.idType_ + "]");
 
         return refModel;
       }
@@ -208,8 +240,7 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
   private static class BoundField
   {
     private final Field field_;
-
-    private final TypeAdapter <?> typeAdapter_;
+    private final TypeAdapter typeAdapter_;
 
     BoundField (Field field, TypeAdapter <?> typeAdapter)
     {
@@ -222,6 +253,14 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
     {
       Object value = this.typeAdapter_.read (in);
       this.field_.set (target, value);
+    }
+
+    @SuppressWarnings ("unchecked")
+    void write (JsonWriter out, Object target)
+        throws IllegalAccessException, IOException
+    {
+      Object value = this.field_.get (target);
+      this.typeAdapter_.write (out, value);
     }
   }
 }
