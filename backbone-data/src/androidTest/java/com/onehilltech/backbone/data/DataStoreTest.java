@@ -6,6 +6,8 @@ import android.support.test.runner.AndroidJUnit4;
 import com.onehilltech.backbone.data.fixtures.Book;
 import com.onehilltech.backbone.data.fixtures.TestDatabase;
 import com.onehilltech.backbone.data.fixtures.User;
+import com.onehilltech.backbone.data.fixtures.User_Table;
+import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.FlowManager;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
@@ -16,6 +18,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.util.HashMap;
 
 import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
@@ -396,6 +400,39 @@ public class DataStoreTest
 
 
       this.lock_.wait (5000);
+    }
+  }
+
+  @Test
+  public void testSelect ()
+      throws Exception
+  {
+    User user1 = new User (54, "John", "Doe");
+    User user2 = new User (57, "Jane", "Doe");
+
+    synchronized (this.lock_)
+    {
+      Promise.all (
+          this.dataStore_.push (User.class, user1),
+          this.dataStore_.push (User.class, user2))
+             .then (result -> {
+               HashMap <String, Object> selector = new HashMap< > ();
+               selector.put (User_Table.first_name.getDefinition (), "Jane");
+
+               return this.dataStore_.select (User.class, selector);
+             })
+             .then (resolved (users -> {
+               Assert.assertEquals (1, users.size ());
+               Assert.assertEquals (user2, users.get (0));
+
+               synchronized (this.lock_)
+               {
+                 this.lock_.notify ();
+               }
+             }))
+             ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait ();
     }
   }
 }

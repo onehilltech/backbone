@@ -25,6 +25,13 @@ public class User extends DataModel <User>
 
   }
 
+  public User (long id, String firstName, String lastName)
+  {
+    this._id = id;
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+
   public User (long id)
   {
     this._id = id;

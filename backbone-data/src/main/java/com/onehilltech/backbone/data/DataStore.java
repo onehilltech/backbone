@@ -21,6 +21,7 @@ import com.raizlabs.android.dbflow.sql.SqlUtils;
 import com.raizlabs.android.dbflow.sql.language.From;
 import com.raizlabs.android.dbflow.sql.language.NameAlias;
 import com.raizlabs.android.dbflow.sql.language.Operator;
+import com.raizlabs.android.dbflow.sql.language.SQLOperator;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
 import com.raizlabs.android.dbflow.structure.BaseModel;
@@ -679,10 +680,14 @@ public class DataStore
 
       From<?> from = SQLite.select ().from (dataClass);
 
-      for (Map.Entry <String, Object> param: params.entrySet ())
-        from.where (Operator.op (NameAlias.of (param.getKey ())).eq (param.getValue ()));
+      ArrayList <SQLOperator> conditions = new ArrayList<> ();
 
-      FlowCursor cursor = from.query ();
+      for (Map.Entry <String, Object> param: params.entrySet ())
+        conditions.add (Operator.op (NameAlias.of (param.getKey ())).eq (param.getValue ()));
+
+      Queriable queriable = conditions.isEmpty () ? from : from.where (conditions.toArray (new SQLOperator[0]));
+      FlowCursor cursor = queriable.query ();
+
       settlement.resolve (cursor);
     });
   }
