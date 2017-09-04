@@ -115,6 +115,7 @@ public class DataStore
       // Register the different models in the database with Gson, and then register the
       // Gson instance with the Retrofit builder.
       ResourceSerializer resourceSerializer = this.makeResourceSerializeFromDatabase ();
+      resourceSerializer.put ("errors", HttpError.class);
 
       GsonBuilder gsonBuilder =
           new GsonBuilder ()
@@ -156,7 +157,7 @@ public class DataStore
       for (ModelAdapter modelAdapter : modelAdapters)
       {
         String pluralName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-        String singularName = Pluralize.singular (pluralName);
+        String singularName = Pluralize.getInstance ().singular (pluralName);
         Class <?> modelClass = modelAdapter.getModelClass ();
 
         serializer.put (pluralName, modelClass);
@@ -702,7 +703,7 @@ public class DataStore
 
     ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
     String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-    String singular = Pluralize.singular (tableName);
+    String singular = Pluralize.getInstance ().singular (tableName);
 
     // Cache the endpoint for later lookup.
     endpoint = ResourceEndpoint.create (this.retrofit_, singular, tableName);
