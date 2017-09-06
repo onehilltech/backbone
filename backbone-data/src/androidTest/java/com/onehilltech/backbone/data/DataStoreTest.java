@@ -269,15 +269,11 @@ public class DataStoreTest
   @Test
   public void testGetOneWithRelation () throws Exception
   {
-    // We need this for the foreign relation.
-    User user = new User (25);
-
-    this.dispatcher_.add ("/books/1", new MockResponse ().setBody ("{\"book\": {\"_id\": 1, \"author\": 25, \"title\": \"Book Title\"}}"));
+    this.dispatcher_.add ("/books/1", new MockResponse ().setBody ("{\"book\": {\"_id\": 1, \"author\": 25, \"title\": \"Book Title\"}, \"users\": [{\"_id\": 25, \"first_name\": \"John\", \"last_name\": \"Doe\"}]}"));
 
     synchronized (this.lock_)
     {
-      this.dataStore_.push (User.class, user)
-                     .then (newUser -> this.dataStore_.get (Book.class, 1))
+      this.dataStore_.get (Book.class, 1)
                      .then (resolved (book -> {
                        Assert.assertNotNull (book);
 

@@ -24,18 +24,13 @@ import java.util.Map;
 public class ResourceSerializer
     implements JsonDeserializer <Resource>, JsonSerializer <Resource>
 {
-  private Gson gson_;
+  private Gson gson_ = new Gson ();
 
   private final HashMap <String, Class <?>> types_ = new HashMap<> ();
 
   public ResourceSerializer ()
   {
 
-  }
-
-  public ResourceSerializer (Gson gson)
-  {
-    this.gson_ = gson;
   }
 
   public void setGson (Gson gson)

@@ -172,6 +172,7 @@ public class DataStore
   }
 
   private static final String FIELD_ID = "_id";
+
   private static final NameAlias _ID = NameAlias.of (FIELD_ID);
 
   private final Class <?> databaseClass_;
@@ -179,6 +180,8 @@ public class DataStore
   private final DatabaseDefinition databaseDefinition_;
 
   private final Retrofit retrofit_;
+
+  private final DependencyGraph dependencyGraph_;
 
   private final Map <Class <?>, ResourceEndpoint <?>> endpoints_ = new LinkedHashMap<> ();
 
@@ -192,12 +195,7 @@ public class DataStore
     this.databaseClass_ = databaseClass;
     this.retrofit_ = retrofit;
     this.databaseDefinition_ = FlowManager.getDatabase (this.databaseClass_);
-    this.initDependencyGraph ();
-  }
-
-  private void initDependencyGraph ()
-  {
-
+    this.dependencyGraph_ = new DependencyGraph.Builder (this.databaseDefinition_).build ();
   }
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
@@ -263,7 +261,6 @@ public class DataStore
     });
   }
 
-
   /**
    * Get all the models of a single data class. This method will make a network request
    * to get the data.
@@ -279,21 +276,17 @@ public class DataStore
       String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
 
       endpoint.get ()
-              .then (resolved (r -> {
-                // Get the result, and insert to the database.
-                DataModelList <T> modelList = r.get (tableName);
+              .then (resolved (
+                  r -> this.insertIntoDatabase (r, dataClass)
+                           .then (resolved (result -> {
+                             DataModelList <T> modelList = r.get (tableName);
 
-                if (modelList != null)
-                {
-                  this.insertIntoDatabase (dataClass, modelList)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject));
-                }
-                else
-                {
-                  settlement.resolve (new DataModelList<> ());
-                }
-              }))
+                             if (modelList == null)
+                               modelList = new DataModelList<> ();
+
+                             settlement.resolve (modelList);
+                           }))
+              ))
               ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
                   this.peek (dataClass)
                       .then (resolved (settlement::resolve))
@@ -317,21 +310,13 @@ public class DataStore
       ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
       endpoint.get (id.toString ())
-              .then (resolved (r -> {
-                // Get the result, and insert to the database.
-                T model = r.get (endpoint.getName ());
-
-                if (model != null)
-                {
-                  this.push (dataClass, model)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject));
-                }
-                else
-                {
-                  settlement.resolve (null);
-                }
-              }))
+              .then (resolved (
+                  r -> this.insertIntoDatabase (r, dataClass)
+                           .then (resolved (result -> {
+                             T model = r.get (endpoint.getName ());
+                             settlement.resolve (model);
+                           }))
+              ))
               ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
                   this.peek (dataClass, id)
                       .then (resolved (settlement::resolve))
@@ -356,31 +341,93 @@ public class DataStore
       String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
 
       endpoint.get (query)
-              .then (resolved (r -> {
-                // Check the dependencies for this data class. Make sure we input all
-                // the dependent models first before we insert the models for this data
-                // class.
+              .then (r ->
+                // Insert the resources into the database. We need to account for the
+                // resource containing data for other model classes.
+                this.insertIntoDatabase (r, dataClass)
+                    .then (resolved (result -> {
+                      DataModelList<T> modelList = r.get (tableName);
 
-                // Get the result, and insert to the database.
-                DataModelList <T> modelList = r.get (tableName);
+                      if (modelList == null)
+                        modelList = new DataModelList<> ();
 
-                if (modelList != null)
-                {
-                  this.insertIntoDatabase (dataClass, modelList)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject));
-                }
-                else
-                {
-                  settlement.resolve (new DataModelList<> ());
-                }
-              }))
+                      settlement.resolve (modelList);
+                    }))
+              )
               ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
                   this.select (dataClass, query)
                       .then (resolved (settlement::resolve))
                       ._catch (rejected (settlement::reject))
               )));
     });
+  }
+
+  /**
+   * Insert the resource into the database. We need to know the start node
+   * so that we can insert the resources into the database in the correct
+   * order to ensure dependencies are meet.
+   *
+   * @param r
+   * @param startsAt
+   */
+  @SuppressWarnings ("unchecked")
+  private Promise <Void> insertIntoDatabase (Resource r, Class <? extends DataModel> startsAt)
+  {
+    return new Promise<> (settlement -> {
+      this.databaseDefinition_
+          .beginTransactionAsync (transaction -> {
+            List <DependencyGraph.Node> insertOrder = this.dependencyGraph_.getInsertOrder (startsAt);
+
+            for (DependencyGraph.Node node: insertOrder)
+            {
+              if (node.isPluraleTantum ())
+              {
+                Object value = r.get (node.getSingularName ());
+                ModelAdapter modelAdapter = node.getModelAdapter ();
+                Class <?> valueClass = value.getClass ();
+
+                if (valueClass.equals (DataModel.class))
+                {
+                  DataModel <?> dataModel = (DataModel <?>)value;
+                  this.saveModel (modelAdapter, dataModel);
+                }
+                else if (valueClass.equals (DataModelList.class))
+                {
+                  DataModelList <? extends DataModel> dataModels = (DataModelList <? extends DataModel>)value;
+
+                  for (DataModel model: dataModels)
+                    this.saveModel (modelAdapter, model);
+                }
+              }
+              else if (r.contains (node.getPluralName ()))
+              {
+                DataModelList <? extends DataModel> dataModels = r.get (node.getPluralName ());
+                ModelAdapter modelAdapter = node.getModelAdapter ();
+
+                for (DataModel model: dataModels)
+                  this.saveModel (modelAdapter, model);
+              }
+              else if (r.contains (node.getSingularName ()))
+              {
+                DataModel dataModel = r.get (node.getSingularName ());
+                ModelAdapter modelAdapter = node.getModelAdapter ();
+
+                this.saveModel (modelAdapter, dataModel);
+              }
+            }
+          })
+          .success (transaction -> settlement.resolve (null))
+          .error ((transaction, throwable) -> settlement.reject (throwable))
+          .build ()
+          .execute ();
+    });
+  }
+
+  @SuppressWarnings ("unchecked")
+  private void saveModel (ModelAdapter modelAdapter, DataModel <?> dataModel)
+  {
+    modelAdapter.save (dataModel);
+    dataModel.assignTo (this);
   }
 
   /**
@@ -781,11 +828,6 @@ public class DataStore
                  .build ()
                  .execute ();
     });
-  }
-
-  private <T> void insertDependencies (Class <T> dataClass, String root, Resource r)
-  {
-
   }
 
   private interface OnNotModified

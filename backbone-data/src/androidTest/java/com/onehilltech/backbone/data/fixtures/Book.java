@@ -12,7 +12,6 @@ public class Book extends DataModel <Book>
   @PrimaryKey
   public long _id;
 
-
   @ForeignKey(stubbedRelationship = true)
   public User author;
 
