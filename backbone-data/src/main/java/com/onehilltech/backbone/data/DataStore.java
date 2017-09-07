@@ -380,7 +380,7 @@ public class DataStore
 
             for (DependencyGraph.Node node: insertOrder)
             {
-              if (node.isPluraleTantum ())
+              if (node.isPluraleTantum () && r.contains (node.getSingularName ()))
               {
                 Object value = r.get (node.getSingularName ());
                 ModelAdapter modelAdapter = node.getModelAdapter ();
