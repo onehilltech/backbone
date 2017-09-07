@@ -703,12 +703,22 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> loadFromCursor (Class <T> dataClass, FlowCursor cursor)
   {
+    int position = cursor.getPosition ();
+
     return new Promise<> (settlement -> {
       ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
-      T model = modelAdapter.loadFromCursor (cursor);
-      model.assignTo (this);
 
-      settlement.resolve (model);
+      synchronized (cursor)
+      {
+        // Make sure the cursor is at the position requested.
+        if (cursor.getPosition () != position)
+          cursor.moveToPosition (position);
+
+        T model = modelAdapter.loadFromCursor (cursor);
+        model.assignTo (this);
+
+        settlement.resolve (model);
+      }
     });
   }
 
