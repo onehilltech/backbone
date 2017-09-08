@@ -12,6 +12,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapterFactory;
 import com.onehilltech.backbone.data.serializers.DateTimeSerializer;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
+import com.onehilltech.backbone.http.BackboneHttp;
 import com.onehilltech.backbone.http.HttpError;
 import com.onehilltech.backbone.http.Resource;
 import com.onehilltech.promises.Promise;
@@ -62,6 +63,8 @@ public class DataStore
 
     private String baseUrl_;
 
+    private boolean enableCache_ = true;
+
     private final LinkedHashMap <Type, Object> typeAdapters_ = new LinkedHashMap <> ();
 
     private final ArrayList <TypeAdapterFactory> typeAdapterFactories_ = new ArrayList<> ();
@@ -95,6 +98,12 @@ public class DataStore
       return this;
     }
 
+    public Builder setEnableCache (boolean enableCache)
+    {
+      this.enableCache_ = enableCache;
+      return this;
+    }
+
     public DataStore build ()
     {
       if (this.databaseClass_ == null)
@@ -111,7 +120,14 @@ public class DataStore
               this.httpClient_.newBuilder () :
               new OkHttpClient.Builder ();
 
-      httpClientBuilder.addInterceptor (new ResourceCacheInterceptor ());
+      if (this.enableCache_)
+      {
+        // Make sure http support in Backbone is enabled. Then, add the resource
+        // interceptor to the client to enable http caching.
+        BackboneHttp.initialize ();
+
+        httpClientBuilder.addInterceptor (new ResourceCacheInterceptor ());
+      }
 
       // Register the different models in the database with Gson, and then register the
       // Gson instance with the Retrofit builder.
@@ -138,8 +154,7 @@ public class DataStore
           new Retrofit.Builder ()
               .baseUrl (this.baseUrl_);
 
-      if (this.httpClient_ != null)
-        retrofitBuilder.client (this.httpClient_);
+      retrofitBuilder.client (httpClientBuilder.build ());
 
       Retrofit retrofit =
           retrofitBuilder
