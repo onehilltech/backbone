@@ -695,22 +695,21 @@ public class DataStore
 
 
   /**
-   * Load a model from a cursor. The model is loaded in on the same thread
-   * as the caller.
+   * Load a model from a cursor.
    *
    * @param dataClass
    * @param cursor
    * @param <T>
    * @return
    */
-  public <T extends DataModel> T loadFromCursor (Class <T> dataClass, FlowCursor cursor)
+  public <T extends DataModel> Promise <T> loadFromCursor (Class <T> dataClass, FlowCursor cursor)
   {
     ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
     T model = modelAdapter.loadFromCursor (cursor);
     model.assignTo (this);
 
-    return model;
+    return Promise.resolve (model);
   }
 
   /**
