@@ -6,6 +6,7 @@ import android.content.Loader;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -35,6 +36,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -187,6 +189,7 @@ public class DataStore
   }
 
   private static final String FIELD_ID = "_id";
+  private static final String FOREIGN_KEY_ID_SUFFIX = "__id";
 
   private static final NameAlias _ID = NameAlias.of (FIELD_ID);
 
@@ -369,12 +372,56 @@ public class DataStore
                       settlement.resolve (modelList);
                     }))
               )
-              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
-                  this.select (dataClass, query)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject))
-              )));
+              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () -> {
+                // Transform query object into a query for the database.
+                Map <String, Object> dbQuery = this.convertHttpQueryToDatabaseQuery (modelAdapter, query);
+
+                this.select (dataClass, dbQuery)
+                             .then (resolved (settlement::resolve))
+                             ._catch (rejected (settlement::reject));
+              })));
     });
+  }
+
+  /**
+   * Convert a http query into a database query map.
+   *
+   * @param modelAdapter
+   * @param query
+   * @param <T>
+   * @return
+   */
+  private  <T extends DataModel> Map <String, Object> convertHttpQueryToDatabaseQuery (ModelAdapter <T> modelAdapter, Map <String, Object> query)
+  {
+    HashMap <String, Object> dbQuery = new HashMap<> ();
+
+    for (Map.Entry <String, Object> entry: query.entrySet ())
+    {
+      try
+      {
+        String columnName = entry.getKey ();
+        modelAdapter.getProperty (columnName);
+
+        dbQuery.put (columnName, entry.getValue ());
+      }
+      catch (IllegalArgumentException e)
+      {
+        try
+        {
+          // Try an id column.
+          String referenceColumnName = entry.getKey () + FOREIGN_KEY_ID_SUFFIX;
+          modelAdapter.getProperty (referenceColumnName);
+
+          dbQuery.put (referenceColumnName, entry.getValue ());
+        }
+        catch (IllegalArgumentException e1)
+        {
+          // Ignore this key since we cannot map it.
+        }
+      }
+    }
+
+    return dbQuery;
   }
 
   /**
@@ -884,6 +931,7 @@ public class DataStore
         }
         else
         {
+          Log.e ("STORE", httpError.getLocalizedMessage ());
           this.settlement_.reject (reason);
         }
       }

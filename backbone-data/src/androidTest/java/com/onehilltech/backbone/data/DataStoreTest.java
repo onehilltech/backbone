@@ -293,6 +293,40 @@ public class DataStoreTest
   }
 
   @Test
+  public void testQuery () throws Exception
+  {
+    this.dispatcher_.add ("/books", new MockResponse ().setResponseCode (200).setBody ("{\"books\": [{\"_id\": 1, \"author\": 25, \"title\": \"Book Title\"}], \"users\": [{\"_id\": 25, \"first_name\": \"John\", \"last_name\": \"Doe\"}]}"));
+    this.dispatcher_.add ("/books", new MockResponse ().setResponseCode (304));
+
+    synchronized (this.lock_)
+    {
+      HashMap <String, Object> query = new HashMap<> ();
+      query.put ("author", 25);
+
+      this.dataStore_.query (Book.class, query)
+                     .then (books -> {
+                       Assert.assertEquals (1, books.size ());
+                       Assert.assertEquals (25, books.get (0).author._id);
+
+                       return this.dataStore_.query (Book.class, query);
+                     })
+                     .then (resolved (books -> {
+                       Assert.assertEquals (1, books.size ());
+                       Assert.assertEquals (25, books.get (0).author._id);
+
+                       synchronized (this.lock_)
+                       {
+                         this.lock_.notify ();
+                       }
+                     }))
+                     ._catch (rejected (reason -> Assert.fail (reason.getLocalizedMessage ())));
+
+      this.lock_.wait ();
+    }
+  }
+
+
+  @Test
   public void testGetAll () throws Exception
   {
     this.dispatcher_.add ("/users", new MockResponse ().setBody ("{\"users\": [{\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\"}]}"));

@@ -271,7 +271,7 @@ public class ResourceEndpoint <T>
             {
               // Get the errors from the response message.
               Resource r = resourceConverter_.convert (response.errorBody ());
-              HttpError httpError = r.get ("errors");
+              HttpError httpError = r != null ? r.get ("errors") : new HttpError ();
               httpError.setStatusCode (response.code ());
 
               settlement.reject (httpError);

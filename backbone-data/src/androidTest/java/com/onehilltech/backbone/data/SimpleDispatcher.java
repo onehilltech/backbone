@@ -21,7 +21,10 @@ public class SimpleDispatcher extends Dispatcher
   @Override
   public MockResponse dispatch (RecordedRequest request) throws InterruptedException
   {
-    Collection <MockResponse> responses = this.responses_.get (request.getPath ());
+    String path = request.getPath ();
+    String [] parts = path.split ("\\?");
+
+    Collection <MockResponse> responses = this.responses_.get (parts[0]);
 
     if (responses == null)
       return new MockResponse ().setResponseCode (404);
