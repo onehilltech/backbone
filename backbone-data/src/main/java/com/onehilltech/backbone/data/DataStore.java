@@ -344,6 +344,37 @@ public class DataStore
   }
 
   /**
+   *
+   * @param dataClass
+   * @param id
+   * @param options
+   * @param <T>
+   * @return
+   */
+  public <T extends DataModel> Promise <T> get (Class <T> dataClass, Object id, HashMap <String, Object> options)
+  {
+    return new Promise<> (settlement -> {
+      this.getModelAdapter (dataClass);
+      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+
+      endpoint.get (id.toString (), options)
+              .then (resolved (
+                  r -> this.insertIntoDatabase (r, dataClass)
+                           .then (resolved (result -> {
+                             T model = r.get (endpoint.getName ());
+                             settlement.resolve (model);
+                           }))
+              ))
+              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
+                  this.peek (dataClass, id)
+                      .then (resolved (settlement::resolve))
+                      ._catch (rejected (settlement::reject))
+              )));
+    });
+  }
+
+
+  /**
    * Query for a set of models by making a network request. If the server returns that the
    * list of models has not be modified, then we load the list of models from local disk.
    *
