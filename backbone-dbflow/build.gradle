@@ -44,6 +44,7 @@ android {
 dependencies {
     compile "com.github.Raizlabs.DBFlow:dbflow-core:" + project.property ('dbflow.version')
     compile "com.github.Raizlabs.DBFlow:dbflow:" + project.property ('dbflow.version')
+    compile group: 'org.slf4j', name: 'slf4j-android', version: '1.7.21'
 
     androidTestCompile 'junit:junit:4.11'
     androidTestCompile('com.android.support.test:testing-support-lib:0.1') {

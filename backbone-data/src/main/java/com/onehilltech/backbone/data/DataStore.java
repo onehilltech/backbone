@@ -31,6 +31,8 @@ import com.raizlabs.android.dbflow.structure.ModelAdapter;
 import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
 import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
@@ -202,6 +204,8 @@ public class DataStore
   private final DependencyGraph dependencyGraph_;
 
   private final Map <Class <?>, ResourceEndpoint <?>> endpoints_ = new LinkedHashMap<> ();
+
+  private final Logger logger_ = LoggerFactory.getLogger (DataStore.class);
 
   public interface OnModelLoaded <T>
   {
@@ -475,6 +479,8 @@ public class DataStore
             {
               if (node.isPluraleTantum () && r.contains (node.getSingularName ()))
               {
+                this.logger_.info ("Inserting {} into the database", node.getSingularName ());
+
                 Object value = r.get (node.getSingularName ());
                 ModelAdapter modelAdapter = node.getModelAdapter ();
                 Class <?> valueClass = value.getClass ();
@@ -491,9 +497,15 @@ public class DataStore
                   for (DataModel model: dataModels)
                     this.saveModel (modelAdapter, model);
                 }
+                else
+                {
+                  this.logger_.info ("Unexpected data model type: {}", valueClass.getName ());
+                }
               }
               else if (r.contains (node.getPluralName ()))
               {
+                this.logger_.info ("Inserting {} into the database", node.getPluralName ());
+
                 DataModelList <? extends DataModel> dataModels = r.get (node.getPluralName ());
                 ModelAdapter modelAdapter = node.getModelAdapter ();
 
@@ -502,10 +514,16 @@ public class DataStore
               }
               else if (r.contains (node.getSingularName ()))
               {
+                this.logger_.info ("Inserting {} into the database", node.getSingularName ());
+
                 DataModel dataModel = r.get (node.getSingularName ());
                 ModelAdapter modelAdapter = node.getModelAdapter ();
 
                 this.saveModel (modelAdapter, dataModel);
+              }
+              else
+              {
+                this.logger_.info ("Skipping {}", node.getSingularName ());
               }
             }
           })
