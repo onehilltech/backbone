@@ -10,12 +10,12 @@ public class DateTimeTypeConverter extends TypeConverter <Long, DateTime>
   @Override
   public Long getDBValue (DateTime model)
   {
-    return model.getMillis ();
+    return model != null ? model.getMillis () : null;
   }
 
   @Override
   public DateTime getModelValue (Long data)
   {
-    return new DateTime (data);
+    return data != null ? new DateTime (data) : null;
   }
 }
