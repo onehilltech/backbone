@@ -477,25 +477,57 @@ public class DataStore
 
             for (DependencyGraph.Node node: insertOrder)
             {
-              if (r.contains (node.getPluralName ()))
+              if (node.isPluraleTantum () && r.contains (node.getSingularName ()))
               {
-                this.logger_.info ("Inserting {} into the database", node.getPluralName ());
+                // The plural and singular name are the same.
 
-                DataModelList <? extends DataModel> dataModels = r.get (node.getPluralName ());
-                ModelAdapter modelAdapter = node.getModelAdapter ();
-
-                for (DataModel model: dataModels)
-                  this.saveModel (modelAdapter, model);
-              }
-
-              if (r.contains (node.getSingularName ()))
-              {
                 this.logger_.info ("Inserting {} into the database", node.getSingularName ());
 
-                DataModel dataModel = r.get (node.getSingularName ());
+                Object value = r.get (node.getSingularName ());
                 ModelAdapter modelAdapter = node.getModelAdapter ();
+                Class <?> valueClass = value.getClass ();
 
-                this.saveModel (modelAdapter, dataModel);
+                if (valueClass.equals (DataModel.class))
+                {
+                  DataModel <?> dataModel = (DataModel <?>)value;
+                  this.saveModel (modelAdapter, dataModel);
+                }
+                else if (valueClass.equals (DataModelList.class))
+                {
+                  DataModelList <? extends DataModel> dataModels = (DataModelList <? extends DataModel>)value;
+
+                  for (DataModel model: dataModels)
+                    this.saveModel (modelAdapter, model);
+                }
+                else
+                {
+                  this.logger_.info ("Unexpected data model type: {}", valueClass.getName ());
+                }
+              }
+              else
+              {
+                // We could have either the plural and singular name.
+
+                if (r.contains (node.getPluralName ()))
+                {
+                  this.logger_.info ("Inserting {} into the database", node.getPluralName ());
+
+                  DataModelList<? extends DataModel> dataModels = r.get (node.getPluralName ());
+                  ModelAdapter modelAdapter = node.getModelAdapter ();
+
+                  for (DataModel model : dataModels)
+                    this.saveModel (modelAdapter, model);
+                }
+
+                if (r.contains (node.getSingularName ()))
+                {
+                  this.logger_.info ("Inserting {} into the database", node.getSingularName ());
+
+                  DataModel dataModel = r.get (node.getSingularName ());
+                  ModelAdapter modelAdapter = node.getModelAdapter ();
+
+                  this.saveModel (modelAdapter, dataModel);
+                }
               }
             }
           })
