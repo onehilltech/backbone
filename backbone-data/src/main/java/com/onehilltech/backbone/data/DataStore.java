@@ -477,32 +477,7 @@ public class DataStore
 
             for (DependencyGraph.Node node: insertOrder)
             {
-              if (node.isPluraleTantum () && r.contains (node.getSingularName ()))
-              {
-                this.logger_.info ("Inserting {} into the database", node.getSingularName ());
-
-                Object value = r.get (node.getSingularName ());
-                ModelAdapter modelAdapter = node.getModelAdapter ();
-                Class <?> valueClass = value.getClass ();
-
-                if (valueClass.equals (DataModel.class))
-                {
-                  DataModel <?> dataModel = (DataModel <?>)value;
-                  this.saveModel (modelAdapter, dataModel);
-                }
-                else if (valueClass.equals (DataModelList.class))
-                {
-                  DataModelList <? extends DataModel> dataModels = (DataModelList <? extends DataModel>)value;
-
-                  for (DataModel model: dataModels)
-                    this.saveModel (modelAdapter, model);
-                }
-                else
-                {
-                  this.logger_.info ("Unexpected data model type: {}", valueClass.getName ());
-                }
-              }
-              else if (r.contains (node.getPluralName ()))
+              if (r.contains (node.getPluralName ()))
               {
                 this.logger_.info ("Inserting {} into the database", node.getPluralName ());
 
@@ -512,7 +487,8 @@ public class DataStore
                 for (DataModel model: dataModels)
                   this.saveModel (modelAdapter, model);
               }
-              else if (r.contains (node.getSingularName ()))
+
+              if (r.contains (node.getSingularName ()))
               {
                 this.logger_.info ("Inserting {} into the database", node.getSingularName ());
 
@@ -520,10 +496,6 @@ public class DataStore
                 ModelAdapter modelAdapter = node.getModelAdapter ();
 
                 this.saveModel (modelAdapter, dataModel);
-              }
-              else
-              {
-                this.logger_.info ("Skipping {}", node.getSingularName ());
               }
             }
           })
