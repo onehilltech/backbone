@@ -355,10 +355,16 @@ public class DataStoreTest
   }
 
   @Test
-  public void testGetNotModified () throws Exception
+  public void testCache () throws Exception
   {
-    this.dispatcher_.add ("/users/1", new MockResponse ().setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\"}}"));
-    this.dispatcher_.add ("/users/1", new MockResponse ().setResponseCode (304).setBody ("Not Modified"));
+    this.dispatcher_.add ("/users/1", new MockResponse ()
+        .setBody ("{\"user\": {\"_id\": 1, \"first_name\": \"John\", \"last_name\": \"Doe\"}}")
+        .setHeader ("ETag", 1));
+
+    this.dispatcher_.add ("/users/1", new MockResponse ()
+        .setResponseCode (304)
+        .setBody ("Not Modified")
+        .setHeader ("ETag", 1));
 
     synchronized (this.lock_)
     {
