@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -41,7 +42,10 @@ import java.util.List;
 import java.util.Map;
 
 import okhttp3.Cache;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -76,6 +80,8 @@ public class DataStore
     private final ArrayList <TypeAdapterFactory> typeAdapterFactories_ = new ArrayList<> ();
 
     private final Context context_;
+
+    private DataStoreAdapter appAdapter_;
 
     public Builder (Context context, Class <?> databaseClass)
     {
@@ -119,6 +125,12 @@ public class DataStore
       return this;
     }
 
+    public Builder setApplicationAdapter (DataStoreAdapter adapter)
+    {
+      this.appAdapter_ = adapter;
+      return this;
+    }
+
     public DataStore build ()
     {
       if (this.databaseClass_ == null)
@@ -137,6 +149,15 @@ public class DataStore
 
       if (this.enableCache_)
         httpClientBuilder.cache (this.buildCache ());
+
+      if (this.appAdapter_ != null)
+      {
+        httpClientBuilder.addInterceptor (chain -> {
+          Request origRequest = chain.request ();
+          Request newRequest = appAdapter_.handleRequest (origRequest);
+          return chain.proceed (newRequest);
+        });
+      }
 
       // Register the different models in the database with Gson, and then register the
       // Gson instance with the Retrofit builder.
@@ -205,7 +226,6 @@ public class DataStore
   }
 
   private static final String FIELD_ID = "_id";
-  private static final String FOREIGN_KEY_ID_SUFFIX = "__id";
 
   private static final NameAlias _ID = NameAlias.of (FIELD_ID);
 
@@ -221,6 +241,9 @@ public class DataStore
 
   private final Logger logger_ = LoggerFactory.getLogger (DataStore.class);
 
+  /// The adapter for the entire application.
+  private DataStoreAdapter appAdapter_;
+
   public interface OnModelLoaded <T>
   {
     void onModelLoaded (T model);
@@ -232,6 +255,7 @@ public class DataStore
     this.retrofit_ = retrofit;
     this.databaseDefinition_ = FlowManager.getDatabase (this.databaseClass_);
     this.dependencyGraph_ = new DependencyGraph.Builder (this.databaseDefinition_).build ();
+    this.appAdapter_ = adapter;
   }
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
