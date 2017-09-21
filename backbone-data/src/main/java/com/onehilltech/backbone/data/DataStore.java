@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -136,89 +137,7 @@ public class DataStore
       if (this.baseUrl_ == null)
         throw new IllegalStateException ("You must provide a base URL for the data store");
 
-      // We need to create our own HttpClient, but we need to use the provided on
-      // as the foundation. This allows us to merge the client's configuration with
-      // the required configuration for the data store.
-      OkHttpClient.Builder httpClientBuilder =
-          this.httpClient_ != null ?
-              this.httpClient_.newBuilder () :
-              new OkHttpClient.Builder ();
-
-      if (this.enableCache_)
-        httpClientBuilder.cache (this.buildCache ());
-
-      if (this.appAdapter_ != null)
-      {
-        httpClientBuilder.addInterceptor (chain -> {
-          Request origRequest = chain.request ();
-          Request newRequest = appAdapter_.handleRequest (origRequest);
-          return chain.proceed (newRequest);
-        });
-      }
-
-      // Register the different models in the database with Gson, and then register the
-      // Gson instance with the Retrofit builder.
-      ResourceSerializer resourceSerializer = this.makeResourceSerializeFromDatabase ();
-      resourceSerializer.put ("errors", HttpError.class);
-
-      GsonBuilder gsonBuilder =
-          new GsonBuilder ()
-              .registerTypeAdapter (Resource.class, resourceSerializer)
-              .registerTypeAdapter (DateTime.class, new DateTimeSerializer ())
-              .registerTypeAdapterFactory (new DataModelTypeAdapterFactory ());
-
-      for (Map.Entry <Type, Object> entry: this.typeAdapters_.entrySet ())
-        gsonBuilder.registerTypeAdapter (entry.getKey (), entry.getValue ());
-
-      for (TypeAdapterFactory typeAdapterFactory: this.typeAdapterFactories_)
-        gsonBuilder.registerTypeAdapterFactory (typeAdapterFactory);
-
-      Gson gson = gsonBuilder.create ();
-      resourceSerializer.setGson (gson);
-
-      // Build the Retrofit instance for the data store.
-      Retrofit.Builder retrofitBuilder =
-          new Retrofit.Builder ()
-              .baseUrl (this.baseUrl_);
-
-      retrofitBuilder.client (httpClientBuilder.build ());
-
-      Retrofit retrofit =
-          retrofitBuilder
-              .addConverterFactory (GsonConverterFactory.create (gson))
-              .build ();
-
-      return new DataStore (this.databaseClass_, retrofit);
-    }
-
-    private Cache buildCache ()
-    {
-      String cacheFileName = FlowManager.getDatabase (this.databaseClass_).getDatabaseName () + ".store.cache";
-      File cacheDir = this.context_.getCacheDir ();
-      File cacheFile = new File (cacheDir, cacheFileName);
-
-      return new Cache (cacheFile, this.cacheSize_);
-    }
-
-    private ResourceSerializer makeResourceSerializeFromDatabase ()
-    {
-      ResourceSerializer serializer = new ResourceSerializer ();
-      DatabaseDefinition databaseDefinition = FlowManager.getDatabase (this.databaseClass_);
-      List<ModelAdapter> modelAdapters = databaseDefinition.getModelAdapters ();
-
-      for (ModelAdapter modelAdapter : modelAdapters)
-      {
-        String pluralName = TableUtils.getRawTableName (modelAdapter.getTableName ());
-        String singularName = Pluralize.getInstance ().singular (pluralName);
-        Class <?> modelClass = modelAdapter.getModelClass ();
-
-        serializer.put (pluralName, modelClass);
-
-        if (!pluralName.equals (singularName))
-          serializer.put (singularName, modelClass);
-      }
-
-      return serializer;
+      return new DataStore (this);
     }
   }
 
@@ -238,20 +157,117 @@ public class DataStore
 
   private final Logger logger_ = LoggerFactory.getLogger (DataStore.class);
 
-  /// The adapter for the entire application.
-  private DataStoreAdapter appAdapter_;
+  private Cache cache_;
 
   public interface OnModelLoaded <T>
   {
     void onModelLoaded (T model);
   }
 
-  private DataStore (@NonNull Class <?> databaseClass, @NonNull Retrofit retrofit)
+  private DataStore (Builder builder)
   {
-    this.databaseClass_ = databaseClass;
-    this.retrofit_ = retrofit;
+    this.databaseClass_ = builder.databaseClass_;
     this.databaseDefinition_ = FlowManager.getDatabase (this.databaseClass_);
     this.dependencyGraph_ = new DependencyGraph.Builder (this.databaseDefinition_).build ();
+
+    // We need to create our own HttpClient, but we need to use the provided on
+    // as the foundation. This allows us to merge the client's configuration with
+    // the required configuration for the data store.
+    OkHttpClient.Builder httpClientBuilder =
+        builder.httpClient_ != null ?
+            builder.httpClient_.newBuilder () :
+            new OkHttpClient.Builder ();
+
+    if (builder.enableCache_)
+    {
+      // The data store support caching.
+      String cacheFileName = FlowManager.getDatabase (this.databaseClass_).getDatabaseName () + ".store.cache";
+      File cacheDir = builder.context_.getCacheDir ();
+      File cacheFile = new File (cacheDir, cacheFileName);
+
+      this.cache_ = new Cache (cacheFile, builder.cacheSize_);
+
+      httpClientBuilder.cache (this.cache_);
+    }
+
+    if (builder.appAdapter_ != null)
+    {
+      // The data store has an application adapter.
+      httpClientBuilder.addInterceptor (chain -> {
+        Request origRequest = chain.request ();
+        Request newRequest = builder.appAdapter_.handleRequest (origRequest);
+        return chain.proceed (newRequest);
+      });
+    }
+
+    // Register the different models in the database with Gson, and then register the
+    // Gson instance with the Retrofit builder.
+    ResourceSerializer resourceSerializer = this.makeResourceSerializeFromDatabase ();
+    resourceSerializer.put ("errors", HttpError.class);
+
+    GsonBuilder gsonBuilder =
+        new GsonBuilder ()
+            .registerTypeAdapter (Resource.class, resourceSerializer)
+            .registerTypeAdapter (DateTime.class, new DateTimeSerializer ())
+            .registerTypeAdapterFactory (new DataModelTypeAdapterFactory ());
+
+    for (Map.Entry <Type, Object> entry: builder.typeAdapters_.entrySet ())
+      gsonBuilder.registerTypeAdapter (entry.getKey (), entry.getValue ());
+
+    for (TypeAdapterFactory typeAdapterFactory: builder.typeAdapterFactories_)
+      gsonBuilder.registerTypeAdapterFactory (typeAdapterFactory);
+
+    Gson gson = gsonBuilder.create ();
+    resourceSerializer.setGson (gson);
+
+    // Build the Retrofit instance for the data store.
+    Retrofit.Builder retrofitBuilder =
+        new Retrofit.Builder ()
+            .baseUrl (builder.baseUrl_);
+
+    retrofitBuilder.client (httpClientBuilder.build ());
+
+    this.retrofit_ =
+        retrofitBuilder
+            .addConverterFactory (GsonConverterFactory.create (gson))
+            .build ();
+  }
+
+  private ResourceSerializer makeResourceSerializeFromDatabase ()
+  {
+    ResourceSerializer serializer = new ResourceSerializer ();
+    DatabaseDefinition databaseDefinition = FlowManager.getDatabase (this.databaseClass_);
+    List<ModelAdapter> modelAdapters = databaseDefinition.getModelAdapters ();
+
+    for (ModelAdapter modelAdapter : modelAdapters)
+    {
+      String pluralName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+      String singularName = Pluralize.getInstance ().singular (pluralName);
+      Class<?> modelClass = modelAdapter.getModelClass ();
+
+      serializer.put (pluralName, modelClass);
+
+      if (!pluralName.equals (singularName))
+        serializer.put (singularName, modelClass);
+    }
+
+    return serializer;
+  }
+
+  /**
+   * Clear the data store cache.
+   */
+  public void clearCache ()
+  {
+    try
+    {
+      if (this.cache_ != null)
+        this.cache_.evictAll ();
+    }
+    catch (IOException e)
+    {
+      throw new IllegalStateException ("Failed to clear cache", e);
+    }
   }
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
