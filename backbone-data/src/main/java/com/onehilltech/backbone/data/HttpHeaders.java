@@ -1,4 +1,4 @@
-package com.onehilltech.backbone.http;
+package com.onehilltech.backbone.data;
 
 public class HttpHeaders
 {

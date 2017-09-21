@@ -23,6 +23,4 @@ include ':backbone-android-objectid'
 include ':backbone-data'
 include ':backbone-dbflow'
 include ':backbone-firebase-messaging'
-include ':backbone-http'
-//include ':backbone-materialize'
-//include ':backbone-materialize-demo'
+

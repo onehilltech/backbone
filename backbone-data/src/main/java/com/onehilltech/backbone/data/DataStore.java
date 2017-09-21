@@ -6,16 +6,12 @@ import android.content.Loader;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapterFactory;
 import com.onehilltech.backbone.data.serializers.DateTimeSerializer;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
-import com.onehilltech.backbone.http.BackboneHttp;
-import com.onehilltech.backbone.http.HttpError;
-import com.onehilltech.backbone.http.Resource;
 import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
@@ -34,6 +30,7 @@ import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -43,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import okhttp3.Cache;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -51,14 +49,15 @@ import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
 
 /**
- * @class DataStore
- *
  * The DataStore is an abstraction that manages different data objects. The DataStore has
  * methods for retrieving data from both local and remote storage. Data from remote storage
  * is stored locally for faster access.
  */
 public class DataStore
 {
+  /**
+   * Build a DataStore object.
+   */
   public static class Builder
   {
     private Class <?> databaseClass_;
@@ -69,12 +68,18 @@ public class DataStore
 
     private boolean enableCache_ = true;
 
+    /// Default cache size is 10 MB
+    private int cacheSize_ = 10 * 1024 * 1024;
+
     private final LinkedHashMap <Type, Object> typeAdapters_ = new LinkedHashMap <> ();
 
     private final ArrayList <TypeAdapterFactory> typeAdapterFactories_ = new ArrayList<> ();
 
-    public Builder (Class <?> databaseClass)
+    private final Context context_;
+
+    public Builder (Context context, Class <?> databaseClass)
     {
+      this.context_ = context;
       this.databaseClass_ = databaseClass;
     }
 
@@ -108,6 +113,12 @@ public class DataStore
       return this;
     }
 
+    public Builder setCacheSize (int cacheSize)
+    {
+      this.cacheSize_ = cacheSize;
+      return this;
+    }
+
     public DataStore build ()
     {
       if (this.databaseClass_ == null)
@@ -125,13 +136,7 @@ public class DataStore
               new OkHttpClient.Builder ();
 
       if (this.enableCache_)
-      {
-        // Make sure http support in Backbone is enabled. Then, add the resource
-        // interceptor to the client to enable http caching.
-        BackboneHttp.initialize ();
-
-        httpClientBuilder.addInterceptor (new ResourceCacheInterceptor ());
-      }
+        httpClientBuilder.cache (this.buildCache ());
 
       // Register the different models in the database with Gson, and then register the
       // Gson instance with the Retrofit builder.
@@ -166,6 +171,15 @@ public class DataStore
               .build ();
 
       return new DataStore (this.databaseClass_, retrofit);
+    }
+
+    private Cache buildCache ()
+    {
+      String cacheFileName = FlowManager.getDatabase (this.databaseClass_).getDatabaseName () + ".store.cache";
+      File cacheDir = this.context_.getCacheDir ();
+      File cacheFile = new File (cacheDir, cacheFileName);
+
+      return new Cache (cacheFile, this.cacheSize_);
     }
 
     private ResourceSerializer makeResourceSerializeFromDatabase ()
@@ -309,11 +323,7 @@ public class DataStore
                              settlement.resolve (modelList);
                            }))
               ))
-              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
-                  this.peek (dataClass)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject))
-              )));
+              ._catch (rejected (settlement::reject));
     });
   }
 
@@ -339,11 +349,7 @@ public class DataStore
                              settlement.resolve (model);
                            }))
               ))
-              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
-                  this.peek (dataClass, id)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject))
-              )));
+              ._catch (rejected (settlement::reject));
     });
   }
 
@@ -369,11 +375,7 @@ public class DataStore
                              settlement.resolve (model);
                            }))
               ))
-              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
-                  this.peek (dataClass, id)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject))
-              )));
+              ._catch (rejected (settlement::reject));
     });
   }
 
@@ -407,56 +409,8 @@ public class DataStore
                       settlement.resolve (modelList);
                     }))
               )
-              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () -> {
-                // Transform query object into a query for the database.
-                Map <String, Object> dbQuery = this.convertHttpQueryToDatabaseQuery (modelAdapter, query);
-
-                this.select (dataClass, dbQuery)
-                             .then (resolved (settlement::resolve))
-                             ._catch (rejected (settlement::reject));
-              })));
+              ._catch (rejected (settlement::reject));
     });
-  }
-
-  /**
-   * Convert a http query into a database query map.
-   *
-   * @param modelAdapter
-   * @param query
-   * @param <T>
-   * @return
-   */
-  private  <T extends DataModel> Map <String, Object> convertHttpQueryToDatabaseQuery (ModelAdapter <T> modelAdapter, Map <String, Object> query)
-  {
-    HashMap <String, Object> dbQuery = new HashMap<> ();
-
-    for (Map.Entry <String, Object> entry: query.entrySet ())
-    {
-      try
-      {
-        String columnName = entry.getKey ();
-        modelAdapter.getProperty (columnName);
-
-        dbQuery.put (columnName, entry.getValue ());
-      }
-      catch (IllegalArgumentException e)
-      {
-        try
-        {
-          // Try an id column.
-          String referenceColumnName = entry.getKey () + FOREIGN_KEY_ID_SUFFIX;
-          modelAdapter.getProperty (referenceColumnName);
-
-          dbQuery.put (referenceColumnName, entry.getValue ());
-        }
-        catch (IllegalArgumentException e1)
-        {
-          // Ignore this key since we cannot map it.
-        }
-      }
-    }
-
-    return dbQuery;
   }
 
   /**
@@ -569,11 +523,7 @@ public class DataStore
                     .then (resolved (settlement::resolve))
                     ._catch (rejected (settlement::reject))
               ))
-              ._catch (rejected (handleErrorOrLoadFromCache (settlement, () ->
-                  this.selectCursor (dataClass, query)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject))
-              )));
+              ._catch (rejected (settlement::reject));
     });
   }
 
@@ -943,55 +893,5 @@ public class DataStore
                  .build ()
                  .execute ();
     });
-  }
-
-  private interface OnNotModified
-  {
-    void onNotModified ();
-  }
-
-  private static <T> HandleErrorOrLoadFromCache<T> handleErrorOrLoadFromCache (Promise.Settlement <T> settlement, OnNotModified onNotModified)
-  {
-    return new HandleErrorOrLoadFromCache <> (settlement, onNotModified);
-  }
-
-  private static class HandleErrorOrLoadFromCache <T> implements Promise.RejectNoReturn
-  {
-    private Promise.Settlement <T> settlement_;
-
-    private OnNotModified onNotModified_;
-
-    HandleErrorOrLoadFromCache (Promise.Settlement <T> settlement, OnNotModified onNotModified)
-    {
-      this.settlement_ = settlement;
-      this.onNotModified_ = onNotModified;
-    }
-
-    @Override
-    public void rejectNoReturn (Throwable reason)
-    {
-      if ((reason instanceof HttpError))
-      {
-        HttpError httpError = (HttpError) reason;
-
-        if (httpError.getStatusCode () == 304)
-        {
-          // The server said that the data has not been modified. This means we
-          // already have the data cached locally. Let's use the peek () method
-          // to load the data from disk, and resolve our promise.
-
-          this.onNotModified_.onNotModified ();
-        }
-        else
-        {
-          Log.e ("STORE", httpError.getLocalizedMessage ());
-          this.settlement_.reject (reason);
-        }
-      }
-      else
-      {
-        this.settlement_.reject (reason);
-      }
-    }
   }
 }

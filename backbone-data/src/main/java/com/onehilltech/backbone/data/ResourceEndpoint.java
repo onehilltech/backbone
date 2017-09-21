@@ -1,7 +1,5 @@
 package com.onehilltech.backbone.data;
 
-import com.onehilltech.backbone.http.HttpError;
-import com.onehilltech.backbone.http.Resource;
 import com.onehilltech.promises.Promise;
 
 import java.io.IOException;

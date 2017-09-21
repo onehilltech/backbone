@@ -15,4 +15,7 @@
   limitations under the License.
 -->
 
-<manifest package="com.onehilltech.backbone.data" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.onehilltech.backbone.data">
+    <uses-permission android:name="android.permission.INTERNET"/>
+</manifest>

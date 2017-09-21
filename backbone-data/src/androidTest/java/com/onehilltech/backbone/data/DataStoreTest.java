@@ -43,7 +43,7 @@ public class DataStoreTest
     this.isComplete_ = false;
 
     InstrumentationRegistry.getContext ().deleteDatabase (TestDatabase.NAME + ".db");
-    FlowManager.init (InstrumentationRegistry.getContext ());
+    FlowManager.init (InstrumentationRegistry.getTargetContext ());
 
     this.dispatcher_ = new SimpleDispatcher ();
 
@@ -52,7 +52,7 @@ public class DataStoreTest
     this.server_.start ();
 
     this.dataStore_ =
-        new DataStore.Builder (TestDatabase.class)
+        new DataStore.Builder (InstrumentationRegistry.getTargetContext (), TestDatabase.class)
             .setBaseUrl (this.server_.getUrl ("/").toString ())
             .build ();
   }
@@ -295,8 +295,14 @@ public class DataStoreTest
   @Test
   public void testQuery () throws Exception
   {
-    this.dispatcher_.add ("/books", new MockResponse ().setResponseCode (200).setBody ("{\"books\": [{\"_id\": 1, \"author\": 25, \"title\": \"Book Title\"}], \"users\": [{\"_id\": 25, \"first_name\": \"John\", \"last_name\": \"Doe\"}]}"));
-    this.dispatcher_.add ("/books", new MockResponse ().setResponseCode (304));
+    this.dispatcher_.add ("/books", new MockResponse ()
+        .setResponseCode (200)
+        .setBody ("{\"books\": [{\"_id\": 1, \"author\": 25, \"title\": \"Book Title\"}], \"users\": [{\"_id\": 25, \"first_name\": \"John\", \"last_name\": \"Doe\"}]}")
+        .setHeader ("ETag", "1"));
+
+    this.dispatcher_.add ("/books", new MockResponse ()
+        .setResponseCode (304)
+        .setHeader ("ETag", "1"));
 
     synchronized (this.lock_)
     {

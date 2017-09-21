@@ -44,7 +44,6 @@ android {
 }
 
 dependencies {
-    compile project (':backbone-http')
     compile project (':backbone-dbflow')
     compile project (':backbone-android-objectid')
 
