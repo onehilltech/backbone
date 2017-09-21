@@ -255,7 +255,6 @@ public class DataStore
     this.retrofit_ = retrofit;
     this.databaseDefinition_ = FlowManager.getDatabase (this.databaseClass_);
     this.dependencyGraph_ = new DependencyGraph.Builder (this.databaseDefinition_).build ();
-    this.appAdapter_ = adapter;
   }
 
   public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
