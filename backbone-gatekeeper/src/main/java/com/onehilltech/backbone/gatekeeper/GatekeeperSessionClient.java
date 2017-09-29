@@ -739,7 +739,7 @@ public class GatekeeperSessionClient
   interface Methods
   {
     @POST("oauth2/token")
-    Call <JsonBearerToken> getUserToken (@Body JsonPassword password);
+    Call <JsonBearerToken> getUserToken (@Body JsonGrant password);
   }
 
   interface UserMethods
@@ -751,7 +751,7 @@ public class GatekeeperSessionClient
     Call <Boolean> changePassword (@Body Resource r);
 
     @POST("oauth2/token")
-    Call <JsonBearerToken> refreshToken (@Body JsonRefreshToken refreshToken);
+    Call <JsonBearerToken> refreshToken (@Body JsonGrant refreshToken);
   }
 
   static
