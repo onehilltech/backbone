@@ -45,6 +45,8 @@ public class MessagingClient
     }
   }
 
+  public static final int VERSION = 1;
+
   private static MessagingClient instance_;
 
   private ClientMethods clientMethods_;
@@ -52,6 +54,8 @@ public class MessagingClient
   private UserMethods userMethods_;
 
   private final GatekeeperSessionClient sessionClient_;
+
+  private final Configuration configuration_;
 
   public static MessagingClient getInstance (Context context)
   {
@@ -72,20 +76,25 @@ public class MessagingClient
   private MessagingClient (Context context)
       throws PackageManager.NameNotFoundException, IllegalAccessException, InvocationTargetException, ClassNotFoundException
   {
+    this.configuration_ = Configuration.loadFromMetadata (context);
     this.sessionClient_ = GatekeeperSessionClient.getInstance (context);
-    Configuration configuration = Configuration.loadFromMetadata (context);
 
     this.clientMethods_ =
         new Retrofit.Builder ()
-            .baseUrl (configuration.baseUri)
+            .baseUrl (this.getBaseUrlWithVersion ())
             .client (this.sessionClient_.getClient ().getHttpClient ())
             .build ().create (ClientMethods.class);
 
     this.userMethods_ =
         new Retrofit.Builder ()
-            .baseUrl (configuration.baseUri)
+            .baseUrl (this.getBaseUrlWithVersion ())
             .client (this.sessionClient_.getHttpClient ())
             .build ().create (UserMethods.class);
+  }
+
+  public String getBaseUrlWithVersion ()
+  {
+    return this.configuration_.baseUri + "v" + VERSION + "/";
   }
 
   public Promise <ClaimTicket> refreshToken (CloudToken cloudToken)
