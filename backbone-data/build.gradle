@@ -44,6 +44,7 @@ android {
 }
 
 dependencies {
+    apt "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ("dbflow.version")
     compile project (':backbone-dbflow')
     compile project (':backbone-android-objectid')
 

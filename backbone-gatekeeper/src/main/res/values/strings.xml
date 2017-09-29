@@ -1,0 +1,37 @@
+<resources>
+	<string name="gatekeeper_name">Gatekeeper</string>
+    <string name="gatekeeper_login_statement">Log in.</string>
+    <string name="gatekeeper_have_an_account">Have an account?</string>
+    <string name="gatekeeper_slogan">Simplifying and codifying the authentication process for mobile applications</string>
+
+    <string name="gatekeeper_title_new_account">New account</string>
+
+
+    <string name="prompt_email">Email</string>
+    <string name="prompt_confirm_password">Confirm password</string>
+    <string name="prompt_username">Username</string>
+    <string name="prompt_password">Password</string>
+
+    <string name="action_sign_in">Sign in</string>
+    <string name="action_sign_in_short">Sign in</string>
+    <string name="action_create_new_account">Do not have an account? Create one.</string>
+    <string name="action_already_have_account">I already have an account. Sign in.</string>
+
+    <string name="action_create_account">Create account</string>
+
+    <string name="progress_initializing_app">Initializing application&#8230;</string>
+
+    <string name="error_field_required">This field is required</string>
+    <string name="error_failed_to_initialize_client">Failed to initialize client</string>
+    <string name="error_password_not_match">Password does not match</string>
+    <string name="error_invalid_password">Password is invalid</string>
+    <string name="error_invalid_email">Email is invalid</string>
+
+    <string name="label_username">Username</string>
+    <string name="label_password">Password</string>
+    <string name="label_email">Email</string>
+
+    <string name="hint_username">john.doe@contact.me</string>
+    <string name="hint_password">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</string>
+    <string name="hint_email">john.doe@contact.me</string>
+</resources>
