@@ -4,8 +4,7 @@ import android.content.Context;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 
-import com.onehilltech.backbone.gatekeeper.GatekeeperClient;
-import com.onehilltech.gatekeeper.android.test.R;
+import com.onehilltech.backbone.gatekeeper.test.R;
 
 import org.junit.Assert;
 import org.junit.Test;

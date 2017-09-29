@@ -1,5 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'me.tatarka.retrolambda'
 
 group   = project.property('build.group')
 version = project.property('build.version')
@@ -31,7 +32,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_7
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     lintOptions {
@@ -43,6 +45,7 @@ dependencies {
     compile group: 'org.slf4j', name: 'slf4j-android', version: '1.7.21'
 
     compile project (':backbone-gatekeeper')
+
     compile 'com.google.firebase:firebase-core:10.2.1'
     compile 'com.google.firebase:firebase-messaging:10.2.1'
 

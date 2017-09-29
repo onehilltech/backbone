@@ -8,9 +8,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 
-public class MessagingService extends FirebaseMessagingService
+public abstract class AbstractMessagingService extends FirebaseMessagingService
 {
-  private final Logger logger_ = LoggerFactory.getLogger (MessagingService.class);
+  private final Logger logger_ = LoggerFactory.getLogger (AbstractMessagingService.class);
+
+  private String discriminator_ = "type";
 
   public interface MessageHandler
   {
@@ -25,6 +27,16 @@ public class MessagingService extends FirebaseMessagingService
     super.onCreate ();
   }
 
+  private String getDiscriminator ()
+  {
+    return this.discriminator_;
+  }
+
+  public void setDiscriminator (String discriminator)
+  {
+    this.discriminator_ = discriminator;
+  }
+
   @Override
   public void onMessageReceived (RemoteMessage msg)
   {
@@ -32,7 +44,7 @@ public class MessagingService extends FirebaseMessagingService
     {
       this.logger_.info ("Received message {} from {}", msg.getMessageId (), msg.getFrom ());
 
-      String type = msg.getData ().get ("type");
+      String type = msg.getData ().get (this.discriminator_);
       MessageHandler handler = this.handlers_.get (type);
 
       if (handler != null)
