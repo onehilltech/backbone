@@ -572,6 +572,9 @@ public class GatekeeperSessionClient
     JsonPassword grant = new JsonPassword ();
     grant.username = username;
     grant.password = password;
+    grant.clientId = this.client_.getConfig ().clientId;
+    grant.clientSecret = this.client_.getConfig ().clientSecret;
+    grant.packageName = this.packageName_;
 
     return this.executeCall (this.methods_.getUserToken (grant));
   }
