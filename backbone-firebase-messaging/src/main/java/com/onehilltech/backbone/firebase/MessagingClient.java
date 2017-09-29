@@ -105,12 +105,12 @@ public class MessagingClient
 
   public Promise <ClaimTicket> refreshToken (CloudToken cloudToken)
   {
-    Call <ClaimTicket> call =
-        this.sessionClient_.isSignedIn () ?
-            this.userMethods_.refreshToken (cloudToken) :
-            this.clientMethods_.refreshToken (cloudToken);
+    if (this.sessionClient_.isSignedIn ())
+      return this.executeCall (this.userMethods_.refreshToken (cloudToken));
 
-    return this.executeCall (call);
+    return this.sessionClient_.getClient ()
+                              .ensureAuthenticated ()
+                              .then (result -> this.executeCall (this.clientMethods_.refreshToken (cloudToken)));
   }
 
   public Promise <Boolean> claimDevice (String deviceId, ClaimTicket claimTicket)
