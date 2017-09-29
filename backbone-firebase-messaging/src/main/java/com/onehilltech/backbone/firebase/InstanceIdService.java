@@ -39,6 +39,8 @@ public class InstanceIdService extends FirebaseInstanceIdService
   @Override
   public void onTokenRefresh ()
   {
+    this.logger_.info ("Refreshing cloud token; sending cloud token to server");
+
     CloudToken cloudToken = new CloudToken ();
     FirebaseInstanceId instanceId = FirebaseInstanceId.getInstance ();
 
@@ -48,7 +50,7 @@ public class InstanceIdService extends FirebaseInstanceIdService
     MessagingClient.getInstance (this)
                    .refreshToken (cloudToken)
                    .then (resolved (this::saveClaimTicket))
-                   ._catch (rejected (reason -> this.logger_.error ("Failed to refresh cloud token", reason.getLocalizedMessage ())));
+                   ._catch (rejected (reason -> this.logger_.error ("Failed to refresh cloud token", reason)));
   }
 
   private void saveClaimTicket (ClaimTicket ticket)
