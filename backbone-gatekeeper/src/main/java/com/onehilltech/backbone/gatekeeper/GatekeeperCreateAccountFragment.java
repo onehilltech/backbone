@@ -1,5 +1,6 @@
 package com.onehilltech.backbone.gatekeeper;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -140,36 +141,23 @@ public class GatekeeperCreateAccountFragment extends Fragment
   @Override
   public View onCreateView (LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
   {
-    View view = inflater.inflate (com.onehilltech.gatekeeper.android.R.layout.fragment_new_account, container, false);
+    View view = inflater.inflate (R.layout.fragment_new_account, container, false);
 
-    TextView title = (TextView)view.findViewById (com.onehilltech.gatekeeper.android.R.id.title);
-    this.username_ = (MaterialEditText) view.findViewById (com.onehilltech.gatekeeper.android.R.id.username);
-    this.email_ = (MaterialEditText) view.findViewById (com.onehilltech.gatekeeper.android.R.id.email);
-    this.password_ = (MaterialEditText) view.findViewById (com.onehilltech.gatekeeper.android.R.id.password);
+    TextView title = view.findViewById (R.id.title);
+    this.username_ = view.findViewById (R.id.username);
+    this.email_ = view.findViewById (R.id.email);
+    this.password_ = view.findViewById (R.id.password);
 
-    Button btnCreate = (Button) view.findViewById (com.onehilltech.gatekeeper.android.R.id.button_create_account);
-    btnCreate.setOnClickListener (new View.OnClickListener ()
-    {
-      @Override
-      public void onClick (View view)
-      {
-        createAccount ();
-      }
-    });
+    Button btnCreate = view.findViewById (R.id.button_create_account);
+    btnCreate.setOnClickListener (v -> this.createAccount ());
 
-    TextView signIn = (TextView)view.findViewById (com.onehilltech.gatekeeper.android.R.id.action_sign_in);
-    signIn.setOnClickListener (new View.OnClickListener ()
-    {
-      @Override
-      public void onClick (View view)
-      {
-        Intent upIntent =
-            getActivity ().getIntent ()
-                          .getParcelableExtra (GatekeeperCreateAccountActivity.EXTRA_UP_INTENT);
+    TextView signIn = view.findViewById (R.id.action_sign_in);
+    signIn.setOnClickListener (v -> {
+      Activity activity = this.getActivity ();
 
-        getActivity ().startActivity (upIntent);
-        getActivity ().finish ();
-      }
+      Intent upIntent = activity.getIntent ().getParcelableExtra (GatekeeperCreateAccountActivity.EXTRA_UP_INTENT);
+      activity.startActivity (upIntent);
+      activity.finish ();
     });
 
     this.username_.addValidator (new NotEmptyValidator ());

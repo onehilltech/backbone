@@ -54,7 +54,7 @@ public class GatekeeperSignInActivity extends AppCompatActivity
     super.onCreate (savedInstanceState);
 
     // Set the content view for this activity.
-    this.setContentView (com.onehilltech.gatekeeper.android.R.layout.activity_login);
+    this.setContentView (R.layout.activity_login);
 
     try
     {
@@ -64,7 +64,7 @@ public class GatekeeperSignInActivity extends AppCompatActivity
       // anything and should return or else we could end up with overlapping fragments.
       this.getSupportFragmentManager ()
           .beginTransaction ()
-          .replace (com.onehilltech.gatekeeper.android.R.id.container, this.onCreateFragment (savedInstanceState))
+          .replace (R.id.container, this.onCreateFragment (savedInstanceState))
           .commit ();
     }
     catch (Exception e)

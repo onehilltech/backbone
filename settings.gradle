@@ -23,5 +23,4 @@ include ':backbone-android-objectid'
 include ':backbone-data'
 include ':backbone-dbflow'
 include ':backbone-gatekeeper'
-//include ':backbone-firebase-messaging'
 

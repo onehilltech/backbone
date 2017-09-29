@@ -40,14 +40,14 @@ public class GatekeeperCreateAccountActivity extends AppCompatActivity
   {
     super.onCreate (savedInstanceState);
 
-    this.setContentView (com.onehilltech.gatekeeper.android.R.layout.activity_new_account);
+    this.setContentView (R.layout.activity_new_account);
 
     // Show the fragment for creating the new account.
     GatekeeperCreateAccountFragment fragment = this.onCreateFragment (savedInstanceState);
 
     this.getSupportFragmentManager ()
         .beginTransaction ()
-        .replace (com.onehilltech.gatekeeper.android.R.id.container, fragment)
+        .replace (R.id.container, fragment)
         .commit ();
   }
 
