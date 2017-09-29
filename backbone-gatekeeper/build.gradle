@@ -22,7 +22,7 @@ android {
         versionCode = project.property('build.versionCode').toInteger()
         versionName = project.property('build.version')
 
-        testApplicationId "com.onehilltech.gatekeeper.android.test"
+        testApplicationId "com.onehilltech.backbone.gatekeeper.test"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
         multiDexEnabled  true

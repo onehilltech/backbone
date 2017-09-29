@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.onehilltech.gatekeeper.android.test">
+    package="com.onehilltech.backbone.gatekeeper.test">
 
     <application>
         <meta-data android:name="com.onehilltech.gatekeeper.android.client_id"
