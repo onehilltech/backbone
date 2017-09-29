@@ -226,7 +226,7 @@ public class GatekeeperClient
       account.password = password;
       account.email = email;
 
-      this.requestClientToken ()
+      this.ensureAuthenticated ()
           .then (result -> this.accountEndpoint_.create (account))
           .then (resolved (settlement::resolve))
           ._catch (rejected (settlement::reject));
@@ -253,7 +253,7 @@ public class GatekeeperClient
       HashMap<String, Object> options = new HashMap<> ();
       options.put ("login", autoSignIn);
 
-      this.requestClientToken ()
+      this.ensureAuthenticated ()
           .then (result -> this.accountEndpoint_.create (account, options))
           .then (resolved (settlement::resolve))
           ._catch (rejected (settlement::reject));
@@ -283,7 +283,11 @@ public class GatekeeperClient
     });
   }
 
-  private Promise <Void> requestClientToken ()
+  /**
+   * Check that the client has been authenticated. If the client has not
+   * been authenticated, then authenticate the client.
+   */
+  public Promise <Void> ensureAuthenticated ()
   {
     if (this.clientToken_ != null)
       return Promise.resolve (null);
