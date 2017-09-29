@@ -3,6 +3,7 @@ package com.onehilltech.backbone.firebase;
 import android.content.Context;
 import android.content.pm.PackageManager;
 
+import com.google.gson.Gson;
 import com.onehilltech.backbone.gatekeeper.GatekeeperSessionClient;
 import com.onehilltech.metadata.ManifestMetadata;
 import com.onehilltech.metadata.MetadataProperty;
@@ -14,6 +15,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.POST;
@@ -79,16 +81,20 @@ public class MessagingClient
     this.configuration_ = Configuration.loadFromMetadata (context);
     this.sessionClient_ = GatekeeperSessionClient.getInstance (context);
 
+    Gson gson = new Gson ();
+
     this.clientMethods_ =
         new Retrofit.Builder ()
             .baseUrl (this.getBaseUrlWithVersion ())
             .client (this.sessionClient_.getClient ().getHttpClient ())
+            .addConverterFactory (GsonConverterFactory.create (gson))
             .build ().create (ClientMethods.class);
 
     this.userMethods_ =
         new Retrofit.Builder ()
             .baseUrl (this.getBaseUrlWithVersion ())
             .client (this.sessionClient_.getHttpClient ())
+            .addConverterFactory (GsonConverterFactory.create (gson))
             .build ().create (UserMethods.class);
   }
 
