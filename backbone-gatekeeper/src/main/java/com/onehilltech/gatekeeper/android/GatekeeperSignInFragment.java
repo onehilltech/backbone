@@ -211,7 +211,7 @@ public class GatekeeperSignInFragment extends Fragment
       String password = this.getPasswordText ();
 
       GatekeeperSessionClient.getInstance (this.getContext ())
-                             .signIn (username, password)
+                             .signIn (this.getContext (), username, password)
                              .then (resolved (value -> loginFragmentListener_.onSignInComplete (this)))
                              ._catch (onUiThread (rejected (reason -> showErrorMessage (reason.getLocalizedMessage ()))));
     });

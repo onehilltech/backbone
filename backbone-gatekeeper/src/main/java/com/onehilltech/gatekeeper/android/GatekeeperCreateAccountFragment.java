@@ -272,7 +272,7 @@ public class GatekeeperCreateAccountFragment extends Fragment
     String email = this.getEmail ();
 
     GatekeeperSessionClient.getInstance (this.getContext ())
-                           .createAccount (username, password, email, true)
+                           .createAccount (this.getContext (), username, password, email, true)
                            .then (resolved (value -> this.listener_.onAccountCreated (this, value)))
                            ._catch (rejected (reason -> this.listener_.onError (this, reason)));
   }

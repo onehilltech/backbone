@@ -89,8 +89,8 @@ public class GatekeeperClientTest extends TestWithDatabase
             .build ();
 
     Assert.assertSame (this.httpClient_, this.gatekeeper_.getHttpClient ());
-    Assert.assertEquals (config.baseUri, client.getBaseUrl ());
-    Assert.assertEquals (config.clientId, client.getClientId ());
+    Assert.assertEquals (config.baseUri, client.getConfig ().baseUri);
+    Assert.assertEquals (config.clientId, client.getConfig ().clientId);
   }
 
   @Test

@@ -29,7 +29,7 @@ public class GatekeeperStore
     dataStore_ = new DataStore.Builder (context, GatekeeperDatabase.class)
         .setBaseUrl (sessionClient.getClient ().getBaseUrlWithVersion ())
         .setApplicationAdapter (dataStoreAdapter_)
-        .setHttpClient (sessionClient.getUserClient ())
+        .setHttpClient (sessionClient.getHttpClient ())
         .addTypeAdapter (ObjectId.class, new ObjectIdSerializer ())
         .build ();
 

@@ -7,14 +7,19 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.typeadapters.RuntimeTypeAdapterFactory;
 import com.onehilltech.backbone.data.HttpError;
 import com.onehilltech.backbone.data.Resource;
-import com.onehilltech.backbone.data.ResourceEndpoint;
+import com.onehilltech.backbone.data.ResourceSerializer;
 import com.onehilltech.gatekeeper.android.http.JsonAccount;
 import com.onehilltech.gatekeeper.android.http.JsonBearerToken;
 import com.onehilltech.gatekeeper.android.http.JsonChangePassword;
+import com.onehilltech.gatekeeper.android.http.JsonGrant;
+import com.onehilltech.gatekeeper.android.http.JsonPassword;
+import com.onehilltech.gatekeeper.android.http.JsonRefreshToken;
 import com.onehilltech.gatekeeper.android.model.Account;
-import com.onehilltech.gatekeeper.android.model.ClientToken;
 import com.onehilltech.gatekeeper.android.model.GatekeeperStore;
 import com.onehilltech.gatekeeper.android.model.UserToken;
 import com.onehilltech.gatekeeper.android.model.UserToken$Table;
@@ -30,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 
 import okhttp3.Interceptor;
@@ -55,31 +59,12 @@ import static com.onehilltech.promises.Promise.resolved;
 public class GatekeeperSessionClient
 {
   /**
-   * @interface Listener
-   *
    * Listener that receives notifications about changes to the signIn state.
    */
   public interface Listener
   {
-    /**
-     * The client has signed in.
-     *
-     * @param client        Session client
-     */
     void onSignedIn (GatekeeperSessionClient client);
-
-    /**
-     * The client has signed out.
-     *
-     * @param client        Session client
-     */
     void onSignedOut (GatekeeperSessionClient client);
-
-    /**
-     * Let the application know it needs to reauthenticate the user.
-     *
-     * @param client
-     */
     void onReauthenticate (GatekeeperSessionClient client, HttpError reason);
   }
 
@@ -99,11 +84,6 @@ public class GatekeeperSessionClient
   /// The user token for the current session.
   private UserToken userToken_;
 
-  /// The client token for the session client.
-  private ClientToken clientToken_;
-
-  private Retrofit retrofit_;
-
   private final LinkedList <Listener> listeners_ = new LinkedList<> ();
 
   private final FlowContentObserver userTokenObserver_ = new FlowContentObserver ();
@@ -114,11 +94,9 @@ public class GatekeeperSessionClient
 
   private final UserMethods userMethods_;
 
+  private final Methods methods_;
+
   private String userAgent_;
-
-  private OkHttpClient userClient_;
-
-  private Retrofit userEndpoint_;
 
   private final Logger logger_ = LoggerFactory.getLogger (GatekeeperSessionClient.class);
 
@@ -126,7 +104,9 @@ public class GatekeeperSessionClient
 
   private static final ArrayList <String> REAUTHENTICATE_ERROR_CODES = new ArrayList<> ();
 
-  private final Context context_;
+  private Gson gson_;
+
+  private final String packageName_;
 
   /**
    * Initializing constructor.
@@ -135,40 +115,81 @@ public class GatekeeperSessionClient
    */
   private GatekeeperSessionClient (Context context)
   {
-    this.context_ = context.getApplicationContext ();
+    this.packageName_ = context.getPackageName ();
     this.client_ = new GatekeeperClient.Builder (context).build ();
     this.session_ = GatekeeperSession.getCurrent (context);
 
     // Build a new HttpClient for the user session. This client is responsible for
     // adding the authentication header to each request.
-    OkHttpClient.Builder builder = this.client_.getHttpClient ().newBuilder ();
-    builder.addInterceptor (this.responseInterceptor_);
+    this.httpClient_ =
+        new OkHttpClient.Builder ()
+            .addInterceptor (chain -> {
+              okhttp3.Request original = chain.request ();
+              okhttp3.Request.Builder builder = original.newBuilder ();
 
-    this.httpClient_ = builder.build ();
+              if (userToken_ != null)
+                builder.header ("Authorization", "Bearer " + userToken_.accessToken);
+
+              if (userAgent_ != null)
+                builder.header ("User-Agent", userAgent_);
+
+              builder.method (original.method (), original.body ());
+
+              return chain.proceed (builder.build ());
+            })
+            .addInterceptor (this.responseInterceptor_)
+            .build ();
+
+    // Initialize the type factories for Gson.
+    RuntimeTypeAdapterFactory<JsonGrant> grantTypes =
+        RuntimeTypeAdapterFactory.of (JsonGrant.class, "grant_type")
+                                 .registerSubtype (JsonPassword.class, "password")
+                                 .registerSubtype (JsonRefreshToken.class, "refresh_token");
+
+    // Initialize the Retrofit.
+    ResourceSerializer serializer = new ResourceSerializer ();
+    serializer.put ("account", JsonAccount.class);
+    serializer.put ("accounts", JsonAccount.class);
+    serializer.put ("change-password", JsonChangePassword.class);
+    serializer.put ("token", JsonBearerToken.class);
+    serializer.put ("errors", HttpError.class);
+
+    this.gson_ =
+        new GsonBuilder ()
+            .registerTypeAdapter (Resource.class, serializer)
+            .registerTypeAdapterFactory (grantTypes)
+            .create ();
 
     // Build the Retrofit object for this client.
-    this.retrofit_ = new Retrofit.Builder ()
+    Retrofit userRetrofit = new Retrofit.Builder ()
         .baseUrl (this.client_.getBaseUrlWithVersion ())
-        .addConverterFactory (GsonConverterFactory.create (this.client_.getGson ()))
+        .addConverterFactory (GsonConverterFactory.create (this.gson_))
         .client (this.httpClient_)
         .build ();
 
-    this.resourceConverter_ = this.retrofit_.responseBodyConverter (Resource.class, new Annotation[0]);
-    this.userMethods_ = this.retrofit_.create (UserMethods.class);
+    this.resourceConverter_ = userRetrofit.responseBodyConverter (Resource.class, new Annotation[0]);
+
+    this.userMethods_ = userRetrofit.create (UserMethods.class);
+    this.methods_ = new Retrofit.Builder ()
+        .baseUrl (this.client_.getBaseUrlWithVersion ())
+        .addConverterFactory (GsonConverterFactory.create (this.gson_))
+        .build ().create (Methods.class);
 
     this.initUserToken (context);
+  }
 
-    this.userClient_ =
-        this.httpClient_.newBuilder ()
-                        .addInterceptor (this.userAuthorizationHeader_)
-                        .build ();
+  public Promise <JsonAccount> createAccount (Context context, String username, String password, String email, boolean autoSignIn)
+  {
+    return this.client_.createAccount (username, password, email, autoSignIn)
+                       .then (r -> new Promise<JsonAccount> (settlement -> {
+                         // Complete the sign in process.
+                         JsonAccount account = r.get ("account");
+                         JsonBearerToken userToken = r.get ("token");
 
-    this.userEndpoint_ =
-        new Retrofit.Builder ()
-            .baseUrl (this.client_.getBaseUrlWithVersion ())
-            .addConverterFactory (GsonConverterFactory.create (this.client_.getGson ()))
-            .client (this.userClient_)
-            .build ();
+                         this.completeSignIn (context, username, userToken)
+                             .then (resolved (value -> settlement.resolve (account)))
+                             ._catch (rejected (settlement::reject));
+                       }));
   }
 
   private void initUserToken (Context context)
@@ -285,27 +306,6 @@ public class GatekeeperSessionClient
   }
 
   /**
-   * Get the OkHttpClient for the current user session.
-   *
-   * @return
-   */
-  public OkHttpClient getUserClient ()
-  {
-    return this.userClient_;
-  }
-
-  /**
-   * Get the user endpoint for the client. This endpoint will adds the Authorization header
-   * to all request for the current user.
-   *
-   * @return
-   */
-  public Retrofit getUserEndpoint ()
-  {
-    return this.userEndpoint_;
-  }
-
-  /**
    * Ensure the user is signed in to the session. If not, then we show the sign in
    * activity that prompts the user to sign in.
    *
@@ -355,7 +355,7 @@ public class GatekeeperSessionClient
   public void forceSignIn (Activity activity, Intent signInIntent)
   {
     // Force the user to sign out.
-    this.completeSignOut ();
+    this.completeSignOut (activity);
 
     signInIntent.putExtra (GatekeeperSignInActivity.ARG_REDIRECT_INTENT, activity.getIntent ());
     activity.startActivity (signInIntent);
@@ -392,36 +392,9 @@ public class GatekeeperSessionClient
   }
 
   /**
-   * Force the client to refresh its token.
-   *
-   * @return
-   */
-  public Promise <Void> refreshToken ()
-  {
-    if (!this.isSignedIn ())
-      return Promise.reject (new IllegalStateException ("User must be signed in to refresh token"));
-
-    return new Promise<> (settlement ->
-      this.client_.refreshToken (this.userToken_.refreshToken)
-                  .then (resolved (token -> {
-                    // The token was refreshed. Let's save the token, and then resolve this
-                    // promise so the client can continue on.
-                    this.userToken_.accessToken = token.accessToken;
-                    this.userToken_.refreshToken = token.refreshToken;
-
-                    // Update the user token in the database.
-                    FlowManager.getModelAdapter (UserToken.class).update (this.userToken_);
-
-                    settlement.resolve (null);
-                  }))
-                  ._catch (rejected (settlement::reject))
-    );
-  }
-
-  /**
    * Complete the signOut process.
    */
-  private void completeSignOut ()
+  private void completeSignOut (Context context)
   {
     if (this.userToken_ == null)
       return;
@@ -432,7 +405,7 @@ public class GatekeeperSessionClient
     // Delete the token from the database. This will cause all session clients
     // listening for changes to be notified of the change.
     FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
-    GatekeeperStore.getInstance (this.context_).clearCache ();
+    GatekeeperStore.getInstance (context).clearCache ();
 
     this.userToken_ = null;
   }
@@ -446,18 +419,18 @@ public class GatekeeperSessionClient
   /**
    * Sign in a user.
    *
+   * @param context           Context object
    * @param username          Username for the user
    * @param password          Password for the user
    */
-  public Promise <Void> signIn (final String username, String password)
+  public Promise <Void> signIn (Context context, String username, String password)
   {
     if (this.isSignedIn ())
       return Promise.reject (new IllegalStateException ("User is already signed in"));
 
     return new Promise<> (settlement ->
-      this.client_
-          .getUserToken (username, password)
-          .then (token -> this.completeSignIn (username, token))
+      this.getUserToken (username, password)
+          .then (token -> this.completeSignIn (context, username, token))
           .then (resolved (value -> settlement.resolve (null)))
           ._catch (rejected (settlement::reject))
     );
@@ -470,15 +443,14 @@ public class GatekeeperSessionClient
    * @param username            Username that signed in
    * @param jsonToken           Access token for the user
    */
-  private Promise <Void> completeSignIn (String username, JsonBearerToken jsonToken)
+  private Promise <Void> completeSignIn (Context context, String username, JsonBearerToken jsonToken)
   {
     return new Promise<> (settlement -> {
       // Save the user access token. We need it so we can
       this.userToken_ = UserToken.fromToken (username, jsonToken);
-
       FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
 
-      GatekeeperStore.getInstance (this.context_)
+      GatekeeperStore.getInstance (context)
                      .get (Account.class, "me")
                      .then (resolved (account -> {
                        this.session_.edit ()
@@ -499,15 +471,15 @@ public class GatekeeperSessionClient
     });
   }
 
-  public Promise <Boolean> signOut ()
+  public Promise <Boolean> signOut (Context context)
   {
-    return this.signOut (true);
+    return this.signOut (context, true);
   }
 
   /**
    * Sign out the current user
    */
-  public Promise <Boolean> signOut (boolean forceSignOut)
+  public Promise <Boolean> signOut (Context context, boolean forceSignOut)
   {
     if (this.userToken_ == null)
       return Promise.resolve (true);
@@ -526,7 +498,7 @@ public class GatekeeperSessionClient
             boolean complete = (result != null && result) || forceSignOut;
 
             if (complete)
-              completeSignOut ();
+              completeSignOut (context);
 
             settlement.resolve (complete);
           }
@@ -541,7 +513,7 @@ public class GatekeeperSessionClient
         {
           if (forceSignOut)
           {
-            completeSignOut ();
+            completeSignOut (context);
             settlement.resolve (true);
           }
           else
@@ -555,10 +527,6 @@ public class GatekeeperSessionClient
 
   /**
    * Change the users current password.
-   *
-   * @param currentPassword
-   * @param newPassword
-   * @return
    */
   public Promise <Boolean> changePassword (String currentPassword, String newPassword)
   {
@@ -594,91 +562,53 @@ public class GatekeeperSessionClient
   }
 
   /**
-   * Create a new account.
+   * Get an access token for the user.
    *
-   * @param username
-   * @param password
-   * @param email
+   * @param username        Username
+   * @param password        Password
    */
-  public Promise<JsonAccount> createAccount (String username, String password, String email)
+  private Promise<JsonBearerToken> getUserToken (String username, String password)
   {
-    return new Promise<> (settlement ->
-      this.client_.getClientToken ()
-                  .then (token -> {
-                    this.clientToken_ = ClientToken.fromToken (this.client_.getClientId (), token);
-                    FlowManager.getModelAdapter (ClientToken.class).save (this.clientToken_);
+    JsonPassword grant = new JsonPassword ();
+    grant.username = username;
+    grant.password = password;
 
-                    // Make a call to create the account.
-                    JsonAccount account = new JsonAccount ();
-                    account.username = username;
-                    account.password = password;
-                    account.email = email;
-
-                    return this.getCreateAccountEndpoint ().create (account);
-                  })
-                  .then (resolved (r -> settlement.resolve (r.get ("account"))))
-                  ._catch (rejected (settlement::reject))
-    );
+    return this.executeCall (this.methods_.getUserToken (grant));
   }
 
-  /**
-   * Create a new account, and login the user.
-   *
-   * @param username
-   * @param password
-   * @param email
-   * @param autoSignIn
-   */
-  public Promise <JsonAccount> createAccount (String username, String password, String email, boolean autoSignIn)
+  private <T> Promise <T> executeCall (Call <T> call)
   {
     return new Promise<> (settlement ->
-      this.client_.getClientToken ()
-                  .then (token -> {
-                    // Use the client token to create a new account. We are going to login
-                    // with the newly created account.
-                    this.clientToken_ = ClientToken.fromToken (this.client_.getClientId (), token);
-                    FlowManager.getModelAdapter (ClientToken.class).save (this.clientToken_);
+      call.enqueue (new Callback<T> () {
+        @Override
+        public void onResponse (Call<T> call, retrofit2.Response<T> response)
+        {
+          if (response.isSuccessful ())
+          {
+            settlement.resolve (response.body ());
+          }
+          else
+          {
+            try
+            {
+              HttpError error = getError (response.errorBody ());
+              error.setStatusCode (response.code ());
 
-                    // Make a call to create the account.
-                    JsonAccount account = new JsonAccount ();
-                    account.username = username;
-                    account.password = password;
-                    account.email = email;
+              settlement.reject (error);
+            }
+            catch (IOException e)
+            {
+              settlement.reject (e);
+            }
+          }
+        }
 
-                    HashMap <String, Object> options = new HashMap<> ();
-                    options.put ("login", autoSignIn);
-
-                    return this.getCreateAccountEndpoint ().create (account, options);
-                  })
-                  .then (resolved (r -> {
-                    // Complete the sign in process.
-                    JsonAccount account = r.get ("account");
-                    JsonBearerToken userToken = r.get ("token");
-
-                    this.completeSignIn (username, userToken)
-                        .then (resolved (value -> settlement.resolve (account)))
-                        ._catch (rejected (settlement::reject));
-                  }))
-                  ._catch (rejected (settlement::reject))
-    );
-  }
-
-  private ResourceEndpoint<JsonAccount> getCreateAccountEndpoint ()
-  {
-    OkHttpClient clientClient =
-        this.client_.getHttpClient ()
-                    .newBuilder ()
-                    .addInterceptor (clientAuthorizationHeader_)
-                    .build ();
-
-    Retrofit clientEndpoint =
-        new Retrofit.Builder ()
-            .baseUrl (client_.getBaseUrlWithVersion ())
-            .addConverterFactory (GsonConverterFactory.create (client_.getGson ()))
-            .client (clientClient)
-            .build ();
-
-    return ResourceEndpoint.create (clientEndpoint, "account", "accounts");
+        @Override
+        public void onFailure (Call<T> call, Throwable t)
+        {
+          settlement.reject (t);
+        }
+      }));
   }
 
   // The messaging handler for this client. This handlers notifies interested
@@ -713,36 +643,17 @@ public class GatekeeperSessionClient
     }
   };
 
-  /**
-   * Interceptor that adds the user token as the Authorization header to the request.
-   */
-  private final Interceptor userAuthorizationHeader_ = new Interceptor ()
-  {
-    @Override
-    public Response intercept (Chain chain) throws IOException
-    {
-      okhttp3.Request original = chain.request ();
-      okhttp3.Request.Builder builder = original.newBuilder ();
-
-      if (userToken_ != null)
-        builder.header ("Authorization", "Bearer " + userToken_.accessToken);
-
-      if (userAgent_ != null)
-        builder.header ("User-Agent", userAgent_);
-
-      builder.method (original.method (), original.body ());
-
-      return chain.proceed (builder.build ());
-    }
-  };
-
   private boolean refreshTokenSync ()
   {
     try
     {
-      retrofit2.Response<JsonBearerToken> response =
-          this.client_.refreshTokenSync (this.userToken_.refreshToken)
-                      .execute ();
+      JsonRefreshToken grant = new JsonRefreshToken ();
+      grant.refreshToken = this.userToken_.refreshToken;
+      grant.clientId = this.client_.getConfig ().clientId;
+      grant.clientSecret = this.client_.getConfig ().clientSecret;
+      grant.packageName = this.packageName_;
+
+      retrofit2.Response<JsonBearerToken> response = this.userMethods_.refreshToken (grant).execute ();
 
       if (response.isSuccessful ())
       {
@@ -765,25 +676,6 @@ public class GatekeeperSessionClient
       return false;
     }
   }
-
-  /**
-   * Interceptor that add the client token as the Authorization header to the request.
-   */
-  private final Interceptor clientAuthorizationHeader_ = (chain)-> {
-    okhttp3.Request original = chain.request ();
-    Request.Builder builder = original.newBuilder ();
-
-    if (userAgent_ != null)
-      builder.header ("User-Agent", userAgent_);
-
-    if (clientToken_ != null)
-      builder.header ("Authorization", "Bearer " + clientToken_.accessToken);
-
-    builder.method (original.method (), original.body ())
-           .build ();
-
-    return chain.proceed (builder.build ());
-  };
 
   /**
    * Interceptor that handles special cases for a response, such a refreshing
@@ -820,7 +712,7 @@ public class GatekeeperSessionClient
 
         // Since we can only consume a ResponseBody once, we need to replace the original
         // one with a new one.
-        String origBody = client_.getGson ().toJson (resource);
+        String origBody = gson_.toJson (resource);
         ResponseBody responseBody = ResponseBody.create (origResponse.body ().contentType (), origBody);
 
         origResponse =
@@ -841,6 +733,12 @@ public class GatekeeperSessionClient
     }
   };
 
+  interface Methods
+  {
+    @POST("oauth2/token")
+    Call <JsonBearerToken> getUserToken (@Body JsonPassword password);
+  }
+
   interface UserMethods
   {
     @POST("oauth2/logout")
@@ -848,6 +746,9 @@ public class GatekeeperSessionClient
 
     @POST("accounts/me/password")
     Call <Boolean> changePassword (@Body Resource r);
+
+    @POST("oauth2/token")
+    Call <JsonBearerToken> refreshToken (@Body JsonRefreshToken refreshToken);
   }
 
   static
