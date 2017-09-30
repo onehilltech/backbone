@@ -9,6 +9,7 @@ import android.support.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import com.google.gson.TypeAdapterFactory;
 import com.onehilltech.backbone.data.serializers.DateTimeSerializer;
 import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
@@ -159,6 +160,8 @@ public class DataStore
 
   private Cache cache_;
 
+  private Gson gson_;
+
   public interface OnModelLoaded <T>
   {
     void onModelLoaded (T model);
@@ -217,8 +220,8 @@ public class DataStore
     for (TypeAdapterFactory typeAdapterFactory: builder.typeAdapterFactories_)
       gsonBuilder.registerTypeAdapterFactory (typeAdapterFactory);
 
-    Gson gson = gsonBuilder.create ();
-    resourceSerializer.setGson (gson);
+    this.gson_ = gsonBuilder.create ();
+    resourceSerializer.setGson (this.gson_);
 
     // Build the Retrofit instance for the data store.
     Retrofit.Builder retrofitBuilder =
@@ -229,7 +232,7 @@ public class DataStore
 
     this.retrofit_ =
         retrofitBuilder
-            .addConverterFactory (GsonConverterFactory.create (gson))
+            .addConverterFactory (GsonConverterFactory.create (this.gson_))
             .build ();
   }
 
@@ -897,6 +900,31 @@ public class DataStore
       modelAdapter.save (model);
 
       // Set the data store for the model.
+      model.assignTo (this);
+
+      settlement.resolve (model);
+    });
+  }
+
+  /**
+   * Push a data object onto the store.
+   *
+   * @param dataClass       Class object
+   * @param data            Map containing the objects data
+   * @return                Promise object
+   */
+  public <T extends DataModel> Promise <T> push (Class <T> dataClass, Map <String, String> data)
+  {
+    return new Promise<> (settlement -> {
+      // Locate the model adapter.
+      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+
+      // Convert the data map into a model.
+      JsonObject json = (JsonObject)this.gson_.toJsonTree (data);
+      T model = this.gson_.fromJson (json, modelAdapter.getModelClass ());
+
+      // Save the model to our local database.
+      modelAdapter.save (model);
       model.assignTo (this);
 
       settlement.resolve (model);
