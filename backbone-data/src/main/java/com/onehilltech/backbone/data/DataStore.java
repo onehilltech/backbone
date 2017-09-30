@@ -638,11 +638,7 @@ public class DataStore
                 .then (resolved (settlement::resolve))
                 ._catch (rejected (settlement::reject));
       }
-      catch (NoSuchFieldException e)
-      {
-        settlement.reject (new AssertionError (e));
-      }
-      catch (IllegalAccessException e)
+      catch (Exception e)
       {
         settlement.reject (new AssertionError (e));
       }

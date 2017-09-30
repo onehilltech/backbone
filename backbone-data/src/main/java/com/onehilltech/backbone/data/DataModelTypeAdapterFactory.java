@@ -67,11 +67,7 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
       if (field.isSynthetic ())
         continue;
 
-      String fieldName = field.getName ();
       SerializedName serializedName = field.getAnnotation (SerializedName.class);
-
-      if (serializedName != null)
-        fieldName = serializedName.value ();
 
       Class<?> fieldType = field.getType ();
       TypeAdapter<?> fieldTypeAdapter;
@@ -101,10 +97,27 @@ public class DataModelTypeAdapterFactory implements TypeAdapterFactory
         }
       }
 
+      String fieldName = field.getName ();
+
       if (fieldTypeAdapter == null)
         throw new IllegalStateException ("No type adapter registered for " + fieldName);
 
-      adapters.put (fieldName, new BoundField (field, fieldTypeAdapter));
+      // Put the default name in the mapping.
+      if (serializedName != null)
+        fieldName = serializedName.value ();
+
+      BoundField boundField = new BoundField (field, fieldTypeAdapter);
+      adapters.put (fieldName, boundField);
+
+      if (serializedName != null)
+      {
+        // Now, let's also add the alternate names to the mapping.
+        String [] alternates = serializedName.alternate ();
+
+        for (String alternate: alternates)
+          adapters.put (alternate, boundField);
+      }
+
     }
 
     return new DataModelTypeAdapter<> (instanceAdapter, adapters);
