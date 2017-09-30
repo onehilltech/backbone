@@ -82,6 +82,8 @@ public class DataStore
 
     private DataStoreAdapter appAdapter_;
 
+    private String typeDiscriminator_ = "type";
+
     public Builder (Context context, Class <?> databaseClass)
     {
       this.context_ = context;
@@ -91,6 +93,12 @@ public class DataStore
     public Builder setBaseUrl (String baseUrl)
     {
       this.baseUrl_ = baseUrl;
+      return this;
+    }
+
+    public Builder setTypeDiscriminator (String discriminator)
+    {
+      this.typeDiscriminator_ = discriminator;
       return this;
     }
 
@@ -162,6 +170,8 @@ public class DataStore
 
   private Gson gson_;
 
+  private String typeDiscriminator_;
+
   public interface OnModelLoaded <T>
   {
     void onModelLoaded (T model);
@@ -170,6 +180,7 @@ public class DataStore
   private DataStore (Builder builder)
   {
     this.databaseClass_ = builder.databaseClass_;
+    this.typeDiscriminator_ = builder.typeDiscriminator_;
     this.databaseDefinition_ = FlowManager.getDatabase (this.databaseClass_);
     this.dependencyGraph_ = new DependencyGraph.Builder (this.databaseDefinition_).build ();
 
