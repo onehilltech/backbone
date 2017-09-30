@@ -51,4 +51,14 @@ public abstract class AbstractMessagingService extends FirebaseMessagingService
         handler.handleMessage (msg);
     }
   }
+
+  public MessageHandler registerHandler (String type, MessageHandler handler)
+  {
+    return this.handlers_.put (type, handler);
+  }
+
+  public MessageHandler unregisterHandler (String type)
+  {
+    return this.handlers_.remove (type);
+  }
 }
