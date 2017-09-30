@@ -3,6 +3,7 @@ package com.onehilltech.backbone.firebase;
 import android.content.Context;
 import android.content.pm.PackageManager;
 
+import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.gson.Gson;
 import com.onehilltech.backbone.gatekeeper.GatekeeperSessionClient;
 import com.onehilltech.metadata.ManifestMetadata;
@@ -113,14 +114,19 @@ public class MessagingClient
                               .then (result -> this.executeCall (this.clientMethods_.refreshToken (cloudToken)));
   }
 
-  public Promise <Boolean> claimDevice (String deviceId, ClaimTicket claimTicket)
+  public Promise <Boolean> claimDevice (Context context)
   {
+    ClaimTicket claimTicket = new ClaimTicket ();
+    claimTicket.claimTicket = CloudMessagingPreferences.open (context).getClaimTicket ();
+    String deviceId = FirebaseInstanceId.getInstance ().getId ();
+
     return this.executeCall (this.userMethods_.claimDevice (deviceId, claimTicket));
   }
 
-  public Promise <Boolean> releaseDevice (String instanceId)
+  public Promise <Boolean> releaseDevice ()
   {
-    return this.executeCall (this.userMethods_.releaseDevice (instanceId));
+    String deviceId = FirebaseInstanceId.getInstance ().getId ();
+    return this.executeCall (this.userMethods_.releaseDevice (deviceId));
   }
 
   private <T> Promise <T> executeCall (Call <T> call)
