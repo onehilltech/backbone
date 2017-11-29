@@ -655,13 +655,20 @@ public class DataStore
    * @throws NoSuchFieldException
    * @throws IllegalAccessException
    */
-  public <T extends DataModel> Promise <Boolean> remove (Class <T> dataClass, T model)
-      throws NoSuchFieldException, IllegalAccessException
-  {
-    Field idField = dataClass.getField (FIELD_ID);
-    Object id = idField.get (model);
+  public <T extends DataModel> Promise <Boolean> remove (Class <T> dataClass, T model) {
+    return new Promise<> (settlement -> {
+      try
+      {
+        Field idField = dataClass.getField (FIELD_ID);
+        Object id = idField.get (model);
 
-    return this.deleteFromDatabase (dataClass, id, model);
+        settlement.resolve (id);
+      }
+      catch (Exception e)
+      {
+        settlement.reject (e);
+      }
+    }).then (id -> this.deleteFromDatabase (dataClass, id, model));
   }
 
   /**

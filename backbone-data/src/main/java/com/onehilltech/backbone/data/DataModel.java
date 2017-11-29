@@ -52,7 +52,7 @@ public abstract class DataModel <T extends DataModel>
   /**
    * Delete the model.
    *
-   * @return       Promise object
+   * @return        Promise object
    */
   @SuppressWarnings ("unchecked")
   public Promise <Boolean> delete ()
@@ -63,6 +63,22 @@ public abstract class DataModel <T extends DataModel>
     T model = (T)this;
 
     return this.store_.delete (dataClass, model);
+  }
+
+  /**
+   * Delete the model from the local store.
+   *
+   * @return        Promise object
+   */
+  @SuppressWarnings ("unchecked")
+  public Promise <Boolean> deleteLocal ()
+  {
+    this.checkStore ();
+
+    Class <T> dataClass = (Class <T>)this.getClass ();
+    T model = (T)this;
+
+    return this.store_.remove (dataClass, model);
   }
 
   /**
