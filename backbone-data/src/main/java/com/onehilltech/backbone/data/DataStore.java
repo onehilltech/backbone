@@ -646,6 +646,25 @@ public class DataStore
   }
 
   /**
+   * Remove a model from the local database.
+   *
+   * @param dataClass       Data class
+   * @param model           Model to remove
+   * @param <T>
+   * @return
+   * @throws NoSuchFieldException
+   * @throws IllegalAccessException
+   */
+  public <T extends DataModel> Promise <Boolean> remove (Class <T> dataClass, T model)
+      throws NoSuchFieldException, IllegalAccessException
+  {
+    Field idField = dataClass.getField (FIELD_ID);
+    Object id = idField.get (model);
+
+    return this.deleteFromDatabase (dataClass, id, model);
+  }
+
+  /**
    * Helper method for deleting a model from the database.
    *
    * @param dataClass         Data class
