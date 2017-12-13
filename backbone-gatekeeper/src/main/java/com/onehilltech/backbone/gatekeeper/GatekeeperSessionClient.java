@@ -445,7 +445,7 @@ public class GatekeeperSessionClient
    * @param refreshToken
    * @return
    */
-  public Promise <Void> useSession (Context context, String username, String accessToken, String refreshToken)
+  public Promise <Void> beginSession (Context context, String username, String accessToken, String refreshToken)
   {
     JsonBearerToken token = new JsonBearerToken (accessToken, refreshToken);
     return this.completeSignIn (context, username, token);
