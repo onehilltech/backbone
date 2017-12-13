@@ -26,7 +26,7 @@ public class JsonBearerToken
     return new JsonBearerToken (accessToken, refreshToken);
   }
 
-  JsonBearerToken (String accessToken, String refreshToken)
+  public JsonBearerToken (String accessToken, String refreshToken)
   {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;

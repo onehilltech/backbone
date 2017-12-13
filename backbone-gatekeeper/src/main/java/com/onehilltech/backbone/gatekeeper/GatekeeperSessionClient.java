@@ -437,6 +437,21 @@ public class GatekeeperSessionClient
   }
 
   /**
+   * Force the session client to use an existing access and refresh token.
+   *
+   * @param context
+   * @param username
+   * @param accessToken
+   * @param refreshToken
+   * @return
+   */
+  public Promise <Void> useSession (Context context, String username, String accessToken, String refreshToken)
+  {
+    JsonBearerToken token = new JsonBearerToken (accessToken, refreshToken);
+    return this.completeSignIn (context, username, token);
+  }
+
+  /**
    * Complete the signIn process by storing the information in the database, and
    * notifying all parties that the signIn is complete.
    *
