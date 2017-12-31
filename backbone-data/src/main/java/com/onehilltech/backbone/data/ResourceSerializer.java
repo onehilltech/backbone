@@ -14,6 +14,7 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * @class ResourceSerializer
@@ -42,6 +43,7 @@ public class ResourceSerializer
     this.types_.put (name, dataClass);
   }
 
+  @SuppressWarnings ("unchecked")
   @Override
   public Resource deserialize (JsonElement json, Type typeOfT, JsonDeserializationContext context)
       throws JsonParseException
@@ -71,7 +73,7 @@ public class ResourceSerializer
       else if (element.isJsonArray ())
       {
         JsonArray jsonArray = element.getAsJsonArray ();
-        DataModelList list = new DataModelList (jsonArray.size ());
+        ArrayList list = DataModel.class.isAssignableFrom (dataClass) ? new DataModelList (jsonArray.size ()) : new ArrayList (jsonArray.size ());
 
         for (JsonElement item: jsonArray)
           list.add (this.gson_.fromJson (item, dataClass));

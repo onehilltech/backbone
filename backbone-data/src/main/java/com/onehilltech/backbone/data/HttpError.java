@@ -13,19 +13,19 @@ public class HttpError extends RuntimeException
 
   private String code;
 
-  private String message;
+  private String detail;
 
-  private HashMap <String, Object> details;
+  private HashMap <String, Object> meta;
 
   public HttpError ()
   {
 
   }
 
-  public HttpError (String code, String message)
+  public HttpError (String code, String detail)
   {
     this.code = code;
-    this.message = message;
+    this.detail = detail;
   }
 
   public int getStatusCode ()
@@ -43,13 +43,20 @@ public class HttpError extends RuntimeException
     return this.code;
   }
 
+  @Override
   public String getMessage ()
   {
-    return this.message;
+    return this.detail;
   }
 
-  public HashMap <String, Object> getDetails ()
+  @Override
+  public String getLocalizedMessage ()
   {
-    return this.details;
+    return this.detail;
+  }
+
+  public HashMap <String, Object> getMeta ()
+  {
+    return this.meta;
   }
 }
