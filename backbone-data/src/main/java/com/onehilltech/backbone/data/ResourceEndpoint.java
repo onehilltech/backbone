@@ -4,6 +4,7 @@ import com.onehilltech.promises.Promise;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -132,11 +133,7 @@ public class ResourceEndpoint <T>
           {
             try
             {
-              // Get the errors from the response message.
-              Resource r = resourceConverter_.convert (response.errorBody ());
-              HttpError httpError = r.get ("errors");
-              httpError.setStatusCode (response.code ());
-
+              HttpError httpError = getFirstError (response);
               settlement.reject (httpError);
             }
             catch (IOException e)
@@ -194,6 +191,25 @@ public class ResourceEndpoint <T>
   {
     Call <Resource> call = this.methods_.get (this.path_, params);
     return this.executeCall (call);
+  }
+
+  public ArrayList <HttpError> getErrors (Response <?> response)
+      throws IOException
+  {
+    ResponseBody errorBody = response.errorBody ();
+
+    if (errorBody == null)
+      return new ArrayList<> ();
+
+    Resource r = this.resourceConverter_.convert (errorBody);
+    return r.get ("errors");
+  }
+
+  public HttpError getFirstError (Response <?> response)
+      throws IOException
+  {
+    ArrayList <HttpError> errors = this.getErrors (response);
+    return !errors.isEmpty () ? errors.get (0) : new HttpError ();
   }
 
   /**
@@ -267,11 +283,7 @@ public class ResourceEndpoint <T>
           {
             try
             {
-              // Get the errors from the response message.
-              Resource r = resourceConverter_.convert (response.errorBody ());
-              HttpError httpError = r != null ? r.get ("errors") : new HttpError ();
-              httpError.setStatusCode (response.code ());
-
+              HttpError httpError = getFirstError (response);
               settlement.reject (httpError);
             }
             catch (IOException e)
