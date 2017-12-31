@@ -453,6 +453,8 @@ public class GatekeeperSessionClient
    */
   public Promise <Void> beginSession (Context context, String username, String accessToken, String refreshToken)
   {
+    this.logger_.info ("Begin session for {}", username);
+
     JsonBearerToken token = new JsonBearerToken (accessToken, refreshToken);
     return this.completeSignIn (context, username, token);
   }
@@ -468,6 +470,7 @@ public class GatekeeperSessionClient
   {
     return new Promise<> (settlement -> {
       // Save the user access token. We need it so we can
+      this.logger_.info ("Saving user access token to the database");
       this.userToken_ = UserToken.fromToken (username, jsonToken);
       FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
 
@@ -479,10 +482,11 @@ public class GatekeeperSessionClient
                                     .setUserId (account._id.toString ())
                                     .commit ();
 
-
                        settlement.resolve (null);
                      }))
                      ._catch (rejected (reason -> {
+                       this.logger_.error ("Failed to get my account info", reason);
+
                        // Delete the user token that we temporarily saved.
                        this.userToken_ = null;
                        FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
