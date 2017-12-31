@@ -410,10 +410,16 @@ public class GatekeeperSessionClient
     this.userToken_ = null;
   }
 
-  public HttpError getError (ResponseBody errorBody)
+  public ArrayList<HttpError> getErrors (ResponseBody errorBody)
       throws IOException
   {
-    return this.client_.getError (errorBody);
+    return this.client_.getErrors (errorBody);
+  }
+
+  public HttpError getFirstError (ResponseBody errorBody)
+      throws IOException
+  {
+    return this.client_.getFirstError (errorBody);
   }
 
   /**
@@ -609,7 +615,7 @@ public class GatekeeperSessionClient
           {
             try
             {
-              HttpError error = getError (response.errorBody ());
+              HttpError error = getFirstError (response.errorBody ());
               error.setStatusCode (response.code ());
 
               settlement.reject (error);
@@ -726,7 +732,8 @@ public class GatekeeperSessionClient
         // Let's see what kind of error message we received. We may be able to handle
         // it here in the interceptor if it related to the token.
         Resource resource = resourceConverter_.convert (origResponse.body ());
-        HttpError error = resource.get ("errors");
+        ArrayList <HttpError> errors = resource.get ("errors");
+        HttpError error = errors.get (0);
 
         // Since we can only consume a ResponseBody once, we need to replace the original
         // one with a new one.

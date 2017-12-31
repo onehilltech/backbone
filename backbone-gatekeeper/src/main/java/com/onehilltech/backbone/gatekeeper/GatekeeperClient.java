@@ -23,6 +23,7 @@ import com.raizlabs.android.dbflow.config.FlowManager;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import okhttp3.Interceptor;
@@ -326,7 +327,7 @@ public class GatekeeperClient
                        {
                          try
                          {
-                           HttpError error = getError (response.errorBody ());
+                           HttpError error = getFirstError (response.errorBody ());
                            error.setStatusCode (response.code ());
 
                            settlement.reject (error);
@@ -348,15 +349,28 @@ public class GatekeeperClient
   }
 
   /**
-   * Get the HttpError from the ResponseBody.
+   * Get the array of errors from the response.
    *
    * @param errorBody       Error body
    */
-  public HttpError getError (ResponseBody errorBody)
+  public ArrayList <HttpError> getErrors (ResponseBody errorBody)
       throws IOException
   {
     Resource resource = this.resourceConverter_.convert (errorBody);
     return resource.get ("errors");
+  }
+
+  /**
+   * Get the first error in the response.
+   *
+   * @param errorBody
+   * @return
+   * @throws IOException
+   */
+  public HttpError getFirstError (ResponseBody errorBody)
+      throws IOException
+  {
+    return this.getErrors (errorBody).get (0);
   }
 
   private interface ClientMethods
