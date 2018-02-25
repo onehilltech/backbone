@@ -19,7 +19,7 @@ public class AllPermissionsRequestHandler implements PermissionRequestHandler.On
    */
   interface OnPermissionsGranted
   {
-    void onPermissionGranted (List <String> permissions);
+    void onPermissionGranted ();
   }
 
   /**
@@ -57,6 +57,6 @@ public class AllPermissionsRequestHandler implements PermissionRequestHandler.On
 
     // Since we did not leave the function, this means we have found
     // all the permissions we requested.
-    this.onPermissionsGranted_.onPermissionGranted (this.permissions_);
+    this.onPermissionsGranted_.onPermissionGranted ();
   }
 }
