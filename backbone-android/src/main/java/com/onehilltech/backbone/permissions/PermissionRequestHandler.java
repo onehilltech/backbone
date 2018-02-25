@@ -56,6 +56,16 @@ public class PermissionRequestHandler
     this.deniedHandler_.put (permission, callback);
   }
 
+  public void addOnPermissionResultCallback (OnPermissionResultCallback callback)
+  {
+    this.onPermissionResultCallbacks_.add (callback);
+  }
+
+  public boolean removeOnPermissionResultCallback (OnPermissionResultCallback callback)
+  {
+    return this.onPermissionResultCallbacks_.remove (callback);
+  }
+
   @Override
   public void onPermissionsResult (PermissionGranter granter, Set<Permission> granted, Set<Permission> denied)
   {
