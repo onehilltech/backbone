@@ -192,13 +192,13 @@ public class GatekeeperSignInFragment extends Fragment
     View view = inflater.inflate (this.layout_, container, false);
 
     // Setup the UI controls.
-    this.username_ = view.findViewById (R.id.username);
+    this.username_ = (MaterialEditText)view.findViewById (R.id.username);
     this.username_.addValidator (new NotEmptyValidator ());
 
-    this.password_ = view.findViewById (R.id.password);
+    this.password_ = (MaterialEditText)view.findViewById (R.id.password);
     this.password_.addValidator (new NotEmptyValidator ());
 
-    Button signInButton = view.findViewById (R.id.button_sign_in);
+    Button signInButton = (Button)view.findViewById (R.id.button_sign_in);
 
     signInButton.setOnClickListener (v -> {
       boolean isValid = this.username_.validate ();
@@ -216,8 +216,8 @@ public class GatekeeperSignInFragment extends Fragment
                              ._catch (onUiThread (rejected (reason -> showErrorMessage (reason.getLocalizedMessage ()))));
     });
 
-    TextView title = view.findViewById (R.id.title);
-    this.errorMessage_ = view.findViewById (R.id.error_message);
+    TextView title = (TextView)view.findViewById (R.id.title);
+    this.errorMessage_ = (TextView)view.findViewById (R.id.error_message);
 
     // Initialize the view with data.
     Bundle args = this.getArguments ();
@@ -262,7 +262,7 @@ public class GatekeeperSignInFragment extends Fragment
       if (args.containsKey (ARG_ERROR_MESSAGE))
         showErrorMessage (args.getString (ARG_ERROR_MESSAGE));
 
-      TextView actionCreateNewAccount = view.findViewById (R.id.action_create_account);
+      TextView actionCreateNewAccount = (TextView)view.findViewById (R.id.action_create_account);
 
       if (actionCreateNewAccount != null)
       {

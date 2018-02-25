@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
-apply plugin: 'me.tatarka.retrolambda'
 
 group   = project.property('build.group')
 version = project.property('build.version')
@@ -42,11 +41,11 @@ android {
 }
 
 dependencies {
-    compile 'com.google.guava:guava:19.0'
+    compile 'com.google.guava:guava:22.0'
     compile 'com.android.support:support-annotations:25.1.1'
-    compile 'joda-time:joda-time:2.3'
+    compile 'joda-time:joda-time:2.9.3'
 
-    androidTestCompile 'junit:junit:4.11'
+    androidTestCompile 'junit:junit:4.12'
     androidTestCompile('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
     }

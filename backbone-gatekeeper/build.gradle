@@ -1,13 +1,5 @@
 apply plugin: 'com.android.library'
-apply plugin: 'com.neenbedankt.android-apt'
 apply plugin: 'com.github.dcendents.android-maven'
-apply plugin: 'me.tatarka.retrolambda'
-
-apt {
-    arguments {
-        targetModuleName 'Gatekeeper'
-    }
-}
 
 group   = project.property('build.group')
 version = project.property('build.version')
@@ -26,7 +18,11 @@ android {
         testApplicationId "com.onehilltech.backbone.gatekeeper.test"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
-        multiDexEnabled  true
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments = ['targetModuleName': 'Gatekeeper']
+            }
+        }
     }
 
     buildTypes {
@@ -64,11 +60,11 @@ android {
 }
 
 dependencies {
-    apt "com.github.Raizlabs.DBFlow:dbflow-processor:4.0.4"
+    annotationProcessor "com.github.Raizlabs.DBFlow:dbflow-processor:4.0.4"
 
     compile 'com.onehilltech:android-metadata:1.5.2'
-    compile project (':backbone-android')
-    compile project (':backbone-data')
+    compile project (path: ':backbone-android')
+    compile project (path: ':backbone-data')
 
     compile 'org.danilopianini:gson-extras:0.1.0'
     compile 'org.apache.commons:commons-lang3:3.0'
@@ -82,8 +78,7 @@ dependencies {
 
     compile group: 'org.slf4j', name: 'slf4j-android', version: '1.7.21'
 
-    androidTestCompile 'com.android.support:multidex:1.0.1'
-    androidTestCompile 'junit:junit:4.11'
+    androidTestCompile 'junit:junit:4.12'
     androidTestCompile 'com.squareup.okhttp3:mockwebserver:3.4.1'
     androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'

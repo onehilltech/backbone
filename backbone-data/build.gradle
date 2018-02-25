@@ -1,11 +1,8 @@
 apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
-apply plugin: 'me.tatarka.retrolambda'
 
 group   = project.property('build.group')
 version = project.property('build.version')
-
-apply plugin: 'com.neenbedankt.android-apt'
 
 android {
     compileSdkVersion project.property('android.compileSdkVersion').toInteger()
@@ -44,17 +41,24 @@ android {
 }
 
 dependencies {
-    apt "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ("dbflow.version")
-    compile project (':backbone-dbflow')
-    compile project (':backbone-android-objectid')
+    //compile "com.github.Raizlabs.DBFlow:dbflow-core:" + project.property ('dbflow.version')
+    //compile "com.github.Raizlabs.DBFlow:dbflow:" + project.property ('dbflow.version')
 
+    //compile group: 'org.slf4j', name: 'slf4j-android', version: '1.7.21'
+
+    //annotationProcessor "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ('dbflow.version')
+
+    compile project (path: ':backbone-dbflow')
+    compile project (path: ':backbone-android-objectid', configuration: 'default')
+
+    compile 'joda-time:joda-time:2.9.9'
     compile 'com.onehilltech.promises:promises-android:0.2.0'
     compile 'com.squareup.retrofit2:retrofit:2.3.0'
     compile 'com.squareup.retrofit2:converter-gson:2.3.0'
 
-    androidTestApt "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ("dbflow.version")
-    androidTestCompile 'junit:junit:4.11'
-    androidTestCompile 'com.google.guava:guava:22.0-android'
+    androidTestAnnotationProcessor "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ('dbflow.version')
+    androidTestCompile 'junit:junit:4.12'
+    androidTestCompile 'com.google.guava:guava:22.0'
     androidTestCompile 'com.squareup.okhttp:mockwebserver:2.3.0'
     androidTestCompile 'com.squareup.retrofit2:converter-scalars:2.3.0'
     androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {

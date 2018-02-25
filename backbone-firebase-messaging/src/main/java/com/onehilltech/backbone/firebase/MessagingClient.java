@@ -165,9 +165,9 @@ public class MessagingClient
     @POST("cloud-tokens/{id}/claim")
     Call <Boolean> claimDevice (@Path("id") String instanceId, @Body ClaimTicket claimTicket);
 
-    Call <ClaimTicket> refreshToken (@Body CloudToken cloudToken);
-
     @DELETE("cloud-tokens/{id}/claim")
     Call <Boolean> releaseDevice (@Path("id") String instanceId);
+
+    Call <ClaimTicket> refreshToken (@Body CloudToken cloudToken);
   }
 }

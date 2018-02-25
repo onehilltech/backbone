@@ -143,15 +143,15 @@ public class GatekeeperCreateAccountFragment extends Fragment
   {
     View view = inflater.inflate (R.layout.fragment_new_account, container, false);
 
-    TextView title = view.findViewById (R.id.title);
-    this.username_ = view.findViewById (R.id.username);
-    this.email_ = view.findViewById (R.id.email);
-    this.password_ = view.findViewById (R.id.password);
+    TextView title = (TextView)view.findViewById (R.id.title);
+    this.username_ = (MaterialEditText)view.findViewById (R.id.username);
+    this.email_ = (MaterialEditText)view.findViewById (R.id.email);
+    this.password_ = (MaterialEditText)view.findViewById (R.id.password);
 
-    Button btnCreate = view.findViewById (R.id.button_create_account);
+    Button btnCreate = (Button)view.findViewById (R.id.button_create_account);
     btnCreate.setOnClickListener (v -> this.createAccount ());
 
-    TextView signIn = view.findViewById (R.id.action_sign_in);
+    TextView signIn = (TextView)view.findViewById (R.id.action_sign_in);
     signIn.setOnClickListener (v -> {
       Activity activity = this.getActivity ();
 
