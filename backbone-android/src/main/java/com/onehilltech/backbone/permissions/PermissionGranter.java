@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.SparseArray;
 
@@ -80,12 +79,12 @@ public class PermissionGranter
     HashSet<Permission> permissions = new HashSet<> ();
     permissions.add (permission);
 
-    this.requestPermissions (new ActivityPermissionImpl (activity), permissions, callback);
+    this.requestPermissions (activity, permissions, callback);
   }
 
-  public void requestPermission (FragmentActivity activity, Permission permission, OnPermissionsResult callback)
+  public void requestPermissions (Activity activity, Set <Permission> permissions, OnPermissionsResult callback)
   {
-
+    this.requestPermissions (new ActivityPermissionImpl (activity), permissions, callback);
   }
 
   /**
@@ -100,6 +99,11 @@ public class PermissionGranter
     HashSet<Permission> permissions = new HashSet<> ();
     permissions.add (permission);
 
+    this.requestPermissions (fragment, permissions, callback);
+  }
+
+  public void requestPermissions (Fragment fragment, Set <Permission> permissions, OnPermissionsResult callback)
+  {
     this.requestPermissions (new FragmentPermissionImpl (fragment), permissions, callback);
   }
 
@@ -233,31 +237,6 @@ public class PermissionGranter
     private final Activity activity_;
 
     ActivityPermissionImpl (Activity activity)
-    {
-      this.activity_ = activity;
-    }
-
-    @Override
-    public Activity getActivity ()
-    {
-      return this.activity_;
-    }
-
-    @Override
-    public void requestPermission (PermissionRequest request)
-    {
-      String [] permissions = request.getRequestedPermissions ();
-      int id = request.getId ();
-
-      ActivityCompat.requestPermissions (this.activity_, permissions, id);
-    }
-  }
-
-  private static class FragmentActivityPermissionImpl implements PermissionImpl
-  {
-    private final FragmentActivity activity_;
-
-    FragmentActivityPermissionImpl (FragmentActivity activity)
     {
       this.activity_ = activity;
     }

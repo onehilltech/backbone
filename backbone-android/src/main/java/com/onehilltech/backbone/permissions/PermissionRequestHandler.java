@@ -1,5 +1,6 @@
 package com.onehilltech.backbone.permissions;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -20,11 +21,18 @@ public class PermissionRequestHandler
     void onPermissionDenied (PermissionGranter granter, Permission permission);
   }
 
+  public interface OnPermissionResultCallback
+  {
+    void onPermissionResult (Set<Permission> granted, Set<Permission> denied);
+  }
+
   /// Collection of granted callback handlers mapped to permission strings.
   private final HashMap <String, OnPermissionGrantedCallback> grantedHandler_ = new HashMap<> ();
 
   /// Collection of denied callback handlers mapped to permission strings.
   private final HashMap <String, OnPermissionDeniedCallback> deniedHandler_ = new HashMap<> ();
+
+  private final ArrayList <OnPermissionResultCallback> onPermissionResultCallbacks_ = new ArrayList<> ();
 
   /**
    * Add a granted callback handler for a permission.
@@ -51,6 +59,13 @@ public class PermissionRequestHandler
   @Override
   public void onPermissionsResult (PermissionGranter granter, Set<Permission> granted, Set<Permission> denied)
   {
+    // Call the generic handler.
+
+    for (OnPermissionResultCallback permissionResultCallback: this.onPermissionResultCallbacks_)
+      permissionResultCallback.onPermissionResult (granted, denied);
+
+    // Call the permission granted handlers.
+
     for (Permission permission: granted)
     {
       OnPermissionGrantedCallback handler = this.grantedHandler_.get (permission.name);
@@ -58,6 +73,8 @@ public class PermissionRequestHandler
       if (handler != null)
         handler.onPermissionGranted (granter, permission);
     }
+
+    // Call the permission denied handlers.
 
     for (Permission permission: denied)
     {
