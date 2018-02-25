@@ -12,9 +12,12 @@ public class AllPermissionsRequestHandler implements PermissionRequestHandler.On
 {
   private final ArrayList <String> permissions_ = new ArrayList<> ();
 
-  private final OnPermissionGranted onPermissionGranted_;
+  private final OnPermissionsGranted onPermissionsGranted_;
 
-  interface OnPermissionGranted
+  /**
+   * Callback for all permissions granted.
+   */
+  interface OnPermissionsGranted
   {
     void onPermissionGranted (List <String> permissions);
   }
@@ -23,12 +26,12 @@ public class AllPermissionsRequestHandler implements PermissionRequestHandler.On
    * Initializing constructor.
    *
    * @param permissions               Set of permissions
-   * @param onPermissionGranted       Callback for permissions granted
+   * @param onPermissionsGranted       Callback for permissions granted
    */
-  public AllPermissionsRequestHandler (List <String> permissions, OnPermissionGranted onPermissionGranted)
+  public AllPermissionsRequestHandler (List <String> permissions, OnPermissionsGranted onPermissionsGranted)
   {
     this.permissions_.addAll (permissions);
-    this.onPermissionGranted_ = onPermissionGranted;
+    this.onPermissionsGranted_ = onPermissionsGranted;
   }
 
   @Override
@@ -54,6 +57,6 @@ public class AllPermissionsRequestHandler implements PermissionRequestHandler.On
 
     // Since we did not leave the function, this means we have found
     // all the permissions we requested.
-    this.onPermissionGranted_.onPermissionGranted (this.permissions_);
+    this.onPermissionsGranted_.onPermissionGranted (this.permissions_);
   }
 }
