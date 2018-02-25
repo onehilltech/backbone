@@ -17,7 +17,7 @@ public class AllPermissionsRequestHandler implements PermissionRequestHandler.On
   /**
    * Callback for all permissions granted.
    */
-  interface OnPermissionsGranted
+  public interface OnPermissionsGranted
   {
     void onPermissionGranted ();
   }

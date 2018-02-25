@@ -3,7 +3,7 @@ package com.onehilltech.backbone.permissions;
 import java.util.HashSet;
 import java.util.Set;
 
-class PermissionRequest
+public class PermissionRequest
 {
   private final int id_;
 
