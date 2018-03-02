@@ -60,27 +60,27 @@ android {
 }
 
 dependencies {
-    annotationProcessor "com.github.Raizlabs.DBFlow:dbflow-processor:4.0.4"
+    annotationProcessor 'com.github.Raizlabs.DBFlow:dbflow-processor:' + project.property ('dbflow.version')
 
-    compile 'com.onehilltech:android-metadata:1.5.2'
-    compile project (path: ':backbone-android')
-    compile project (path: ':backbone-data')
+    implementation 'com.onehilltech:android-metadata:1.5.2'
+    implementation project (path: ':backbone-android')
+    implementation project (path: ':backbone-data')
 
-    compile 'org.danilopianini:gson-extras:0.1.0'
-    compile 'org.apache.commons:commons-lang3:3.0'
+    implementation 'org.danilopianini:gson-extras:0.1.0'
+    implementation 'org.apache.commons:commons-lang3:3.0'
 
-    compile 'com.rengwuxian.materialedittext:library:2.1.4'
+    implementation 'com.rengwuxian.materialedittext:library:2.1.4'
 
-    compile 'com.android.support:appcompat-v7:27.1.0'
-    compile 'com.android.support:support-v4:27.1.0'
-    compile 'com.android.support:design:27.1.0'
-    compile 'com.android.support:cardview-v7:27.1.0'
+    implementation 'com.android.support:appcompat-v7:27.1.0'
+    implementation 'com.android.support:support-v4:27.1.0'
+    implementation 'com.android.support:design:27.1.0'
+    implementation 'com.android.support:cardview-v7:27.1.0'
 
-    compile group: 'org.slf4j', name: 'slf4j-android', version: '1.7.21'
+    implementation 'org.slf4j:slf4j-android:1.7.21'
 
-    androidTestCompile 'junit:junit:4.12'
-    androidTestCompile 'com.squareup.okhttp3:mockwebserver:3.4.1'
-    androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.squareup.okhttp3:mockwebserver:3.4.1'
+    androidTestImplementation ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
     }
 
