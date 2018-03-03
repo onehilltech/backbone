@@ -41,8 +41,8 @@ android {
 }
 
 dependencies {
-    implementation project (path: ':backbone-dbflow')
-    implementation project (path: ':backbone-android-objectid', configuration: 'default')
+    api project (path: ':backbone-dbflow')
+    api project (path: ':backbone-android-objectid', configuration: 'default')
 
     implementation 'joda-time:joda-time:2.9.9'
     implementation 'com.onehilltech.promises:promises-android:0.3.1'
