@@ -2,6 +2,10 @@
 
 A simple library/module for adding ObjectId support on Android
 
+* Based on ObjectId from MongoDB
+* Easily generate new ObjectId
+* Parse/generate string representation of an ObjectId
+
 ## Installation
 
 #### Gradle
