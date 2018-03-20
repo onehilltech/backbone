@@ -3,7 +3,7 @@
 A simple library/module for adding ObjectId support on Android
 
 * Based on ObjectId from MongoDB
-* Easily generate new ObjectId
+* Generate new ObjectId just by creating one
 * Parse/generate string representation of an ObjectId
 
 ## Installation
