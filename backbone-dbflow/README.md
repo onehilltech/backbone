@@ -143,7 +143,7 @@ Lastly, the cursor can be passed to any adapter.
 ### Using adapters to view the data
  
 Android uses adapters to adapt data from different sources to its views. We 
-provide 2 adapters to integrating DBFlow cursor with the adapters.
+provide two adapters to integrating DBFlow cursor with the adapters.
 
 * `FlowCursorAdapter`
 * `FlowSimpleCursorAdapter`
