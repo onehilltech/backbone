@@ -84,6 +84,12 @@ public Loader<Book> onCreateLoader (int id, Bundle args)
 
   return loader;
 }
+
+@Override
+public void onLoadFinished (Loader<Book> loader, Book book)
+{
+  // The book variable is the one loaded above.
+}
 ```  
 
 When using a subclass of `FlowSingleModelLoader`, the loader automatically 
