@@ -81,8 +81,6 @@ public Loader<Book> onCreateLoader (int id, Bundle args)
             .where (Book_Table._id.eq (1));
 
   return new FlowModelLoader (this, Book.class, queriable);
-
-  return loader;
 }
 
 @Override
