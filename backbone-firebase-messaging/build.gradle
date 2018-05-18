@@ -41,15 +41,15 @@ android {
 }
 
 dependencies {
-    implementation "org.slf4j:slf4j-android:1.7.21"
+    compile "org.slf4j:slf4j-android:1.7.21"
 
     compile project (path: ':backbone-gatekeeper')
 
     compile 'com.google.firebase:firebase-core:11.8.0'
     compile 'com.google.firebase:firebase-messaging:11.8.0'
 
-    androidTestImplementation 'junit:junit:4.12'
-    androidTestImplementation ('com.android.support.test:testing-support-lib:0.1') {
+    androidTestCompile 'junit:junit:4.12'
+    androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
     }
 }

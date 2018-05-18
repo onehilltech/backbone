@@ -50,11 +50,11 @@ dependencies {
     compile 'com.squareup.retrofit2:converter-gson:2.3.0'
 
     androidTestAnnotationProcessor "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ('dbflow.version')
-    androidTestImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.google.guava:guava:22.0'
-    androidTestImplementation 'com.squareup.okhttp:mockwebserver:2.3.0'
-    androidTestImplementation 'com.squareup.retrofit2:converter-scalars:2.3.0'
-    androidTestImplementation ('com.android.support.test:testing-support-lib:0.1') {
+    androidTestCompile 'junit:junit:4.12'
+    androidTestCompile 'com.google.guava:guava:22.0'
+    androidTestCompile 'com.squareup.okhttp:mockwebserver:2.3.0'
+    androidTestCompile 'com.squareup.retrofit2:converter-scalars:2.3.0'
+    androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
     }
 }
