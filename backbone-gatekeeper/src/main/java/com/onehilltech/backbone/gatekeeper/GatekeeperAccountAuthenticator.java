@@ -23,11 +23,11 @@ import org.slf4j.LoggerFactory;
 public class GatekeeperAccountAuthenticator extends AbstractAccountAuthenticator
 {
   private final Context context_;
-  private final Class <AccountAuthenticatorActivity> activityClass_;
+  private final Class <? extends AccountAuthenticatorActivity> activityClass_;
 
   private final Logger LOG = LoggerFactory.getLogger (GatekeeperAccountAuthenticator.class);
 
-  public GatekeeperAccountAuthenticator (Context context, Class <AccountAuthenticatorActivity> activityClass)
+  public GatekeeperAccountAuthenticator (Context context, Class <? extends AccountAuthenticatorActivity> activityClass)
   {
     super (context);
 
