@@ -180,7 +180,7 @@ public class GatekeeperClient
     // Initialize the Retrofit related properties.
     Retrofit retrofit =
         new Retrofit.Builder ()
-            .baseUrl (this.getBaseUrlWithVersion ())
+            .baseUrl (this.config_.baseUri)
             .addConverterFactory (GsonConverterFactory.create (this.gson_))
             .client (this.httpClient_)
             .build ();
@@ -205,11 +205,6 @@ public class GatekeeperClient
   public Configuration getConfig ()
   {
     return this.config_;
-  }
-
-  public String getBaseUrlWithVersion ()
-  {
-    return this.config_.baseUri + "v" + VERSION + "/";
   }
 
   /**

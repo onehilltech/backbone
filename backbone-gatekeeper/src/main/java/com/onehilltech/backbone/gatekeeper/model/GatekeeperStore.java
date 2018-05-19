@@ -28,7 +28,7 @@ public class GatekeeperStore
     GatekeeperSessionClient sessionClient = GatekeeperSessionClient.getInstance (context);
 
     dataStore_ = new DataStore.Builder (context, GatekeeperDatabase.class)
-        .setBaseUrl (sessionClient.getClient ().getBaseUrlWithVersion ())
+        .setBaseUrl (sessionClient.getClient ().getConfig ().baseUri)
         .setApplicationAdapter (dataStoreAdapter_)
         .setHttpClient (sessionClient.getHttpClient ())
         .addTypeAdapter (ObjectId.class, new ObjectIdSerializer ())
@@ -40,7 +40,7 @@ public class GatekeeperStore
   public static DataStore getInstance (Context context, GatekeeperClient client)
   {
     return new DataStore.Builder (context, GatekeeperDatabase.class)
-        .setBaseUrl (client.getBaseUrlWithVersion ())
+        .setBaseUrl (client.getConfig ().baseUri)
         .setApplicationAdapter (dataStoreAdapter_)
         .setHttpClient (client.getHttpClient ())
         .addTypeAdapter (ObjectId.class, new ObjectIdSerializer ())

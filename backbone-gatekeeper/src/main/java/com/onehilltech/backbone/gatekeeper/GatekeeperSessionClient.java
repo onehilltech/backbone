@@ -162,7 +162,7 @@ public class GatekeeperSessionClient
 
     // Build the Retrofit object for this client.
     Retrofit userRetrofit = new Retrofit.Builder ()
-        .baseUrl (this.client_.getBaseUrlWithVersion ())
+        .baseUrl (this.client_.getConfig ().baseUri)
         .addConverterFactory (GsonConverterFactory.create (this.gson_))
         .client (this.httpClient_)
         .build ();
@@ -171,7 +171,7 @@ public class GatekeeperSessionClient
 
     this.userMethods_ = userRetrofit.create (UserMethods.class);
     this.methods_ = new Retrofit.Builder ()
-        .baseUrl (this.client_.getBaseUrlWithVersion ())
+        .baseUrl (this.client_.getConfig ().baseUri)
         .addConverterFactory (GsonConverterFactory.create (this.gson_))
         .build ().create (Methods.class);
 
