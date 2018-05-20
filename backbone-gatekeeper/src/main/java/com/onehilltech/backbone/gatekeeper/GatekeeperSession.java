@@ -1,5 +1,7 @@
 package com.onehilltech.backbone.gatekeeper;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -74,6 +76,26 @@ public class GatekeeperSession
   public static GatekeeperSession getCurrent (Context context)
   {
     return new GatekeeperSession (context.getSharedPreferences (PREFS_FILE, Context.MODE_PRIVATE));
+  }
+
+  /**
+   * Lookup the account for the this session.
+   *
+   * @param context           Target context
+   * @param accountType       Account type
+   * @return                  Account object
+   */
+  public Account lookupAccount (Context context, String accountType)
+  {
+    AccountManager accountManager = AccountManager.get (context);
+    Account [] accounts = accountManager.getAccountsByType (accountType);
+    String username = this.getUsername ();
+
+    for (Account account: accounts)
+      if (account.name.equals (username))
+        return account;
+
+    return null;
   }
 
   /**
