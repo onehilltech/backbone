@@ -464,32 +464,28 @@ public class GatekeeperSessionClient
    */
   private Promise <Void> completeSignIn (Context context, String username, JsonBearerToken jsonToken)
   {
-    return new Promise<> ("gatekeeper:completeSignIn", settlement -> {
-      // Save the user access token. We need it so we can
-      this.logger_.info ("Saving user access token to the database");
-      this.userToken_ = UserToken.fromToken (username, jsonToken);
-      FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
+    // Save the user access token. We need it so we can
+    this.logger_.info ("Saving user access token to the database");
+    this.userToken_ = UserToken.fromToken (username, jsonToken);
+    FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
 
-      GatekeeperStore.getInstance (context)
-                     .get (Account.class, "me")
-                     .then (resolved (account -> {
-                       this.session_.edit ()
-                                    .setUsername (account.username)
-                                    .setUserId (account._id.toString ())
-                                    .commit ();
+    return GatekeeperStore.getInstance (context)
+                          .get (Account.class, "me")
+                          .then (resolved (account -> {
+                            this.session_.edit ()
+                                         .setUsername (account.username)
+                                         .setUserId (account._id.toString ())
+                                         .commit ();
+                          }))
+                          ._catch (reason -> {
+                            this.logger_.error ("Failed to get my account info", reason);
 
-                       settlement.resolve (null);
-                     }))
-                     ._catch (rejected (reason -> {
-                       this.logger_.error ("Failed to get my account info", reason);
+                            // Delete the user token that we temporarily saved.
+                            this.userToken_ = null;
+                            FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
 
-                       // Delete the user token that we temporarily saved.
-                       this.userToken_ = null;
-                       FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
-
-                       settlement.reject (reason);
-                     }));
-    });
+                            return Promise.reject (reason);
+                          });
   }
 
   public Promise <Boolean> signOut (Context context)
