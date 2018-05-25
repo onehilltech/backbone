@@ -471,12 +471,7 @@ public class GatekeeperSessionClient
 
     return GatekeeperStore.getInstance (context)
                           .get (Account.class, "me")
-                          .then (resolved (account -> {
-                            this.session_.edit ()
-                                         .setUsername (account.username)
-                                         .setUserId (account._id.toString ())
-                                         .commit ();
-                          }))
+                          .then (resolved (this::writeAccountToSession))
                           ._catch (reason -> {
                             this.logger_.error ("Failed to get my account info", reason);
 
@@ -486,6 +481,14 @@ public class GatekeeperSessionClient
 
                             return Promise.reject (reason);
                           });
+  }
+
+  private void writeAccountToSession (Account account)
+  {
+    this.session_.edit ()
+                 .setUsername (account.username)
+                 .setUserId (account._id.toString ())
+                 .commit ();
   }
 
   public Promise <Boolean> signOut (Context context)

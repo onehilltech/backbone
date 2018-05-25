@@ -330,21 +330,16 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> create (Class <T> dataClass, T value)
   {
-    return new Promise<> (settlement -> {
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
-      endpoint.create (value)
-              .then (resolved (resource -> {
-                // Get the new value, and associate it with this data store.
-                T newValue = resource.get (endpoint.getName ());
+    return endpoint.create (value)
+                   .then (resource -> {
+                     // Get the new value, and associate it with this data store.
+                     T newValue = resource.get (endpoint.getName ());
 
-                // Insert the created value in our database.
-                this.push (dataClass, newValue)
-                    .then (resolved (settlement::resolve))
-                    ._catch (rejected (settlement::reject));
-              }))
-              ._catch (rejected (settlement::reject));
-    });
+                     // Insert the created value in our database.
+                     return this.push (dataClass, newValue);
+                   });
   }
 
   /**
@@ -356,25 +351,18 @@ public class DataStore
    */
   public <T extends DataModel> Promise <DataModelList <T>> get (Class <T> dataClass)
   {
-    return new Promise<> (settlement -> {
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
-      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+    String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
 
-      endpoint.get ()
-              .then (resolved (
-                  r -> this.insertIntoDatabase (r, dataClass)
-                           .then (resolved (result -> {
-                             DataModelList <T> modelList = r.get (tableName);
+    return endpoint.get ().then (r -> this.insertIntoDatabase (r, dataClass).then (result -> {
+      DataModelList <T> modelList = r.get (tableName);
 
-                             if (modelList == null)
-                               modelList = new DataModelList<> ();
+      if (modelList == null)
+        modelList = new DataModelList<> ();
 
-                             settlement.resolve (modelList);
-                           }))
-              ))
-              ._catch (rejected (settlement::reject));
-    });
+      return Promise.resolve (modelList);
+    }));
   }
 
   /**
@@ -387,20 +375,15 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> get (Class <T> dataClass, Object id)
   {
-    return new Promise<> (settlement -> {
-      this.getModelAdapter (dataClass);
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    this.getModelAdapter (dataClass);
+    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
-      endpoint.get (id.toString ())
-              .then (resolved (
-                  r -> this.insertIntoDatabase (r, dataClass)
-                           .then (resolved (result -> {
-                             T model = r.get (endpoint.getName ());
-                             settlement.resolve (model);
-                           }))
-              ))
-              ._catch (rejected (settlement::reject));
-    });
+    return endpoint.get (id.toString ())
+                   .then (r -> this.insertIntoDatabase (r, dataClass)
+                                   .then (result -> {
+                                     T model = r.get (endpoint.getName ());
+                                     return Promise.resolve (model);
+                                   }));
   }
 
   /**
@@ -413,20 +396,15 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> get (Class <T> dataClass, Object id, HashMap <String, Object> options)
   {
-    return new Promise<> (settlement -> {
-      this.getModelAdapter (dataClass);
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    this.getModelAdapter (dataClass);
+    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
 
-      endpoint.get (id.toString (), options)
-              .then (resolved (
-                  r -> this.insertIntoDatabase (r, dataClass)
-                           .then (resolved (result -> {
-                             T model = r.get (endpoint.getName ());
-                             settlement.resolve (model);
-                           }))
-              ))
-              ._catch (rejected (settlement::reject));
-    });
+    return endpoint.get (id.toString (), options)
+                   .then (r -> this.insertIntoDatabase (r, dataClass)
+                                   .then (result -> {
+                                     T model = r.get (endpoint.getName ());
+                                     return Promise.resolve (model);
+                                   }));
   }
 
 
@@ -440,27 +418,20 @@ public class DataStore
    */
   public <T extends DataModel> Promise <DataModelList <T>> query (Class <T> dataClass, Map <String, Object> query)
   {
-    return new Promise<> (settlement -> {
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
-      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+    String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
 
-      endpoint.get (query)
-              .then (r ->
-                // Insert the resources into the database. We need to account for the
-                // resource containing data for other model classes.
-                this.insertIntoDatabase (r, dataClass)
-                    .then (resolved (result -> {
-                      DataModelList<T> modelList = r.get (tableName);
+    // Insert the resources into the database. We need to account for the
+    // resource containing data for other model classes.
+    return endpoint.get (query).then (r -> this.insertIntoDatabase (r, dataClass).then (result -> {
+      DataModelList<T> modelList = r.get (tableName);
 
-                      if (modelList == null)
-                        modelList = new DataModelList<> ();
+      if (modelList == null)
+        modelList = new DataModelList<> ();
 
-                      settlement.resolve (modelList);
-                    }))
-              )
-              ._catch (rejected (settlement::reject));
-    });
+      return Promise.resolve (modelList);
+    }));
   }
 
   /**
