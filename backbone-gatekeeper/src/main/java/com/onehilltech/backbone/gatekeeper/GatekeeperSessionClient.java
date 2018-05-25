@@ -434,7 +434,7 @@ public class GatekeeperSessionClient
     if (this.isSignedIn ())
       return Promise.reject (new IllegalStateException ("User is already signed in"));
 
-    return new Promise<> (settlement ->
+    return new Promise<> ("gatekeeper:signIn", settlement ->
       this.getUserToken (username, password)
           .then (token -> this.completeSignIn (context, username, token))
           .then (resolved (value -> settlement.resolve (null)))
@@ -468,7 +468,7 @@ public class GatekeeperSessionClient
    */
   private Promise <Void> completeSignIn (Context context, String username, JsonBearerToken jsonToken)
   {
-    return new Promise<> (settlement -> {
+    return new Promise<> ("gatekeeper:completeSignIn", settlement -> {
       // Save the user access token. We need it so we can
       this.logger_.info ("Saving user access token to the database");
       this.userToken_ = UserToken.fromToken (username, jsonToken);
@@ -509,7 +509,7 @@ public class GatekeeperSessionClient
     if (this.userToken_ == null)
       return Promise.resolve (true);
 
-    return new Promise<> (settlement -> {
+    return new Promise<> ("gatekeeper:signOut", settlement -> {
       this.logger_.info ("Signing out current user");
 
       this.userMethods_.logout ().enqueue (new Callback<Boolean> ()
@@ -555,7 +555,7 @@ public class GatekeeperSessionClient
    */
   public Promise <Boolean> changePassword (String currentPassword, String newPassword)
   {
-    return new Promise<> (settlement -> {
+    return new Promise<> ("gatekeeper:changePassword", settlement -> {
       JsonChangePassword change = new JsonChangePassword ();
       change.currentPassword = currentPassword;
       change.newPassword = newPassword;
@@ -606,7 +606,7 @@ public class GatekeeperSessionClient
 
   private <T> Promise <T> executeCall (Call <T> call)
   {
-    return new Promise<> (settlement ->
+    return new Promise<> ("gatekeeper:executeCall", settlement ->
       call.enqueue (new Callback<T> () {
         @Override
         public void onResponse (Call<T> call, retrofit2.Response<T> response)

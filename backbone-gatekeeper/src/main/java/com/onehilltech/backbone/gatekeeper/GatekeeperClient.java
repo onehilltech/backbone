@@ -216,7 +216,7 @@ public class GatekeeperClient
    */
   public Promise<Resource> createAccount (String username, String password, String email)
   {
-    return new Promise<> (settlement -> {
+    return new Promise<> ("gatekeeper:createAccount", settlement -> {
       JsonAccount account = new JsonAccount ();
       account.username = username;
       account.password = password;
@@ -239,7 +239,7 @@ public class GatekeeperClient
    */
   public Promise <Resource> createAccount (String username, String password, String email, boolean autoSignIn)
   {
-    return new Promise<> (settlement -> {
+    return new Promise<> ("gatekeeper:createAccount", settlement -> {
       // Make a call to create the account.
       JsonAccount account = new JsonAccount ();
       account.username = username;
@@ -304,7 +304,7 @@ public class GatekeeperClient
    */
   private Promise<JsonBearerToken> requestToken (JsonGrant grantType)
   {
-    return new Promise<> ((settlement) -> {
+    return new Promise<> ("gatekeeper:requestToken", settlement -> {
       grantType.clientId = this.config_.clientId;
       grantType.clientSecret = this.config_.clientSecret;
       grantType.packageName = this.context_.getPackageName ();
