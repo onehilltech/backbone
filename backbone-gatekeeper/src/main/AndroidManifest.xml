@@ -10,11 +10,11 @@
     <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
 
     <application>
-        <receiver android:name=".AccountRemovedReceiver">
+        <!-- receiver android:name=".AccountRemovedReceiver">
             <intent-filter>
                 <action android:name="android.accounts.LOGIN_ACCOUNTS_CHANGED" />
             </intent-filter>
-        </receiver>
+        </receiver -->
     </application>
 
 </manifest>
