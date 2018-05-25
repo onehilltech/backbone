@@ -45,7 +45,7 @@ dependencies {
     compile project (path: ':backbone-android-objectid', configuration: 'default')
 
     compile 'joda-time:joda-time:2.9.9'
-    compile 'com.onehilltech.promises:promises-android:0.3.1'
+    compile 'com.onehilltech.promises:promises-android:0.3.2'
     compile 'com.squareup.retrofit2:retrofit:2.3.0'
     compile 'com.squareup.retrofit2:converter-gson:2.3.0'
 
