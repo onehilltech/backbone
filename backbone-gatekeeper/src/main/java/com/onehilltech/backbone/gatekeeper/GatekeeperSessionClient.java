@@ -434,12 +434,8 @@ public class GatekeeperSessionClient
     if (this.isSignedIn ())
       return Promise.reject (new IllegalStateException ("User is already signed in"));
 
-    return new Promise<> ("gatekeeper:signIn", settlement ->
-      this.getUserToken (username, password)
-          .then (token -> this.completeSignIn (context, username, token))
-          .then (resolved (value -> settlement.resolve (null)))
-          ._catch (rejected (settlement::reject))
-    );
+    return this.getUserToken (username, password)
+               .then (token -> this.completeSignIn (context, username, token));
   }
 
   /**
