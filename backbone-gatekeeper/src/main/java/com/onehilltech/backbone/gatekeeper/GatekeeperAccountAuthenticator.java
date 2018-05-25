@@ -9,7 +9,6 @@ import android.accounts.NetworkErrorException;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.provider.SyncStateContract;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,8 +49,6 @@ public class GatekeeperAccountAuthenticator extends AbstractAccountAuthenticator
       throws NetworkErrorException
   {
     Intent intent = new Intent (this.context_, this.activityClass_);
-    intent.putExtra (SyncStateContract.Constants.ACCOUNT_TYPE, authTokenType);
-    intent.putExtra (AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response);
 
     Bundle result = new Bundle();
     result.putParcelable (AccountManager.KEY_INTENT, intent);
