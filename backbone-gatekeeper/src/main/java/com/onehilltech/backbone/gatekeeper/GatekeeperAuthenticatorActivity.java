@@ -58,32 +58,27 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
     LOG.info ("Signing in the user");
 
     return this.session_.signIn (this, username, password)
-                        .then (resolved (result -> this.completeSignIn (username, savePassword ? password : null, userData)));
-  }
+                        .then (resolved (result -> {
+                          LOG.info ("Creating an account for the signed in user");
 
-  private Promise <Void> completeSignIn (String username, String password, Bundle userData)
-  {
-    return new Promise<> (settlement -> {
-      LOG.info ("Creating an account for the signed in user");
+                          // Create a new account object. Then, explicitly add the account to the account
+                          // manager and set the authentication token for the account.
+                          String accountType = this.getAccountType ();
+                          Account account = new Account (username, accountType);
+                          AccountManager accountManager = AccountManager.get (this);
+                          String authToken = this.session_.getAccessToken ();
 
-      // Create a new account object. Then, explicitly add the account to the account
-      // manager and set the authentication token for the account.
-      String accountType = this.getAccountType ();
-      Account account = new Account (username, accountType);
-      AccountManager accountManager = AccountManager.get (this);
-      String authToken = this.session_.getAccessToken ();
+                          accountManager.addAccountExplicitly (account, savePassword ? password : null, userData);
+                          accountManager.setAuthToken (account, "Bearer", authToken);
 
-      accountManager.addAccountExplicitly (account, password, userData);
-      accountManager.setAuthToken (account, "Bearer", authToken);
+                          Intent intent = new Intent();
+                          intent.putExtra (AccountManager.KEY_ACCOUNT_NAME, username);
+                          intent.putExtra (AccountManager.KEY_ACCOUNT_TYPE, accountType);
+                          intent.putExtra (AccountManager.KEY_AUTHTOKEN, authToken);
 
-      Intent intent = new Intent();
-      intent.putExtra (AccountManager.KEY_ACCOUNT_NAME, username);
-      intent.putExtra (AccountManager.KEY_ACCOUNT_TYPE, accountType);
-      intent.putExtra (AccountManager.KEY_AUTHTOKEN, authToken);
-
-      this.setAccountAuthenticatorResult (intent.getExtras());
-      this.setResult (RESULT_OK, intent);
-      this.finish ();
-    });
+                          this.setAccountAuthenticatorResult (intent.getExtras());
+                          this.setResult (RESULT_OK, intent);
+                          this.finish ();
+                        }));
   }
 }
