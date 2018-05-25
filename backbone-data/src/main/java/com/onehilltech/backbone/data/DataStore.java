@@ -172,6 +172,8 @@ public class DataStore
 
   private String typeDiscriminator_;
 
+  private final Logger LOG = LoggerFactory.getLogger (DataStore.class);
+
   public interface OnModelLoaded <T>
   {
     void onModelLoaded (T model);
@@ -445,7 +447,9 @@ public class DataStore
   @SuppressWarnings ("unchecked")
   private Promise <Void> insertIntoDatabase (Resource r, Class <? extends DataModel> startsAt)
   {
-    return new Promise<> (settlement -> {
+    return new Promise<> ("data-store:insertIntoDatabase", settlement -> {
+      LOG.info ("Inserting {} resources into the database", r.entityCount ());
+
       this.databaseDefinition_
           .beginTransactionAsync (transaction -> {
             List <DependencyGraph.Node> insertOrder = this.dependencyGraph_.getInsertOrder (startsAt);
@@ -899,6 +903,8 @@ public class DataStore
   public <T extends DataModel> Promise <T> push (Class <T> dataClass, T model)
   {
     return new Promise<> (settlement -> {
+      LOG.info ("Pushing data model onto the database [class={}]", dataClass);
+
       // Save the model to our local database.
       ModelAdapter <T> modelAdapter = FlowManager.getModelAdapter (dataClass);
       modelAdapter.save (model);
@@ -920,6 +926,8 @@ public class DataStore
   public <T extends DataModel> Promise <T> push (Class <T> dataClass, Map <String, String> data)
   {
     return new Promise<> (settlement -> {
+      LOG.info ("Pushing data onto the database [class={}]", dataClass);
+
       // Locate the model adapter.
       ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
 
@@ -945,6 +953,8 @@ public class DataStore
   private <T extends DataModel> Promise <DataModelList <T>> insertIntoDatabase (Class <T> dataClass, DataModelList <T> modelList)
   {
     return new Promise<> (settlement -> {
+      LOG.info ("Inserting {} model(s) into database [class={}]", modelList.size (), dataClass);
+
       ModelAdapter <T> modelAdapter = FlowManager.getModelAdapter (dataClass);
 
       FlowManager.getDatabase (this.databaseClass_)
