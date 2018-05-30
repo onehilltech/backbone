@@ -58,27 +58,59 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
     LOG.info ("Signing in the user");
 
     return this.session_.signIn (this, username, password)
-                        .then (resolved (result -> {
-                          LOG.info ("Creating an account for the signed in user");
+                        .then (resolved (result -> this.completeSignIn (username, password, savePassword, userData)));
+  }
 
-                          // Create a new account object. Then, explicitly add the account to the account
-                          // manager and set the authentication token for the account.
-                          String accountType = this.getAccountType ();
-                          Account account = new Account (username, accountType);
-                          AccountManager accountManager = AccountManager.get (this);
-                          String authToken = this.session_.getAccessToken ();
+  /**
+   * Sign up a new user for the service.
+   *
+   * @param username        Username
+   * @param password        Password
+   * @param email           Email address
+   * @return                Promise object
+   */
+  protected Promise <Void> signUp (String username, String password, String email)
+  {
+    return this.signUp (username, password, email, false, null);
+  }
 
-                          accountManager.addAccountExplicitly (account, savePassword ? password : null, userData);
-                          accountManager.setAuthToken (account, "Bearer", authToken);
+  /**
+   * Sign up a new user for the service.
+   *
+   * @param username        Username
+   * @param password        Password
+   * @param email           Email address
+   * @param savePassword    Save the password to the account
+   * @param userData        User data associated with account
+   * @return                Promise object
+   */
+  protected Promise <Void> signUp (String username, String password, String email, boolean savePassword, Bundle userData)
+  {
+    return this.session_.createAccount (this, username, password, email, true)
+                        .then (resolved (account -> this.completeSignIn (username, password, savePassword, userData)));
+  }
 
-                          Intent intent = new Intent();
-                          intent.putExtra (AccountManager.KEY_ACCOUNT_NAME, username);
-                          intent.putExtra (AccountManager.KEY_ACCOUNT_TYPE, accountType);
-                          intent.putExtra (AccountManager.KEY_AUTHTOKEN, authToken);
+  private void completeSignIn (String username, String password, boolean savePassword, Bundle userData)
+  {
+    LOG.info ("Creating an account for the signed in user");
 
-                          this.setAccountAuthenticatorResult (intent.getExtras());
-                          this.setResult (RESULT_OK, intent);
-                          this.finish ();
-                        }));
+    // Create a new account object. Then, explicitly add the account to the account
+    // manager and set the authentication token for the account.
+    String accountType = this.getAccountType ();
+    Account account = new Account (username, accountType);
+    AccountManager accountManager = AccountManager.get (this);
+    String authToken = this.session_.getAccessToken ();
+
+    accountManager.addAccountExplicitly (account, savePassword ? password : null, userData);
+    accountManager.setAuthToken (account, "Bearer", authToken);
+
+    Intent intent = new Intent();
+    intent.putExtra (AccountManager.KEY_ACCOUNT_NAME, username);
+    intent.putExtra (AccountManager.KEY_ACCOUNT_TYPE, accountType);
+    intent.putExtra (AccountManager.KEY_AUTHTOKEN, authToken);
+
+    this.setAccountAuthenticatorResult (intent.getExtras());
+    this.setResult (RESULT_OK, intent);
+    this.finish ();
   }
 }

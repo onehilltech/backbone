@@ -184,11 +184,17 @@ public class GatekeeperSessionClient
                        .then (r -> new Promise<JsonAccount> (settlement -> {
                          // Complete the sign in process.
                          JsonAccount account = r.get ("account");
-                         JsonBearerToken userToken = r.get ("token");
 
-                         this.completeSignIn (context, username, userToken)
-                             .then (resolved (value -> settlement.resolve (account)))
-                             ._catch (rejected (settlement::reject));
+                         if (autoSignIn) {
+                           JsonBearerToken userToken = r.get ("token");
+
+                           this.completeSignIn (context, username, userToken)
+                               .then (resolved (value -> settlement.resolve (account)))
+                               ._catch (rejected (settlement::reject));
+                         }
+                         else {
+                           settlement.resolve (account);
+                         }
                        }));
   }
 
