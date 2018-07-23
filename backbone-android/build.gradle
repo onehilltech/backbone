@@ -42,10 +42,10 @@ android {
 }
 
 dependencies {
-    compile 'com.google.guava:guava:22.0'
-    compile 'com.android.support:support-annotations:27.1.0'
-    compile 'com.android.support:appcompat-v7:27.1.0'
-    compile 'com.android.support:support-v13:27.1.0'
+    compile 'com.google.guava:guava:23.0'
+    compile 'com.android.support:support-annotations:27.1.1'
+    compile 'com.android.support:appcompat-v7:27.1.1'
+    compile 'com.android.support:support-v13:27.1.1'
 
     androidTestCompile 'junit:junit:4.12'
     androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {

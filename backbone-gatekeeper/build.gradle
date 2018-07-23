@@ -71,10 +71,10 @@ dependencies {
 
     compile 'com.rengwuxian.materialedittext:library:2.1.4'
 
-    compile 'com.android.support:appcompat-v7:27.1.0'
-    compile 'com.android.support:support-v4:27.1.0'
-    compile 'com.android.support:design:27.1.0'
-    compile 'com.android.support:cardview-v7:27.1.0'
+    compile 'com.android.support:appcompat-v7:27.1.1'
+    compile 'com.android.support:support-v4:27.1.1'
+    compile 'com.android.support:design:27.1.1'
+    compile 'com.android.support:cardview-v7:27.1.1'
 
     androidTestCompile 'junit:junit:4.12'
     androidTestCompile 'com.squareup.okhttp3:mockwebserver:3.4.1'
