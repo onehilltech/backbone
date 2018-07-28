@@ -45,6 +45,8 @@ dependencies {
     compile "com.github.Raizlabs.DBFlow:dbflow:" + project.property ('dbflow.version')
     compile "org.slf4j:slf4j-android:1.7.21"
 
+    compile 'com.android.support:support-v13:27.1.1'
+
     androidTestCompile 'junit:junit:4.12'
     androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
