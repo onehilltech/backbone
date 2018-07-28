@@ -1,11 +1,10 @@
 package com.onehilltech.backbone.permissions;
 
 import android.app.Activity;
-import android.app.Fragment;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.util.SparseArray;
 
@@ -278,7 +277,7 @@ public class PermissionGranter
       String [] permissions = request.getRequestedPermissions ();
       int id = request.getId ();
 
-      FragmentCompat.requestPermissions (this.fragment_, permissions, id);
+      this.fragment_.requestPermissions (permissions, id);
     }
   }
 }
