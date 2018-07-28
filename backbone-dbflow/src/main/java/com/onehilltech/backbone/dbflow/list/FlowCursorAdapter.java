@@ -34,11 +34,6 @@ public abstract class FlowCursorAdapter <TModel> extends CursorAdapter
   public TModel getItem (int position)
   {
     Cursor cursor = (Cursor) super.getItem (position);
-
-    if (cursor == null)
-      return null;
-
-    FlowCursor flowCursor = FlowCursor.from (cursor);
-    return this.modelAdapter_.loadFromCursor (flowCursor);
+    return cursor != null ? this.modelAdapter_.loadFromCursor (FlowCursor.from (cursor)) : null;
   }
 }
