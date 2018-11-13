@@ -41,13 +41,13 @@ android {
 }
 
 dependencies {
-    implementation "org.slf4j:slf4j-android:1.7.21"
+    api "org.slf4j:slf4j-android:1.7.21"
+    api project (path: ':backbone-gatekeeper')
+
     implementation 'com.onehilltech.promises:promises-jvm:0.7.0'
     implementation 'com.onehilltech.promises:promises-android:0.7.0'
     implementation 'com.squareup.retrofit2:retrofit:2.3.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.3.0'
-
-    implementation project (path: ':backbone-gatekeeper')
 
     implementation 'com.google.firebase:firebase-messaging:17.3.4'
 
