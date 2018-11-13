@@ -62,22 +62,22 @@ android {
 dependencies {
     annotationProcessor 'com.github.Raizlabs.DBFlow:dbflow-processor:' + project.property ('dbflow.version')
 
+    api project (path: ':backbone-android')
+    api project (path: ':backbone-data')
+
     api 'com.onehilltech:android-metadata:1.6.0'
 
-    implementation project (path: ':backbone-android')
-    implementation project (path: ':backbone-data')
-    implementation 'org.danilopianini:gson-extras:0.1.0'
-    implementation 'org.apache.commons:commons-lang3:3.0'
+    api 'org.danilopianini:gson-extras:0.1.0'
+    api 'org.apache.commons:commons-lang3:3.0'
 
-    implementation 'androidx.appcompat:appcompat:1.0.2'
-    implementation 'androidx.legacy:legacy-support-v13:1.0.0'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'com.google.android.material:material:1.0.0'
+    api 'androidx.appcompat:appcompat:1.0.2'
+    api 'androidx.legacy:legacy-support-v13:1.0.0'
+    api 'androidx.legacy:legacy-support-v4:1.0.0'
+    api 'com.google.android.material:material:1.0.0'
 
     androidTestImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.squareup.okhttp3:mockwebserver:3.4.1'
     androidTestImplementation ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
     }
-
 }
