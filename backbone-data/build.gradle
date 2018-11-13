@@ -42,15 +42,13 @@ android {
 
 dependencies {
     api project (path: ':backbone-dbflow')
-    api project (path: ':backbone-android-objectid', configuration: 'default')
+    api project (path: ':backbone-android-objectid')
 
     api 'com.onehilltech.promises:promises-jvm:0.7.0'
     api 'com.onehilltech.promises:promises-android:0.7.0'
 
     api 'com.squareup.retrofit2:retrofit:2.3.0'
     api 'com.squareup.retrofit2:converter-gson:2.3.0'
-
-    implementation 'joda-time:joda-time:2.9.9'
 
     androidTestAnnotationProcessor "com.github.Raizlabs.DBFlow:dbflow-processor:" + project.property ('dbflow.version')
 
