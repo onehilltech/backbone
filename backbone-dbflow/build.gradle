@@ -41,14 +41,14 @@ android {
 }
 
 dependencies {
-    compile "com.github.Raizlabs.DBFlow:dbflow-core:" + project.property ('dbflow.version')
-    compile "com.github.Raizlabs.DBFlow:dbflow:" + project.property ('dbflow.version')
-    compile "org.slf4j:slf4j-android:1.7.21"
+    api "com.github.Raizlabs.DBFlow:dbflow-core:" + project.property ('dbflow.version')
+    api "com.github.Raizlabs.DBFlow:dbflow:" + project.property ('dbflow.version')
+    api "org.slf4j:slf4j-android:1.7.21"
 
-    compile 'com.android.support:support-v13:27.1.1'
+    implementation 'androidx.legacy:legacy-support-v13:1.0.0'
 
-    androidTestCompile 'junit:junit:4.12'
-    androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
     }
 }

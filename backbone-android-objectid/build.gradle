@@ -41,12 +41,11 @@ android {
 }
 
 dependencies {
-    compile 'com.google.guava:guava:23.0'
-    compile 'com.android.support:support-annotations:27.1.1'
-    compile 'joda-time:joda-time:2.9.9'
+    implementation 'com.google.guava:guava:24.1-jre'
+    implementation 'joda-time:joda-time:2.9.9'
 
-    androidTestCompile 'junit:junit:4.12'
-    androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
     }
 }

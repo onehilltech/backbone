@@ -4,15 +4,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
 
-import com.rengwuxian.materialedittext.MaterialEditText;
+import androidx.fragment.app.Fragment;
 
 import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
@@ -141,14 +134,6 @@ public class GatekeeperSignInFragment extends Fragment
 
   private static final String ARG_LAYOUT = "layout";
 
-  private MaterialEditText username_;
-
-  private MaterialEditText password_;
-
-  private TextView errorMessage_;
-
-  private int layout_ = R.layout.fragment_login;
-
   /**
    * Default constructor.
    */
@@ -172,126 +157,14 @@ public class GatekeeperSignInFragment extends Fragment
     }
   }
 
-  @Override
-  public void onCreate (@Nullable Bundle savedInstanceState)
+  protected void signIn (String username, String password)
   {
-    super.onCreate (savedInstanceState);
-
-    Bundle args = this.getArguments ();
-
-    if (args != null)
-    {
-      if (args.containsKey (ARG_LAYOUT))
-        this.layout_ = args.getInt (ARG_LAYOUT);
-    }
+    GatekeeperSessionClient.getInstance (this.getContext ())
+                           .signIn (this.getContext (), username, password)
+                           .then (resolved (value -> loginFragmentListener_.onSignInComplete (this)))
+                           ._catch (onUiThread (rejected (reason -> showErrorMessage (reason.getLocalizedMessage ()))));
   }
 
-  @Override
-  public View onCreateView (LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-  {
-    View view = inflater.inflate (this.layout_, container, false);
-
-    // Setup the UI controls.
-    this.username_ = (MaterialEditText)view.findViewById (R.id.username);
-    this.username_.addValidator (new NotEmptyValidator ());
-
-    this.password_ = (MaterialEditText)view.findViewById (R.id.password);
-    this.password_.addValidator (new NotEmptyValidator ());
-
-    Button signInButton = (Button)view.findViewById (R.id.button_sign_in);
-
-    signInButton.setOnClickListener (v -> {
-      boolean isValid = this.username_.validate ();
-      isValid &= this.password_.validate ();
-
-      if (!isValid)
-        return;
-
-      String username = this.getUsernameText ();
-      String password = this.getPasswordText ();
-
-      GatekeeperSessionClient.getInstance (this.getContext ())
-                             .signIn (this.getContext (), username, password)
-                             .then (resolved (value -> loginFragmentListener_.onSignInComplete (this)))
-                             ._catch (onUiThread (rejected (reason -> showErrorMessage (reason.getLocalizedMessage ()))));
-    });
-
-    TextView title = (TextView)view.findViewById (R.id.title);
-    this.errorMessage_ = (TextView)view.findViewById (R.id.error_message);
-
-    // Initialize the view with data.
-    Bundle args = this.getArguments ();
-
-    if (args != null)
-    {
-      if (title != null)
-      {
-        // If the layout contains a title, then allow the title to be customized.
-        // Otherwise, we are not going to show the title of the application.
-        if (args.containsKey (ARG_TITLE))
-        {
-          title.setVisibility (View.VISIBLE);
-          title.setText (args.getString (ARG_TITLE));
-        } else
-        {
-          title.setVisibility (View.GONE);
-        }
-      }
-
-      if (args.containsKey (ARG_USERNAME))
-        this.username_.setText (args.getString (ARG_USERNAME));
-
-      if (args.containsKey (ARG_USERNAME_HINT))
-        this.username_.setHint (args.getString (ARG_USERNAME_HINT));
-
-      if (args.containsKey (ARG_PASSWORD))
-        this.password_.setText (args.getString (ARG_PASSWORD));
-
-      if (args.containsKey (ARG_PASSWORD_HINT))
-        this.password_.setHint (args.getString (ARG_PASSWORD_HINT));
-
-      if (args.containsKey (ARG_SIGN_IN_BUTTON_TEXT))
-        signInButton.setText (args.getString (ARG_SIGN_IN_BUTTON_TEXT));
-
-      if (args.containsKey (ARG_USERNAME_LABEL))
-        this.username_.setFloatingLabelText (args.getString (ARG_USERNAME_LABEL));
-
-      if (args.containsKey (ARG_PASSWORD_LABEL))
-        this.password_.setFloatingLabelText (args.getString (ARG_PASSWORD_LABEL));
-
-      if (args.containsKey (ARG_ERROR_MESSAGE))
-        showErrorMessage (args.getString (ARG_ERROR_MESSAGE));
-
-      TextView actionCreateNewAccount = (TextView)view.findViewById (R.id.action_create_account);
-
-      if (actionCreateNewAccount != null)
-      {
-        if (args.containsKey (ARG_CREATE_ACCOUNT_INTENT))
-        {
-          final Intent targetIntent = args.getParcelable (ARG_CREATE_ACCOUNT_INTENT);
-
-          actionCreateNewAccount.setVisibility (View.VISIBLE);
-          actionCreateNewAccount.setOnClickListener (v -> startNewAccountActivity (targetIntent));
-        }
-        else
-        {
-          actionCreateNewAccount.setVisibility (View.GONE);
-        }
-      }
-    }
-
-    return view;
-  }
-
-  public String getUsernameText ()
-  {
-    return this.username_.getText ().toString ();
-  }
-
-  public String getPasswordText ()
-  {
-    return this.password_.getText ().toString ();
-  }
 
   @Override
   public void onDetach ()
@@ -324,16 +197,10 @@ public class GatekeeperSignInFragment extends Fragment
    * Show an error message. This causes all views to be hidden except for the logo and
    * the error message. When this happens, the user must exit the parent activity.
    *
-   * @param errMsg
+   * @param message
    */
-  protected void showErrorMessage (String errMsg)
+  protected void showErrorMessage (String message)
   {
-    if (this.errorMessage_ == null)
-      return;
 
-    if (this.errorMessage_.getVisibility () != View.VISIBLE)
-      this.errorMessage_.setVisibility (View.VISIBLE);
-
-    this.errorMessage_.setText (errMsg);
   }
 }

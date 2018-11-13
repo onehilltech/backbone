@@ -2,10 +2,11 @@ package com.onehilltech.backbone.app;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.support.annotation.Nullable;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+
+import javax.annotation.Nullable;
 
 public class ActivityResultHandler
 {

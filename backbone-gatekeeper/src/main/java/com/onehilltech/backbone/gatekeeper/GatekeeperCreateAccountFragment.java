@@ -1,19 +1,12 @@
 package com.onehilltech.backbone.gatekeeper;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.text.InputType;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
 
 import com.onehilltech.backbone.gatekeeper.http.JsonAccount;
-import com.rengwuxian.materialedittext.MaterialEditText;
+
+import androidx.fragment.app.Fragment;
 
 import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
@@ -118,14 +111,6 @@ public class GatekeeperCreateAccountFragment extends Fragment
 
   private Listener listener_;
 
-  private MaterialEditText username_;
-
-  private MaterialEditText password_;
-
-  private MaterialEditText email_;
-
-  private boolean usernameIsEmail_ = false;
-
   public GatekeeperCreateAccountFragment ()
   {
     // Required empty public constructor
@@ -139,90 +124,6 @@ public class GatekeeperCreateAccountFragment extends Fragment
   }
 
   @Override
-  public View onCreateView (LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-  {
-    View view = inflater.inflate (R.layout.fragment_new_account, container, false);
-
-    TextView title = (TextView)view.findViewById (R.id.title);
-    this.username_ = (MaterialEditText)view.findViewById (R.id.username);
-    this.email_ = (MaterialEditText)view.findViewById (R.id.email);
-    this.password_ = (MaterialEditText)view.findViewById (R.id.password);
-
-    Button btnCreate = (Button)view.findViewById (R.id.button_create_account);
-    btnCreate.setOnClickListener (v -> this.createAccount ());
-
-    TextView signIn = (TextView)view.findViewById (R.id.action_sign_in);
-    signIn.setOnClickListener (v -> {
-      Activity activity = this.getActivity ();
-
-      Intent upIntent = activity.getIntent ().getParcelableExtra (GatekeeperCreateAccountActivity.EXTRA_UP_INTENT);
-      activity.startActivity (upIntent);
-      activity.finish ();
-    });
-
-    this.username_.addValidator (new NotEmptyValidator ());
-    this.password_.addValidator (new NotEmptyValidator ());
-    this.email_.addValidator (new NotEmptyValidator ());
-
-    Bundle args = this.getArguments ();
-
-    if (args != null)
-    {
-      if (args.containsKey (ARG_TITLE))
-      {
-        title.setText (args.getString (ARG_TITLE));
-        title.setVisibility (View.VISIBLE);
-      }
-      else
-      {
-        title.setVisibility (View.GONE);
-      }
-
-      if (args.containsKey (ARG_USERNAME))
-        this.username_.setText (args.getString (ARG_USERNAME));
-
-      if (args.containsKey (ARG_USERNAME_HINT))
-        this.username_.setHint (args.getString (ARG_USERNAME_HINT));
-
-      if (args.containsKey (ARG_PASSWORD))
-        this.password_.setText (args.getString (ARG_PASSWORD));
-
-      if (args.containsKey (ARG_PASSWORD_HINT))
-        this.password_.setHint (args.getString (ARG_PASSWORD_HINT));
-
-      if (args.containsKey (ARG_CREATE_BUTTON_TEXT))
-        btnCreate.setText (args.getString (ARG_CREATE_BUTTON_TEXT));
-
-      if (args.containsKey (ARG_USERNAME_LABEL))
-        this.username_.setFloatingLabelText (args.getString (ARG_USERNAME_LABEL));
-
-      if (args.containsKey (ARG_PASSWORD_LABEL))
-        this.password_.setFloatingLabelText (args.getString (ARG_PASSWORD_LABEL));
-
-      if (args.containsKey (ARG_USERNAME_IS_EMAIL))
-      {
-        // The username is an email address. We do not need to show the email address
-        // input field. We also need to update the input type for the username to that
-        // of an email.
-        this.usernameIsEmail_ = args.getBoolean (ARG_USERNAME_IS_EMAIL);
-
-        if (this.usernameIsEmail_)
-        {
-          this.username_.setInputType (InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-          this.email_.setVisibility (View.GONE);
-        }
-        else
-        {
-          this.username_.setInputType (InputType.TYPE_CLASS_TEXT);
-          this.email_.setVisibility (View.VISIBLE);
-        }
-      }
-    }
-
-    return view;
-  }
-
-  @Override
   public void onDetach ()
   {
     super.onDetach ();
@@ -230,54 +131,16 @@ public class GatekeeperCreateAccountFragment extends Fragment
     this.listener_ = null;
   }
 
-  public String getUsername ()
-  {
-    return this.username_.getText ().toString ();
-  }
-
-  public String getPassword ()
-  {
-    return this.password_.getText ().toString ();
-  }
-
-  public String getEmail ()
-  {
-    return this.usernameIsEmail_ ? this.getUsername () : this.email_.getText ().toString ();
-  }
-
   /**
    * Attempts to sign in or register the account specified by the signIn form. If
    * there are form errors (invalid email, missing fields, etc.), the errors are
    * presented and no actual signIn attempt is made.
    */
-  private void createAccount ()
+  protected void createAccount (String username, String password, String email)
   {
-    if (!this.validateInput ())
-      return;
-
-    String username = this.getUsername ();
-    String password = this.getPassword ();
-    String email = this.getEmail ();
-
     GatekeeperSessionClient.getInstance (this.getContext ())
                            .createAccount (this.getContext (), username, password, email, true)
                            .then (resolved (value -> this.listener_.onAccountCreated (this, value)))
                            ._catch (rejected (reason -> this.listener_.onError (this, reason)));
-  }
-
-  /**
-   * Validate the input on the forms.
-   *
-   * @return
-   */
-  private boolean validateInput ()
-  {
-    boolean isValid = this.username_.validate ();
-    isValid &= this.password_.validate ();
-
-    if (!this.usernameIsEmail_)
-      isValid &= this.email_.validate ();
-
-    return isValid;
   }
 }

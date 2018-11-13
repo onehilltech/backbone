@@ -3,9 +3,10 @@ package com.onehilltech.backbone.gatekeeper;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 
 import com.onehilltech.metadata.ManifestMetadata;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class GatekeeperSignInActivity extends AppCompatActivity
     implements GatekeeperSignInFragment.LoginFragmentListener

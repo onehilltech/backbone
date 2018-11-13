@@ -3,12 +3,13 @@ package com.onehilltech.backbone.gatekeeper;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 
 import com.onehilltech.backbone.gatekeeper.http.JsonAccount;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * Activity that allows the user to create a new account.

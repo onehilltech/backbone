@@ -18,7 +18,7 @@ buildscript {
 }
 
 dependencies {
-  compile 'com.onehilltech.backbone:backbone-dbflow:x.y.z'
+  implementation 'com.onehilltech.backbone:backbone-dbflow:x.y.z'
 }
 ```
 

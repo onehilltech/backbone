@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Loader;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -42,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import androidx.annotation.NonNull;
 import okhttp3.Cache;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;

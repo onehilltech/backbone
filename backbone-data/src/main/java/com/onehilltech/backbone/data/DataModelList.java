@@ -1,9 +1,9 @@
 package com.onehilltech.backbone.data;
 
-import android.support.annotation.NonNull;
-
 import java.util.ArrayList;
 import java.util.Collection;
+
+import androidx.annotation.NonNull;
 
 public class DataModelList <T extends DataModel> extends ArrayList <T>
 {

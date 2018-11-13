@@ -41,14 +41,18 @@ android {
 }
 
 dependencies {
-    compile "org.slf4j:slf4j-android:1.7.21"
+    implementation "org.slf4j:slf4j-android:1.7.21"
+    implementation 'com.onehilltech.promises:promises-jvm:0.7.0'
+    implementation 'com.onehilltech.promises:promises-android:0.7.0'
+    implementation 'com.squareup.retrofit2:retrofit:2.3.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.3.0'
 
-    compile project (path: ':backbone-gatekeeper')
+    implementation project (path: ':backbone-gatekeeper')
 
-    compile 'com.google.firebase:firebase-messaging:17.1.0'
+    implementation 'com.google.firebase:firebase-messaging:17.3.4'
 
-    androidTestCompile 'junit:junit:4.12'
-    androidTestCompile ('com.android.support.test:testing-support-lib:0.1') {
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation ('com.android.support.test:testing-support-lib:0.1') {
         exclude group: 'junit'
     }
 }
