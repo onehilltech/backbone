@@ -50,6 +50,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.onehilltech.promises.Promise.await;
 import static com.onehilltech.promises.Promise.resolved;
+import static com.onehilltech.promises.Promise.value;
 
 /**
  * The DataStore is an abstraction that manages different data objects. The DataStore has
@@ -368,7 +369,7 @@ public class DataStore
                     if (modelList == null)
                       modelList = new DataModelList<> ();
 
-                    return modelList;
+                    return value (modelList);
                   });
   }
 
@@ -443,7 +444,7 @@ public class DataStore
                     if (modelList == null)
                       modelList = new DataModelList<> ();
 
-                    return modelList;
+                    return value (modelList);
                   });
   }
 
@@ -599,7 +600,7 @@ public class DataStore
                     Object id = idField.get (model);
 
                     boolean result = await (endpoint.delete (id.toString ()));
-                    return result ? this.deleteFromDatabase (dataClass, id, model) : false;
+                    return result ? this.deleteFromDatabase (dataClass, id, model) : value (false);
                   });
   }
 
@@ -617,7 +618,7 @@ public class DataStore
     return Promise.resolve (null)
                   .then (nothing -> {
                     Field idField = dataClass.getField (FIELD_ID);
-                    return idField.get (model);
+                    return value (idField.get (model));
                   })
                   .then (id -> this.deleteFromDatabase (dataClass, id, model));
   }
@@ -697,7 +698,7 @@ public class DataStore
                       modelList.add (model);
                     }
 
-                    return modelList;
+                    return value (modelList);
                   });
   }
 
@@ -724,7 +725,7 @@ public class DataStore
                       modelList.add (model);
                     }
 
-                    return modelList;
+                    return value (modelList);
                   });
   }
 
@@ -752,7 +753,7 @@ public class DataStore
                     if (dataModel != null)
                       dataModel.assignTo (this);
 
-                    return dataModel;
+                    return value (dataModel);
                   });
   }
 
@@ -773,7 +774,7 @@ public class DataStore
 
                     model.assignTo (this);
 
-                    return model;
+                    return value (model);
                   });
   }
 
@@ -818,7 +819,7 @@ public class DataStore
                       conditions.add (Operator.op (NameAlias.of (param.getKey ())).eq (param.getValue ()));
 
                     Queriable queriable = conditions.isEmpty () ? from : from.where (conditions.toArray (new SQLOperator[0]));
-                    return queriable.query ();
+                    return value (queriable.query ());
                   });
   }
 
@@ -884,7 +885,7 @@ public class DataStore
                     // Set the data store for the model.
                     model.assignTo (this);
 
-                    return model;
+                    return value (model);
                   });
   }
 
@@ -912,7 +913,7 @@ public class DataStore
                     modelAdapter.save (model);
                     model.assignTo (this);
 
-                    return model;
+                    return value (model);
                   });
   }
 
