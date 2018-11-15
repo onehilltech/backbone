@@ -48,7 +48,7 @@ import okhttp3.Request;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-import static com.onehilltech.promises.Promise.rejected;
+import static com.onehilltech.promises.Promise.await;
 import static com.onehilltech.promises.Promise.resolved;
 
 /**
@@ -332,16 +332,17 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> create (Class <T> dataClass, T value)
   {
-    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+                    Resource resource = await (endpoint.create (value));
 
-    return endpoint.create (value)
-                   .then (resource -> {
-                     // Get the new value, and associate it with this data store.
-                     T newValue = resource.get (endpoint.getName ());
+                    // Get the new value, and associate it with this data store.
+                    T newValue = resource.get (endpoint.getName ());
 
-                     // Insert the created value in our database.
-                     return this.push (dataClass, newValue);
-                   });
+                    // Insert the created value in our database.
+                    return this.push (dataClass, newValue);
+                  });
   }
 
   /**
@@ -353,18 +354,22 @@ public class DataStore
    */
   public <T extends DataModel> Promise <DataModelList <T>> get (Class <T> dataClass)
   {
-    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
-    String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    ResourceEndpoint<T> endpoint = this.getEndpoint (dataClass);
+                    ModelAdapter<T> modelAdapter = this.getModelAdapter (dataClass);
+                    String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
 
-    return endpoint.get ().then (r -> this.insertIntoDatabase (r, dataClass).then (result -> {
-      DataModelList <T> modelList = r.get (tableName);
+                    Resource r = await (endpoint.get ());
+                    await (this.insertIntoDatabase (r, dataClass));
 
-      if (modelList == null)
-        modelList = new DataModelList<> ();
+                    DataModelList<T> modelList = r.get (tableName);
 
-      return Promise.resolve (modelList);
-    }));
+                    if (modelList == null)
+                      modelList = new DataModelList<> ();
+
+                    return modelList;
+                  });
   }
 
   /**
@@ -377,15 +382,16 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> get (Class <T> dataClass, Object id)
   {
-    this.getModelAdapter (dataClass);
-    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    this.getModelAdapter (dataClass);
+                    ResourceEndpoint<T> endpoint = this.getEndpoint (dataClass);
 
-    return endpoint.get (id.toString ())
-                   .then (r -> this.insertIntoDatabase (r, dataClass)
-                                   .then (result -> {
-                                     T model = r.get (endpoint.getName ());
-                                     return Promise.resolve (model);
-                                   }));
+                    Resource r = await (endpoint.get (id.toString ()));
+                    await (this.insertIntoDatabase (r, dataClass));
+
+                    return r.get (endpoint.getName ());
+                  });
   }
 
   /**
@@ -398,15 +404,16 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> get (Class <T> dataClass, Object id, HashMap <String, Object> options)
   {
-    this.getModelAdapter (dataClass);
-    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    return Promise.resolve (null)
+                  .then (result -> {
+                    this.getModelAdapter (dataClass);
+                    ResourceEndpoint<T> endpoint = this.getEndpoint (dataClass);
 
-    return endpoint.get (id.toString (), options)
-                   .then (r -> this.insertIntoDatabase (r, dataClass)
-                                   .then (result -> {
-                                     T model = r.get (endpoint.getName ());
-                                     return Promise.resolve (model);
-                                   }));
+                    Resource r = await (endpoint.get (id.toString (), options));
+                    await (this.insertIntoDatabase (r, dataClass));
+
+                    return r.get (endpoint.getName ());
+                  });
   }
 
 
@@ -420,20 +427,24 @@ public class DataStore
    */
   public <T extends DataModel> Promise <DataModelList <T>> query (Class <T> dataClass, Map <String, Object> query)
   {
-    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
-    String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    ResourceEndpoint<T> endpoint = this.getEndpoint (dataClass);
+                    ModelAdapter<T> modelAdapter = this.getModelAdapter (dataClass);
+                    String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
 
-    // Insert the resources into the database. We need to account for the
-    // resource containing data for other model classes.
-    return endpoint.get (query).then (r -> this.insertIntoDatabase (r, dataClass).then (result -> {
-      DataModelList<T> modelList = r.get (tableName);
+                    // Insert the resources into the database. We need to account for the
+                    // resource containing data for other model classes.
+                    Resource r = await (endpoint.get (query));
+                    await (this.insertIntoDatabase (r, dataClass));
 
-      if (modelList == null)
-        modelList = new DataModelList<> ();
+                    DataModelList<T> modelList = r.get (tableName);
 
-      return Promise.resolve (modelList);
-    }));
+                    if (modelList == null)
+                      modelList = new DataModelList<> ();
+
+                    return modelList;
+                  });
   }
 
   /**
@@ -533,23 +544,18 @@ public class DataStore
    */
   public <T extends DataModel> Promise <FlowCursor> queryCursor (Class <T> dataClass, Map <String, Object> query)
   {
-    return new Promise<> (settlement -> {
-      ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-      ModelAdapter modelAdapter = this.getModelAdapter (dataClass);
-      String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    ResourceEndpoint<T> endpoint = this.getEndpoint (dataClass);
+                    ModelAdapter modelAdapter = this.getModelAdapter (dataClass);
+                    String tableName = TableUtils.getRawTableName (modelAdapter.getTableName ());
 
-      endpoint.get (query)
-              .then (r -> {
-                DataModelList <T> list = r.get (tableName);
-                return list != null ? this.insertIntoDatabase (dataClass, list) : Promise.resolve (null);
-              })
-              .then (resolved (result ->
-                this.selectCursor (dataClass, query)
-                    .then (resolved (settlement::resolve))
-                    ._catch (rejected (settlement::reject))
-              ))
-              ._catch (rejected (settlement::reject));
-    });
+                    Resource r = await (endpoint.get (query));
+                    DataModelList<T> list = r.get (tableName);
+
+                    return list != null ? this.insertIntoDatabase (dataClass, list) : null;
+                  })
+                  .then (resolved (ignore -> this.selectCursor (dataClass, query)));
   }
 
   /**
@@ -561,36 +567,21 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> update (Class <T> dataClass, T model)
   {
-    return new Promise<> (settlement -> {
-      try
-      {
-        ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    ResourceEndpoint<T> endpoint = this.getEndpoint (dataClass);
+                    Field idField = dataClass.getField (FIELD_ID);
+                    Object id = idField.get (model);
 
-        Field idField = dataClass.getField (FIELD_ID);
-        Object id = idField.get (model);
+                    // Perform the update and wait for completion.
+                    Resource resource = await (endpoint.update (id.toString (), model));
 
-        endpoint.update (id.toString (), model)
-                .then (resolved (resource -> {
-                  // Get the new value and insert it to the database. We do this just in
-                  // case the update value is not the same as the value we receive from
-                  // the service.
-                  T newValue = resource.get (endpoint.getName ());
-
-                  this.push (dataClass, newValue)
-                      .then (resolved (settlement::resolve))
-                      ._catch (rejected (settlement::reject));
-                }))
-                ._catch (rejected (settlement::reject));
-      }
-      catch (IllegalAccessException e)
-      {
-        throw new AssertionError (e);
-      }
-      catch (NoSuchFieldException e)
-      {
-        throw new AssertionError (e);
-      }
-    });
+                    // Get the new value and insert it to the database. We do this just in
+                    // case the update value is not the same as the value we receive from
+                    // the service.
+                    T newValue = resource.get (endpoint.getName ());
+                    return this.push (dataClass, newValue);
+                  });
   }
 
   /**
@@ -601,23 +592,15 @@ public class DataStore
    */
   public <T extends DataModel> Promise <Boolean> delete (Class <T> dataClass, T model)
   {
-    return new Promise<> (settlement -> {
-      try
-      {
-        ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
-        Field idField = dataClass.getField (FIELD_ID);
-        Object id = idField.get (model);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    ResourceEndpoint <T> endpoint = this.getEndpoint (dataClass);
+                    Field idField = dataClass.getField (FIELD_ID);
+                    Object id = idField.get (model);
 
-        endpoint.delete (id.toString ())
-                .then (result -> result ? this.deleteFromDatabase (dataClass, id, model) : Promise.resolve (false))
-                .then (resolved (settlement::resolve))
-                ._catch (rejected (settlement::reject));
-      }
-      catch (Exception e)
-      {
-        settlement.reject (new AssertionError (e));
-      }
-    });
+                    boolean result = await (endpoint.delete (id.toString ()));
+                    return result ? this.deleteFromDatabase (dataClass, id, model) : false;
+                  });
   }
 
   /**
@@ -631,19 +614,12 @@ public class DataStore
    * @throws IllegalAccessException
    */
   public <T extends DataModel> Promise <Boolean> remove (Class <T> dataClass, T model) {
-    return new Promise<> (settlement -> {
-      try
-      {
-        Field idField = dataClass.getField (FIELD_ID);
-        Object id = idField.get (model);
-
-        settlement.resolve (id);
-      }
-      catch (Exception e)
-      {
-        settlement.reject (e);
-      }
-    }).then (id -> this.deleteFromDatabase (dataClass, id, model));
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    Field idField = dataClass.getField (FIELD_ID);
+                    return idField.get (model);
+                  })
+                  .then (id -> this.deleteFromDatabase (dataClass, id, model));
   }
 
   /**
@@ -707,25 +683,22 @@ public class DataStore
    */
   public <T extends DataModel> Promise <DataModelList <T>> peek (Class <T> dataClass)
   {
-    return new Promise<> (settlement -> {
-      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    ModelAdapter<T> modelAdapter = this.getModelAdapter (dataClass);
+                    FlowCursor cursor = await (this.peekCursor (dataClass));
+                    DataModelList<T> modelList = new DataModelList<> (cursor.getCount ());
 
-      this.peekCursor (dataClass)
-          .then (resolved (cursor -> {
-            DataModelList <T> modelList = new DataModelList<> (cursor.getCount ());
+                    while (cursor.moveToNext ())
+                    {
+                      T model = modelAdapter.loadFromCursor (cursor);
+                      model.assignTo (this);
 
-            while (cursor.moveToNext ())
-            {
-              T model = modelAdapter.loadFromCursor (cursor);
-              model.assignTo (this);
+                      modelList.add (model);
+                    }
 
-              modelList.add (model);
-            }
-
-            settlement.resolve (modelList);
-          }))
-          ._catch (rejected (settlement::reject));
-    });
+                    return modelList;
+                  });
   }
 
   /**
@@ -737,25 +710,22 @@ public class DataStore
    */
   public <T extends DataModel> Promise <DataModelList <T>> select (Class <T> dataClass, Map <String, Object> query)
   {
-    return new Promise<> (settlement -> {
-      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+                    FlowCursor cursor = await (this.selectCursor (dataClass, query));
+                    DataModelList<T> modelList = new DataModelList<> (cursor.getCount ());
 
-      this.selectCursor (dataClass, query)
-          .then (resolved (cursor -> {
-            DataModelList<T> modelList = new DataModelList<> (cursor.getCount ());
+                    while (cursor.moveToNext ())
+                    {
+                      T model = modelAdapter.loadFromCursor (cursor);
+                      model.assignTo (this);
 
-            while (cursor.moveToNext ())
-            {
-              T model = modelAdapter.loadFromCursor (cursor);
-              model.assignTo (this);
+                      modelList.add (model);
+                    }
 
-              modelList.add (model);
-            }
-
-            settlement.resolve (modelList);
-          }))
-          ._catch (rejected (settlement::reject));
-    });
+                    return modelList;
+                  });
   }
 
   /**
@@ -769,20 +739,21 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> peek (Class <T> dataClass, Object id)
   {
-    return new Promise<> (settlement -> {
-      this.getModelAdapter (dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    this.getModelAdapter (dataClass);
 
-      T dataModel =
-          SQLite.select ()
-                .from (dataClass)
-                .where (Operator.op (_ID).eq (id))
-                .querySingle ();
+                    T dataModel =
+                        SQLite.select ()
+                              .from (dataClass)
+                              .where (Operator.op (_ID).eq (id))
+                              .querySingle ();
 
-      if (dataModel != null)
-        dataModel.assignTo (this);
+                    if (dataModel != null)
+                      dataModel.assignTo (this);
 
-      settlement.resolve (dataModel);
-    });
+                    return dataModel;
+                  });
   }
 
   /**
@@ -794,15 +765,16 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> load (T model)
   {
-    return new Promise<> (settlement -> {
-      @SuppressWarnings ("unchecked")
-      ModelAdapter <T> modelAdapter = (ModelAdapter <T>)this.getModelAdapter (model.getClass ());
-      modelAdapter.load (model);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    @SuppressWarnings("unchecked")
+                    ModelAdapter<T> modelAdapter = (ModelAdapter<T>) this.getModelAdapter (model.getClass ());
+                    modelAdapter.load (model);
 
-      model.assignTo (this);
+                    model.assignTo (this);
 
-      settlement.resolve (model);
-    });
+                    return model;
+                  });
   }
 
 
@@ -834,21 +806,20 @@ public class DataStore
    */
   public <T extends DataModel> Promise <FlowCursor> selectCursor (Class <T> dataClass, Map <String, Object> params)
   {
-    return new Promise<> (settlement -> {
-      this.getModelAdapter (dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    this.getModelAdapter (dataClass);
 
-      From<?> from = SQLite.select ().from (dataClass);
+                    From<?> from = SQLite.select ().from (dataClass);
 
-      ArrayList <SQLOperator> conditions = new ArrayList<> ();
+                    ArrayList<SQLOperator> conditions = new ArrayList<> ();
 
-      for (Map.Entry <String, Object> param: params.entrySet ())
-        conditions.add (Operator.op (NameAlias.of (param.getKey ())).eq (param.getValue ()));
+                    for (Map.Entry<String, Object> param : params.entrySet ())
+                      conditions.add (Operator.op (NameAlias.of (param.getKey ())).eq (param.getValue ()));
 
-      Queriable queriable = conditions.isEmpty () ? from : from.where (conditions.toArray (new SQLOperator[0]));
-      FlowCursor cursor = queriable.query ();
-
-      settlement.resolve (cursor);
-    });
+                    Queriable queriable = conditions.isEmpty () ? from : from.where (conditions.toArray (new SQLOperator[0]));
+                    return queriable.query ();
+                  });
   }
 
   /**
@@ -902,18 +873,19 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> push (Class <T> dataClass, T model)
   {
-    return new Promise<> (settlement -> {
-      LOG.info ("Pushing data model onto the database [class={}]", dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    LOG.info ("Pushing data model onto the database [class={}]", dataClass);
 
-      // Save the model to our local database.
-      ModelAdapter <T> modelAdapter = FlowManager.getModelAdapter (dataClass);
-      modelAdapter.save (model);
+                    // Save the model to our local database.
+                    ModelAdapter <T> modelAdapter = FlowManager.getModelAdapter (dataClass);
+                    modelAdapter.save (model);
 
-      // Set the data store for the model.
-      model.assignTo (this);
+                    // Set the data store for the model.
+                    model.assignTo (this);
 
-      settlement.resolve (model);
-    });
+                    return model;
+                  });
   }
 
   /**
@@ -925,22 +897,23 @@ public class DataStore
    */
   public <T extends DataModel> Promise <T> push (Class <T> dataClass, Map <String, String> data)
   {
-    return new Promise<> (settlement -> {
-      LOG.info ("Pushing data onto the database [class={}]", dataClass);
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    LOG.info ("Pushing data onto the database [class={}]", dataClass);
 
-      // Locate the model adapter.
-      ModelAdapter <T> modelAdapter = this.getModelAdapter (dataClass);
+                    // Locate the model adapter.
+                    ModelAdapter<T> modelAdapter = this.getModelAdapter (dataClass);
 
-      // Convert the data map into a model.
-      JsonObject json = (JsonObject)this.gson_.toJsonTree (data);
-      T model = this.gson_.fromJson (json, modelAdapter.getModelClass ());
+                    // Convert the data map into a model.
+                    JsonObject json = (JsonObject) this.gson_.toJsonTree (data);
+                    T model = this.gson_.fromJson (json, modelAdapter.getModelClass ());
 
-      // Save the model to our local database.
-      modelAdapter.save (model);
-      model.assignTo (this);
+                    // Save the model to our local database.
+                    modelAdapter.save (model);
+                    model.assignTo (this);
 
-      settlement.resolve (model);
-    });
+                    return model;
+                  });
   }
 
   /**

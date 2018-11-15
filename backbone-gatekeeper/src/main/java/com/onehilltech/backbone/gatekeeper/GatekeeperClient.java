@@ -39,7 +39,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.Body;
 import retrofit2.http.POST;
 
-import static com.onehilltech.promises.Promise.rejected;
+import static com.onehilltech.promises.Promise.await;
 import static com.onehilltech.promises.Promise.resolved;
 
 /**
@@ -216,17 +216,17 @@ public class GatekeeperClient
    */
   public Promise<Resource> createAccount (String username, String password, String email)
   {
-    return new Promise<> ("gatekeeper:createAccount", settlement -> {
-      JsonAccount account = new JsonAccount ();
-      account.username = username;
-      account.password = password;
-      account.email = email;
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    JsonAccount account = new JsonAccount ();
+                    account.username = username;
+                    account.password = password;
+                    account.email = email;
 
-      this.ensureAuthenticated ()
-          .then (result -> this.accountEndpoint_.create (account))
-          .then (resolved (settlement::resolve))
-          ._catch (rejected (settlement::reject));
-    });
+                    await (this.ensureAuthenticated ());
+
+                    return this.accountEndpoint_.create (account);
+                  });
   }
 
   /**
@@ -239,44 +239,21 @@ public class GatekeeperClient
    */
   public Promise <Resource> createAccount (String username, String password, String email, boolean autoSignIn)
   {
-    return new Promise<> ("gatekeeper:createAccount", settlement -> {
-      // Make a call to create the account.
-      JsonAccount account = new JsonAccount ();
-      account.username = username;
-      account.password = password;
-      account.email = email;
+    return Promise.resolve (null)
+                  .then (nothing -> {
+                    // Make a call to create the account.
+                    JsonAccount account = new JsonAccount ();
+                    account.username = username;
+                    account.password = password;
+                    account.email = email;
 
-      HashMap<String, Object> options = new HashMap<> ();
-      options.put ("login", autoSignIn);
+                    HashMap<String, Object> options = new HashMap<> ();
+                    options.put ("login", autoSignIn);
 
-      this.ensureAuthenticated ()
-          .then (result -> this.accountEndpoint_.create (account, options))
-          .then (resolved (settlement::resolve))
-          ._catch (rejected (settlement::reject));
+                    await (this.ensureAuthenticated ());
 
-      /*
-      this.client_.getClientToken ()
-                  .then (token -> {
-                    // Use the client token to create a new account. We are going to login
-                    // with the newly created account.
-                    this.clientToken_ = ClientToken.fromToken (this.client_.getClientId (), token);
-                    FlowManager.getModelAdapter (ClientToken.class).save (this.clientToken_);
-
-
-
-                    return this.getCreateAccountEndpoint ().create (account, options);
-                  })
-                  .then (resolved (r -> {
-                    // Complete the sign in process.
-                    JsonAccount account = r.get ("account");
-                    JsonBearerToken userToken = r.get ("token");
-
-                    this.completeSignIn (username, userToken)
-                        .then (resolved (value -> settlement.resolve (account)))
-                        ._catch (rejected (settlement::reject));
-                  }))
-                  ._catch (rejected (settlement::reject))*/
-    });
+                    return this.accountEndpoint_.create (account, options);
+                  });
   }
 
   /**
