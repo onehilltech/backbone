@@ -55,7 +55,7 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
    */
   protected Promise <Void> signIn (String username, String password, boolean savePassword, Bundle userData)
   {
-    LOG.info ("Signing in the user");
+    LOG.info ("Signing the user into their account.");
 
     return this.session_.signIn (this, username, password)
                         .then (resolved (result -> this.completeSignIn (username, password, savePassword, userData)));
@@ -86,6 +86,8 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
    */
   protected Promise <Void> signUp (String username, String password, String email, boolean savePassword, Bundle userData)
   {
+    LOG.info ("Signing up the user for a new account");
+
     return this.session_.createAccount (this, username, password, email, true)
                         .then (resolved (account -> this.completeSignIn (username, password, savePassword, userData)));
   }
