@@ -391,7 +391,7 @@ public class DataStore
                     Resource r = await (endpoint.get (id.toString ()));
                     await (this.insertIntoDatabase (r, dataClass));
 
-                    return r.get (endpoint.getName ());
+                    return value (r.get (endpoint.getName ()));
                   });
   }
 
@@ -413,7 +413,7 @@ public class DataStore
                     Resource r = await (endpoint.get (id.toString (), options));
                     await (this.insertIntoDatabase (r, dataClass));
 
-                    return r.get (endpoint.getName ());
+                    return value (r.get (endpoint.getName ()));
                   });
   }
 
