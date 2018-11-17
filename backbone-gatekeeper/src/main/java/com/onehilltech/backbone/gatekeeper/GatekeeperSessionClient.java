@@ -180,6 +180,8 @@ public class GatekeeperSessionClient
 
   public Promise <JsonAccount> createAccount (Context context, String username, String password, String email, boolean autoSignIn)
   {
+    this.logger_.info ("Creating user account for {}", username);
+
     return this.client_.createAccount (username, password, email, autoSignIn)
                        .then (r -> new Promise<JsonAccount> (settlement -> {
                          // Complete the sign in process.
@@ -200,6 +202,8 @@ public class GatekeeperSessionClient
 
   private void initUserToken (Context context)
   {
+    this.logger_.info ("Initializing the session token");
+
     String username = GatekeeperSession.getCurrent (context).getUsername ();
 
     if (username != null)
@@ -334,6 +338,8 @@ public class GatekeeperSessionClient
    */
   public boolean ensureSignedIn (Activity activity, Intent signInIntent)
   {
+    this.logger_.info ("Ensuring the user is signed in");
+
     if (this.isSignedIn ())
       return true;
 
@@ -360,6 +366,8 @@ public class GatekeeperSessionClient
    */
   public void forceSignIn (Activity activity, Intent signInIntent)
   {
+    this.logger_.info ("Forcing the user to sign in");
+
     // Force the user to sign out.
     this.completeSignOut (activity);
 
@@ -394,6 +402,8 @@ public class GatekeeperSessionClient
    */
   public boolean isSignedIn ()
   {
+    this.logger_.info ("Checking if the current user is signed in.");
+
     return this.userToken_ != null;
   }
 
@@ -404,6 +414,8 @@ public class GatekeeperSessionClient
   {
     if (this.userToken_ == null)
       return;
+
+    this.logger_.info ("Completing the sign out process");
 
     // Delete the current session information.
     this.session_.edit ().delete ();
@@ -491,6 +503,8 @@ public class GatekeeperSessionClient
 
   private void writeAccountToSession (Account account)
   {
+    this.logger_.info ("Saving the users account to the session.");
+
     this.session_.edit ()
                  .setUsername (account.username)
                  .setUserId (account._id.toString ())
@@ -509,6 +523,8 @@ public class GatekeeperSessionClient
   {
     if (this.userToken_ == null)
       return Promise.resolve (true);
+
+    this.logger_.info ("Signing out the current user.");
 
     return new Promise<> ("gatekeeper:signOut", settlement -> {
       this.logger_.info ("Signing out current user");
@@ -556,6 +572,8 @@ public class GatekeeperSessionClient
    */
   public Promise <Boolean> changePassword (String currentPassword, String newPassword)
   {
+    this.logger_.info ("Changing the user's password.");
+
     return new Promise<> ("gatekeeper:changePassword", settlement -> {
       JsonChangePassword change = new JsonChangePassword ();
       change.currentPassword = currentPassword;
@@ -595,6 +613,8 @@ public class GatekeeperSessionClient
    */
   private Promise<JsonBearerToken> getUserToken (String username, String password)
   {
+    this.logger_.info ("Getting an access token for the user.");
+
     JsonPassword grant = new JsonPassword ();
     grant.username = username;
     grant.password = password;
