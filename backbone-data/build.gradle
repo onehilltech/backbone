@@ -44,8 +44,8 @@ dependencies {
     api project (path: ':backbone-dbflow')
     api project (path: ':backbone-android-objectid')
 
-    api 'com.onehilltech.promises:promises-jvm:0.10.0'
-    api 'com.onehilltech.promises:promises-android:0.10.0'
+    api 'com.onehilltech.promises:promises-jvm:0.10.1'
+    api 'com.onehilltech.promises:promises-android:0.10.1'
 
     api 'com.squareup.retrofit2:retrofit:2.3.0'
     api 'com.squareup.retrofit2:converter-gson:2.3.0'
