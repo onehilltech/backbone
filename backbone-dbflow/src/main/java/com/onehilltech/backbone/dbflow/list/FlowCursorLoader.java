@@ -4,6 +4,7 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Handler;
 
 import com.raizlabs.android.dbflow.runtime.FlowContentObserver;
 import com.raizlabs.android.dbflow.sql.language.SQLOperator;
@@ -33,7 +34,7 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
   /// Cursor for the loader.
   private Cursor mCursor;
 
-  private final ForceLoadContentObserver mObserver = new ForceLoadContentObserver ();
+  private final ForceLoadContentObserver mObserver;
 
   private boolean mListening = false;
 
@@ -47,6 +48,7 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
     super (context);
 
     this.mQueriable = queriable;
+    this.mObserver = new ForceLoadContentObserver (context.getPackageName ());
   }
 
   @Override
@@ -170,6 +172,16 @@ public class FlowCursorLoader extends AsyncTaskLoader<Cursor>
       implements FlowContentObserver.OnModelStateChangedListener
   {
     private boolean endOfTransaction = false;
+
+    public ForceLoadContentObserver (@NonNull String contentAuthority)
+    {
+      super (contentAuthority);
+    }
+
+    public ForceLoadContentObserver (@Nullable Handler handler, @NonNull String contentAuthority)
+    {
+      super (handler, contentAuthority);
+    }
 
     @Override
     public boolean deliverSelfNotifications ()

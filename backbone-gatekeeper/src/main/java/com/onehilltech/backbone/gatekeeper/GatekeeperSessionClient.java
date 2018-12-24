@@ -86,7 +86,7 @@ public class GatekeeperSessionClient
 
   private final LinkedList <Listener> listeners_ = new LinkedList<> ();
 
-  private final FlowContentObserver userTokenObserver_ = new FlowContentObserver ();
+  private final FlowContentObserver userTokenObserver_;
 
   private final GatekeeperClient client_;
 
@@ -102,7 +102,7 @@ public class GatekeeperSessionClient
 
   private final Converter<ResponseBody, Resource> resourceConverter_;
 
-  private static final ArrayList <String> REAUTHENTICATE_ERROR_CODES = new ArrayList<> ();
+  private static final ArrayList <String> AUTHENTICATE_ERROR_CODES = new ArrayList<> ();
 
   private Gson gson_;
 
@@ -118,6 +118,7 @@ public class GatekeeperSessionClient
     this.packageName_ = context.getPackageName ();
     this.client_ = new GatekeeperClient.Builder (context).build ();
     this.session_ = GatekeeperSession.getCurrent (context);
+    this.userTokenObserver_ = new FlowContentObserver (context.getPackageName ());
 
     // Build a new HttpClient for the user session. This client is responsible for
     // adding the authentication header to each request.
@@ -770,7 +771,7 @@ public class GatekeeperSessionClient
                         .body (responseBody)
                         .build();
 
-        if (REAUTHENTICATE_ERROR_CODES.contains (error.getCode ()))
+        if (AUTHENTICATE_ERROR_CODES.contains (error.getCode ()))
         {
           // Notify the client to authenticate. This is optional. If the client
           // does not authenticate, then all calls will continue to fail.
@@ -803,12 +804,12 @@ public class GatekeeperSessionClient
 
   static
   {
-    REAUTHENTICATE_ERROR_CODES.add ("unknown_token");
-    REAUTHENTICATE_ERROR_CODES.add ("invalid_token");
-    REAUTHENTICATE_ERROR_CODES.add ("token_disabled");
-    REAUTHENTICATE_ERROR_CODES.add ("unknown_client");
-    REAUTHENTICATE_ERROR_CODES.add ("client_disabled");
-    REAUTHENTICATE_ERROR_CODES.add ("unknown_account");
-    REAUTHENTICATE_ERROR_CODES.add ("account_disabled");
+    AUTHENTICATE_ERROR_CODES.add ("unknown_token");
+    AUTHENTICATE_ERROR_CODES.add ("invalid_token");
+    AUTHENTICATE_ERROR_CODES.add ("token_disabled");
+    AUTHENTICATE_ERROR_CODES.add ("unknown_client");
+    AUTHENTICATE_ERROR_CODES.add ("client_disabled");
+    AUTHENTICATE_ERROR_CODES.add ("unknown_account");
+    AUTHENTICATE_ERROR_CODES.add ("account_disabled");
   }
 }

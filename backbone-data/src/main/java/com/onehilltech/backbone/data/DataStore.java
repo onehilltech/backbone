@@ -85,10 +85,19 @@ public class DataStore
 
     private String typeDiscriminator_ = "type";
 
+    private String contentAuthority_;
+
     public Builder (Context context, Class <?> databaseClass)
     {
       this.context_ = context;
       this.databaseClass_ = databaseClass;
+      this.contentAuthority_ = context.getPackageName ();
+    }
+
+    public Builder setContentAuthority (String contentAuthority)
+    {
+      this.contentAuthority_ = contentAuthority;
+      return this;
     }
 
     public Builder setBaseUrl (String baseUrl)
@@ -173,6 +182,8 @@ public class DataStore
 
   private String typeDiscriminator_;
 
+  private String contentAuthority_;
+
   private final Logger LOG = LoggerFactory.getLogger (DataStore.class);
 
   public interface OnModelLoaded <T>
@@ -186,6 +197,7 @@ public class DataStore
     this.typeDiscriminator_ = builder.typeDiscriminator_;
     this.databaseDefinition_ = FlowManager.getDatabase (this.databaseClass_);
     this.dependencyGraph_ = new DependencyGraph.Builder (this.databaseDefinition_).build ();
+    this.contentAuthority_ = builder.contentAuthority_;
 
     // We need to create our own HttpClient, but we need to use the provided on
     // as the foundation. This allows us to merge the client's configuration with
@@ -646,7 +658,8 @@ public class DataStore
       // Unset the data store for the model.
       model.assignTo (null);
 
-      Uri changeUri = SqlUtils.getNotificationUri (dataClass,
+      Uri changeUri = SqlUtils.getNotificationUri (this.contentAuthority_,
+                                                   dataClass,
                                                    BaseModel.Action.DELETE,
                                                    Arrays.asList (condition));
 

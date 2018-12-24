@@ -5,6 +5,7 @@ import android.content.AsyncTaskLoader;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Handler;
 
 import com.raizlabs.android.dbflow.runtime.FlowContentObserver;
 import com.raizlabs.android.dbflow.sql.queriable.Queriable;
@@ -13,6 +14,9 @@ import com.raizlabs.android.dbflow.structure.Model;
 import com.raizlabs.android.dbflow.structure.database.FlowCursor;
 
 import java.util.HashSet;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Utility class to be added to DBFlow.
@@ -41,6 +45,16 @@ public abstract class FlowSingleModelLoader <TModel>
 
   private class ForceLoadContentObserver extends FlowContentObserver
   {
+    public ForceLoadContentObserver (@NonNull String contentAuthority)
+    {
+      super (contentAuthority);
+    }
+
+    public ForceLoadContentObserver (@Nullable Handler handler, @NonNull String contentAuthority)
+    {
+      super (handler, contentAuthority);
+    }
+
     @Override
     public boolean deliverSelfNotifications ()
     {
@@ -64,7 +78,7 @@ public abstract class FlowSingleModelLoader <TModel>
     }
   }
 
-  protected final FlowContentObserver mObserver = new ForceLoadContentObserver ();
+  protected final FlowContentObserver mObserver;
 
   protected FlowSingleModelLoader (Context context,
                                    Class<TModel> model,
@@ -76,6 +90,7 @@ public abstract class FlowSingleModelLoader <TModel>
     this.mQueriable = queriable;
     this.mModel = model;
     this.mAdapter = adapter;
+    this.mObserver = new ForceLoadContentObserver (context.getPackageName ());
   }
 
   /* Runs on a worker thread */
