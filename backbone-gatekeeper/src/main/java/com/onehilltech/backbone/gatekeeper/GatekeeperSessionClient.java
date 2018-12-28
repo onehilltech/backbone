@@ -10,6 +10,7 @@ import android.os.Message;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.typeadapters.RuntimeTypeAdapterFactory;
+import com.onehilltech.backbone.data.DataStore;
 import com.onehilltech.backbone.data.HttpError;
 import com.onehilltech.backbone.data.Resource;
 import com.onehilltech.backbone.data.ResourceSerializer;
@@ -54,7 +55,9 @@ import static com.onehilltech.promises.Promise.rejected;
 import static com.onehilltech.promises.Promise.resolved;
 
 /**
- * Gatekeeper client bound to a user session.
+ * A single session client.
+ *
+ * This client only supports one user being logged in at a time.
  */
 public class GatekeeperSessionClient
 {
@@ -98,7 +101,7 @@ public class GatekeeperSessionClient
 
   private String userAgent_;
 
-  private final Logger logger_ = LoggerFactory.getLogger (GatekeeperSessionClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger (GatekeeperSessionClient.class);
 
   private final Converter<ResponseBody, Resource> resourceConverter_;
 
@@ -107,6 +110,8 @@ public class GatekeeperSessionClient
   private Gson gson_;
 
   private final String packageName_;
+
+  private DataStore store_;
 
   /**
    * Initializing constructor.
@@ -119,6 +124,7 @@ public class GatekeeperSessionClient
     this.client_ = new GatekeeperClient.Builder (context).build ();
     this.session_ = GatekeeperSession.getCurrent (context);
     this.userTokenObserver_ = new FlowContentObserver (context.getPackageName ());
+    this.store_ = GatekeeperStore.getInstance (context);
 
     // Build a new HttpClient for the user session. This client is responsible for
     // adding the authentication header to each request.
@@ -181,10 +187,10 @@ public class GatekeeperSessionClient
 
   public Promise <JsonAccount> createAccount (Context context, String username, String password, String email, boolean autoSignIn)
   {
-    this.logger_.info ("Creating user account for {}", username);
+    LOG.info ("Creating user account for {}", username);
 
     return this.client_.createAccount (username, password, email, autoSignIn)
-                       .then (r -> new Promise<JsonAccount> (settlement -> {
+                       .then (r -> new Promise<> (settlement -> {
                          // Complete the sign in process.
                          JsonAccount account = r.get ("account");
 
@@ -203,7 +209,7 @@ public class GatekeeperSessionClient
 
   private void initUserToken (Context context)
   {
-    this.logger_.info ("Initializing the session token");
+    LOG.info ("Initializing the session token");
 
     String username = GatekeeperSession.getCurrent (context).getUsername ();
 
@@ -220,44 +226,9 @@ public class GatekeeperSessionClient
     this.userTokenObserver_.registerForContentChanges (context, UserToken.class);
     this.userTokenObserver_.addModelChangeListener ((table, action, primaryKeyValues) -> {
       if (action == BaseModel.Action.DELETE)
-      {
-        this.logger_.info ("The user token has been deleted from the database");
-
-        if (this.userToken_ != null)
-          this.userToken_ = null;
-
-        Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGOUT);
-        msg.sendToTarget ();
-      }
-      else
-      {
-        // Get the username from the sql condition. We then need to load the
-        // user token from the database that matches the username.
-        String value = (String) primaryKeyValues[0].value ();
-
-        if (this.userToken_ == null || !this.userToken_.username.equals (value))
-        {
-          this.logger_.info ("Loading token for the user");
-
-          // Load the token for the user that was logged in.
-          this.userToken_ =
-              SQLite.select ()
-                    .from (UserToken.class)
-                    .where (UserToken$Table.username.eq (value))
-                    .querySingle ();
-        }
-
-        if (action == BaseModel.Action.SAVE)
-        {
-          this.logger_.info ("Notifying client the user token has been saved");
-
-          // The token is inserted into the database when the user is logged in. The
-          // token is updated in the database when the it is refreshed from the server.
-
-          Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGIN);
-          msg.sendToTarget ();
-        }
-      }
+        onTokenDeleted ((String)primaryKeyValues[0].value ());
+      else if (action == BaseModel.Action.INSERT)
+        onTokenInserted ((String)primaryKeyValues[0].value ());
     });
   }
 
@@ -270,6 +241,55 @@ public class GatekeeperSessionClient
   {
     return this.session_;
   }
+
+  /**
+   * A new user token was inserted into the database.
+   *
+   * @param username          Username of the inserted token.
+   */
+  private void onTokenInserted (String username)
+  {
+    // Load the token for the user that was logged in.
+    this.userToken_ =
+        SQLite.select ()
+              .from (UserToken.class)
+              .where (UserToken$Table.username.eq (username))
+              .querySingle ();
+
+    LOG.info ("Notifying client the user token has been saved");
+
+    // The token is inserted into the database when the user is logged in. The
+    // token is updated in the database when the it is refreshed from the server.
+
+    Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGIN);
+    msg.sendToTarget ();
+  }
+
+  /**
+   * A user token was deleted from the database.
+   *
+   * @param username        Username for the deleted token.
+   */
+  private void onTokenDeleted (String username)
+  {
+    LOG.info ("An user token has been deleted from the database.");
+
+    if (this.userToken_ == null)
+      return;
+
+    // Check if the username matches the one in our session. If it does, then we need
+    // to let this session know it has been logged out.
+
+    if (!this.userToken_.username.equals (username))
+      return;
+
+    Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGOUT);
+    msg.sendToTarget ();
+
+    // Reset the user token.
+    this.userToken_ = null;
+  }
+
 
   /**
    * Set the User-Agent for the client.
@@ -339,7 +359,7 @@ public class GatekeeperSessionClient
    */
   public boolean ensureSignedIn (Activity activity, Intent signInIntent)
   {
-    this.logger_.info ("Ensuring the user is signed in");
+    LOG.info ("Ensuring the user is signed in");
 
     if (this.isSignedIn ())
       return true;
@@ -367,7 +387,7 @@ public class GatekeeperSessionClient
    */
   public void forceSignIn (Activity activity, Intent signInIntent)
   {
-    this.logger_.info ("Forcing the user to sign in");
+    LOG.info ("Forcing the user to sign in");
 
     // Force the user to sign out.
     this.completeSignOut (activity);
@@ -403,7 +423,7 @@ public class GatekeeperSessionClient
    */
   public boolean isSignedIn ()
   {
-    this.logger_.info ("Checking if the current user is signed in.");
+    LOG.info ("Checking if the current user is signed in.");
 
     return this.userToken_ != null;
   }
@@ -416,7 +436,7 @@ public class GatekeeperSessionClient
     if (this.userToken_ == null)
       return;
 
-    this.logger_.info ("Completing the sign out process");
+    LOG.info ("Completing the sign out process");
 
     // Delete the current session information.
     this.session_.edit ().delete ();
@@ -424,7 +444,7 @@ public class GatekeeperSessionClient
     // Delete the token from the database. This will cause all session clients
     // listening for changes to be notified of the change.
     FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
-    GatekeeperStore.getInstance (context).clearCache ();
+    this.store_.clearCache ();
 
     this.userToken_ = null;
   }
@@ -468,7 +488,7 @@ public class GatekeeperSessionClient
    */
   public Promise <Void> beginSession (Context context, String username, String accessToken, String refreshToken)
   {
-    this.logger_.info ("Begin session for {}", username);
+    LOG.info ("Begin session for {}", username);
 
     JsonBearerToken token = new JsonBearerToken (accessToken, refreshToken);
     return this.completeSignIn (context, username, token);
@@ -483,28 +503,27 @@ public class GatekeeperSessionClient
    */
   private Promise <Void> completeSignIn (Context context, String username, JsonBearerToken jsonToken)
   {
-    // Save the user access token. We need it so we can
-    this.logger_.info ("Saving user access token to the database");
+    LOG.info ("Saving user access token to the database");
+
     this.userToken_ = UserToken.fromToken (username, jsonToken);
     FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
 
-    return GatekeeperStore.getInstance (context)
-                          .get (Account.class, "me")
-                          .then (resolved (this::writeAccountToSession))
-                          ._catch (reason -> {
-                            this.logger_.error ("Failed to get my account info", reason);
+    return this.store_.get (Account.class, "me")
+                      .then (resolved (this::writeAccountToSession))
+                      ._catch (reason -> {
+                        LOG.error ("Failed to get my account info", reason);
 
-                            // Delete the user token that we temporarily saved.
-                            this.userToken_ = null;
-                            FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
+                        // Delete the user token that we temporarily saved.
+                        this.userToken_ = null;
+                        FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
 
-                            return Promise.reject (reason);
-                          });
+                        return Promise.reject (reason);
+                      });
   }
 
   private void writeAccountToSession (Account account)
   {
-    this.logger_.info ("Saving the users account to the session.");
+    LOG.info ("Saving the users account to the session.");
 
     this.session_.edit ()
                  .setUsername (account.username)
@@ -525,10 +544,10 @@ public class GatekeeperSessionClient
     if (this.userToken_ == null)
       return Promise.resolve (true);
 
-    this.logger_.info ("Signing out the current user.");
+    LOG.info ("Signing out the current user.");
 
     return new Promise<> ("gatekeeper:signOut", settlement -> {
-      this.logger_.info ("Signing out current user");
+      LOG.info ("Signing out current user");
 
       this.userMethods_.logout ().enqueue (new Callback<Boolean> ()
       {
@@ -573,7 +592,7 @@ public class GatekeeperSessionClient
    */
   public Promise <Boolean> changePassword (String currentPassword, String newPassword)
   {
-    this.logger_.info ("Changing the user's password.");
+    LOG.info ("Changing the user's password.");
 
     return new Promise<> ("gatekeeper:changePassword", settlement -> {
       JsonChangePassword change = new JsonChangePassword ();
@@ -614,7 +633,7 @@ public class GatekeeperSessionClient
    */
   private Promise<JsonBearerToken> getUserToken (String username, String password)
   {
-    this.logger_.info ("Getting an access token for the user.");
+    LOG.info ("Getting an access token for the user.");
 
     JsonPassword grant = new JsonPassword ();
     grant.username = username;
@@ -722,7 +741,7 @@ public class GatekeeperSessionClient
     }
     catch (IOException e)
     {
-      this.logger_.error (e.getLocalizedMessage (), e);
+      LOG.error (e.getLocalizedMessage (), e);
       return false;
     }
   }
