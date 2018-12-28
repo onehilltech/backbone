@@ -124,7 +124,6 @@ public class GatekeeperSessionClient
     this.client_ = new GatekeeperClient.Builder (context).build ();
     this.session_ = GatekeeperSession.getCurrent (context);
     this.userTokenObserver_ = new FlowContentObserver (context.getPackageName ());
-    this.store_ = GatekeeperStore.getInstance (context);
 
     // Build a new HttpClient for the user session. This client is responsible for
     // adding the authentication header to each request.
@@ -183,6 +182,8 @@ public class GatekeeperSessionClient
         .build ().create (Methods.class);
 
     this.initUserToken (context);
+
+    this.store_ = GatekeeperStore.getInstance (context, this);
   }
 
   public Promise <JsonAccount> createAccount (String username, String password, String email, boolean autoSignIn)

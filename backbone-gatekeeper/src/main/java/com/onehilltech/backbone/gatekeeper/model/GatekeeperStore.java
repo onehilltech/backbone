@@ -20,12 +20,10 @@ public class GatekeeperStore
           request.newBuilder ().cacheControl (CacheControl.FORCE_NETWORK).build () :
           request;
 
-  public static DataStore getInstance (Context context)
+  public static DataStore getInstance (Context context, GatekeeperSessionClient sessionClient)
   {
     if (dataStore_ != null)
       return dataStore_;
-
-    GatekeeperSessionClient sessionClient = GatekeeperSessionClient.getInstance (context);
 
     dataStore_ = new DataStore.Builder (context, GatekeeperDatabase.class)
         .setBaseUrl (sessionClient.getClient ().getConfig ().baseUri)
