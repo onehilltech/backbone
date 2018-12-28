@@ -38,6 +38,8 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -393,7 +395,7 @@ public class GatekeeperSessionClient
     LOG.info ("Forcing the user to sign in");
 
     // Force the user to sign out.
-    this.completeSignOut (activity);
+    this.completeSignOut ();
 
     signInIntent.putExtra (GatekeeperSignInActivity.ARG_REDIRECT_INTENT, activity.getIntent ());
     activity.startActivity (signInIntent);
@@ -434,22 +436,28 @@ public class GatekeeperSessionClient
   /**
    * Complete the signOut process.
    */
-  private void completeSignOut (Context context)
+  private void completeSignOut ()
   {
-    if (this.userToken_ == null)
-      return;
-
     LOG.info ("Completing the sign out process");
 
     // Delete the current session information.
     this.session_.edit ().delete ();
 
-    // Delete the token from the database. This will cause all session clients
-    // listening for changes to be notified of the change.
-    FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
+    if (this.userToken_ != null)
+    {
+      // Delete the token from the database. This will cause all session clients
+      // listening for changes to be notified of the change.
+
+      FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
+      this.userToken_ = null;
+    }
+
+    // Clear the data store cache.
     this.store_.clearCache ();
 
-    this.userToken_ = null;
+    // Send a notification to all listeners that we have signed out.
+    Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGOUT);
+    msg.sendToTarget ();
   }
 
   public ArrayList<HttpError> getErrors (ResponseBody errorBody)
@@ -482,13 +490,12 @@ public class GatekeeperSessionClient
   /**
    * Force the session client to use an existing access and refresh token.
    *
-   * @param context
    * @param username
    * @param accessToken
    * @param refreshToken
    * @return
    */
-  public Promise <Void> beginSession (Context context, String username, String accessToken, String refreshToken)
+  public Promise <Void> beginSession (String username, String accessToken, String refreshToken)
   {
     LOG.info ("Begin session for {}", username);
 
@@ -533,15 +540,15 @@ public class GatekeeperSessionClient
                  .commit ();
   }
 
-  public Promise <Boolean> signOut (Context context)
+  public Promise <Boolean> signOut ()
   {
-    return this.signOut (context, true);
+    return this.signOut (true);
   }
 
   /**
    * Sign out the current user
    */
-  public Promise <Boolean> signOut (Context context, boolean forceSignOut)
+  public Promise <Boolean> signOut (boolean forceSignOut)
   {
     if (this.userToken_ == null)
       return Promise.resolve (true);
@@ -554,7 +561,8 @@ public class GatekeeperSessionClient
       this.userMethods_.logout ().enqueue (new Callback<Boolean> ()
       {
         @Override
-        public void onResponse (Call<Boolean> call, retrofit2.Response<Boolean> response)
+        @ParametersAreNonnullByDefault
+        public void onResponse ( Call<Boolean> call, retrofit2.Response<Boolean> response)
         {
           if (response.isSuccessful () || forceSignOut)
           {
@@ -562,7 +570,7 @@ public class GatekeeperSessionClient
             boolean complete = (result != null && result) || forceSignOut;
 
             if (complete)
-              completeSignOut (context);
+              completeSignOut ();
 
             settlement.resolve (complete);
           }
@@ -573,11 +581,12 @@ public class GatekeeperSessionClient
         }
 
         @Override
+        @ParametersAreNonnullByDefault
         public void onFailure (Call<Boolean> call, Throwable t)
         {
           if (forceSignOut)
           {
-            completeSignOut (context);
+            completeSignOut ();
             settlement.resolve (true);
           }
           else
@@ -606,6 +615,7 @@ public class GatekeeperSessionClient
       this.userMethods_.changePassword (r).enqueue (new Callback<Boolean> ()
       {
         @Override
+        @ParametersAreNonnullByDefault
         public void onResponse (Call<Boolean> call, retrofit2.Response<Boolean> response)
         {
           if (response.isSuccessful ())
@@ -619,6 +629,7 @@ public class GatekeeperSessionClient
         }
 
         @Override
+        @ParametersAreNonnullByDefault
         public void onFailure (Call<Boolean> call, Throwable t)
         {
           settlement.reject (t);
@@ -652,6 +663,7 @@ public class GatekeeperSessionClient
     return new Promise<> ("gatekeeper:executeCall", settlement ->
       call.enqueue (new Callback<T> () {
         @Override
+        @ParametersAreNonnullByDefault
         public void onResponse (Call<T> call, retrofit2.Response<T> response)
         {
           if (response.isSuccessful ())
@@ -675,6 +687,7 @@ public class GatekeeperSessionClient
         }
 
         @Override
+        @ParametersAreNonnullByDefault
         public void onFailure (Call<T> call, Throwable t)
         {
           settlement.reject (t);

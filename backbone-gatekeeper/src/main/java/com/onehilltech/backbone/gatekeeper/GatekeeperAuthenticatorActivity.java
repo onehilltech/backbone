@@ -28,6 +28,15 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
     this.session_ = GatekeeperSessionClient.getInstance (this);
   }
 
+  @Override
+  protected void onDestroy ()
+  {
+    super.onDestroy ();
+
+    if (this.session_ != null)
+      this.session_.onDestroy (this);
+  }
+
   /**
    * Sign the user.
    *

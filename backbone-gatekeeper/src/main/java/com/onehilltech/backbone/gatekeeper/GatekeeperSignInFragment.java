@@ -177,6 +177,15 @@ public class GatekeeperSignInFragment extends Fragment
     this.loginFragmentListener_ = null;
   }
 
+  @Override
+  public void onDestroy ()
+  {
+    super.onDestroy ();
+
+    if (this.sessionClient_ != null)
+      this.sessionClient_.onDestroy (this.getContext ());
+  }
+
   /**
    * Start the activity for creating a new account.
    */

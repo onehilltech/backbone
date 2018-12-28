@@ -135,6 +135,15 @@ public class GatekeeperCreateAccountFragment extends Fragment
     this.listener_ = null;
   }
 
+  @Override
+  public void onDestroy ()
+  {
+    super.onDestroy ();
+
+    if (this.sessionClient_ != null)
+      this.sessionClient_.onDestroy (this.getContext ());
+  }
+
   /**
    * Attempts to sign in or register the account specified by the signIn form. If
    * there are form errors (invalid email, missing fields, etc.), the errors are
