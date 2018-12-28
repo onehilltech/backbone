@@ -253,13 +253,15 @@ public class GatekeeperSessionClient
   private void onTokenInserted (String username)
   {
     // Load the token for the user that was logged in.
+    LOG.info ("Retrieving user token for {}", username);
+
     this.userToken_ =
         SQLite.select ()
               .from (UserToken.class)
               .where (UserToken$Table.username.eq (username))
               .querySingle ();
 
-    LOG.info ("Notifying client the user token has been saved");
+    LOG.info ("Notifying all the user has logged in.");
 
     // The token is inserted into the database when the user is logged in. The
     // token is updated in the database when the it is refreshed from the server.
