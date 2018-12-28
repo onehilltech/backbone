@@ -111,6 +111,8 @@ public class GatekeeperCreateAccountFragment extends Fragment
 
   private Listener listener_;
 
+  private GatekeeperSessionClient sessionClient_;
+
   public GatekeeperCreateAccountFragment ()
   {
     // Required empty public constructor
@@ -120,6 +122,8 @@ public class GatekeeperCreateAccountFragment extends Fragment
   public void onAttach (Context context)
   {
     super.onAttach (context);
+
+    this.sessionClient_ = GatekeeperSessionClient.getInstance (context);
     this.listener_ = (Listener) context;
   }
 
@@ -138,9 +142,8 @@ public class GatekeeperCreateAccountFragment extends Fragment
    */
   protected void createAccount (String username, String password, String email)
   {
-    GatekeeperSessionClient.getInstance (this.getContext ())
-                           .createAccount (this.getContext (), username, password, email, true)
-                           .then (resolved (value -> this.listener_.onAccountCreated (this, value)))
-                           ._catch (rejected (reason -> this.listener_.onError (this, reason)));
+    this.sessionClient_.createAccount (username, password, email, true)
+                       .then (resolved (value -> this.listener_.onAccountCreated (this, value)))
+                       ._catch (rejected (reason -> this.listener_.onError (this, reason)));
   }
 }

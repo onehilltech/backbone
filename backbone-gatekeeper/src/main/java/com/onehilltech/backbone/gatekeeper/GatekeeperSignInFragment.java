@@ -134,6 +134,8 @@ public class GatekeeperSignInFragment extends Fragment
 
   private static final String ARG_LAYOUT = "layout";
 
+  private GatekeeperSessionClient sessionClient_;
+
   /**
    * Default constructor.
    */
@@ -147,6 +149,8 @@ public class GatekeeperSignInFragment extends Fragment
   {
     super.onAttach (context);
 
+    this.sessionClient_ = GatekeeperSessionClient.getInstance (context);
+
     try
     {
       this.loginFragmentListener_ = (LoginFragmentListener) context;
@@ -159,10 +163,9 @@ public class GatekeeperSignInFragment extends Fragment
 
   protected void signIn (String username, String password)
   {
-    GatekeeperSessionClient.getInstance (this.getContext ())
-                           .signIn (this.getContext (), username, password)
-                           .then (resolved (value -> loginFragmentListener_.onSignInComplete (this)))
-                           ._catch (onUiThread (rejected (reason -> showErrorMessage (reason.getLocalizedMessage ()))));
+    this.sessionClient_.signIn (username, password)
+                       .then (resolved (value -> loginFragmentListener_.onSignInComplete (this)))
+                       ._catch (onUiThread (rejected (reason -> showErrorMessage (reason.getLocalizedMessage ()))));
   }
 
 

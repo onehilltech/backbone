@@ -185,7 +185,7 @@ public class GatekeeperSessionClient
     this.initUserToken (context);
   }
 
-  public Promise <JsonAccount> createAccount (Context context, String username, String password, String email, boolean autoSignIn)
+  public Promise <JsonAccount> createAccount (String username, String password, String email, boolean autoSignIn)
   {
     LOG.info ("Creating user account for {}", username);
 
@@ -197,7 +197,7 @@ public class GatekeeperSessionClient
                          if (autoSignIn) {
                            JsonBearerToken userToken = r.get ("token");
 
-                           this.completeSignIn (context, username, userToken)
+                           this.completeSignIn (username, userToken)
                                .then (resolved (value -> settlement.resolve (account)))
                                ._catch (rejected (settlement::reject));
                          }
@@ -464,17 +464,16 @@ public class GatekeeperSessionClient
   /**
    * Sign in a user.
    *
-   * @param context           Context object
    * @param username          Username for the user
    * @param password          Password for the user
    */
-  public Promise <Void> signIn (Context context, String username, String password)
+  public Promise <Void> signIn (String username, String password)
   {
     if (this.isSignedIn ())
       return Promise.reject (new IllegalStateException ("User is already signed in"));
 
     return this.getUserToken (username, password)
-               .then (token -> this.completeSignIn (context, username, token));
+               .then (token -> this.completeSignIn (username, token));
   }
 
   /**
@@ -491,7 +490,7 @@ public class GatekeeperSessionClient
     LOG.info ("Begin session for {}", username);
 
     JsonBearerToken token = new JsonBearerToken (accessToken, refreshToken);
-    return this.completeSignIn (context, username, token);
+    return this.completeSignIn (username, token);
   }
 
   /**
@@ -501,7 +500,7 @@ public class GatekeeperSessionClient
    * @param username            Username that signed in
    * @param jsonToken           Access token for the user
    */
-  private Promise <Void> completeSignIn (Context context, String username, JsonBearerToken jsonToken)
+  private Promise <Void> completeSignIn (String username, JsonBearerToken jsonToken)
   {
     LOG.info ("Saving user access token to the database");
 

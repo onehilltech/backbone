@@ -57,7 +57,7 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
   {
     LOG.info ("Signing the user into their account.");
 
-    return this.session_.signIn (this, username, password)
+    return this.session_.signIn (username, password)
                         .then (resolved (result -> this.completeSignIn (username, password, savePassword, userData)));
   }
 
@@ -88,7 +88,7 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
   {
     LOG.info ("Signing up the user for a new account");
 
-    return this.session_.createAccount (this, username, password, email, true)
+    return this.session_.createAccount (username, password, email, true)
                         .then (resolved (account -> this.completeSignIn (username, password, savePassword, userData)));
   }
 
