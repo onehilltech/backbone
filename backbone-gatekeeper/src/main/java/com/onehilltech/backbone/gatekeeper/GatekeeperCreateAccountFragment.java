@@ -123,7 +123,7 @@ public class GatekeeperCreateAccountFragment extends Fragment
   {
     super.onAttach (context);
 
-    this.sessionClient_ = GatekeeperSessionClient.getInstance (context);
+    this.sessionClient_ = GatekeeperSessionClient.get (context);
     this.listener_ = (Listener) context;
   }
 

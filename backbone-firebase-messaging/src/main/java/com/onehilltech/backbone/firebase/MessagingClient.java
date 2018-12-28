@@ -80,7 +80,7 @@ public class MessagingClient
       throws PackageManager.NameNotFoundException, IllegalAccessException, InvocationTargetException, ClassNotFoundException
   {
     this.configuration_ = Configuration.loadFromMetadata (context);
-    this.sessionClient_ = GatekeeperSessionClient.getInstance (context);
+    this.sessionClient_ = GatekeeperSessionClient.get (context);
 
     Gson gson = new Gson ();
 

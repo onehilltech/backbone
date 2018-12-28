@@ -25,7 +25,7 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
   protected void onCreate (Bundle savedInstanceState)
   {
     super.onCreate (savedInstanceState);
-    this.session_ = GatekeeperSessionClient.getInstance (this);
+    this.session_ = GatekeeperSessionClient.get (this);
   }
 
   @Override

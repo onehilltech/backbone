@@ -149,7 +149,7 @@ public class GatekeeperSignInFragment extends Fragment
   {
     super.onAttach (context);
 
-    this.sessionClient_ = GatekeeperSessionClient.getInstance (context);
+    this.sessionClient_ = GatekeeperSessionClient.get (context);
 
     try
     {

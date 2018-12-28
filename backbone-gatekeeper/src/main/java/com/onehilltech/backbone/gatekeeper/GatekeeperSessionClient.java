@@ -73,16 +73,16 @@ public class GatekeeperSessionClient
     void onReauthenticate (GatekeeperSessionClient client, HttpError reason);
   }
 
-  public static GatekeeperSessionClient getInstance (Context context)
+  /**
+   * Get a new GatekeeperSessionClient for the context.
+   *
+   * @param context       Target context
+   * @return              GatekeeperSessionClient object.
+   */
+  public static GatekeeperSessionClient get (Context context)
   {
-    if (instance_ != null)
-      return instance_;
-
-    instance_ = new GatekeeperSessionClient (context);
-    return instance_;
+    return new GatekeeperSessionClient (context);
   }
-
-  private static GatekeeperSessionClient instance_;
 
   private OkHttpClient httpClient_;
 
