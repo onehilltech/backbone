@@ -277,24 +277,31 @@ public class GatekeeperSessionClient
   {
     LOG.info ("An user token has been deleted from the database.");
 
-    if (this.userToken_ == null)
-      return;
+    if (this.userToken_ != null)
+    {
+      // Check if the username matches the one in our session. If it does, then we need
+      // to let this session know it has been logged out.
 
-    // Check if the username matches the one in our session. If it does, then we need
-    // to let this session know it has been logged out.
+      if (this.userToken_.username.equals (username))
+      {
+        LOG.info ("The token for this session has been deleted.");
 
-    if (!this.userToken_.username.equals (username))
-      return;
+        Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGOUT);
+        msg.sendToTarget ();
 
-    LOG.info ("The token for this session has been deleted.");
-
-    Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGOUT);
-    msg.sendToTarget ();
-
-    // Reset the user token.
-    this.userToken_ = null;
+        // Reset the user token.
+        this.userToken_ = null;
+      }
+      else
+      {
+        LOG.info ("This user token in this session does not match the deleted username.");
+      }
+    }
+    else
+    {
+      LOG.info ("This session does not have a user token.");
+    }
   }
-
 
   /**
    * Set the User-Agent for the client.
@@ -443,21 +450,13 @@ public class GatekeeperSessionClient
     // Delete the current session information.
     this.session_.edit ().delete ();
 
+    // Delete the token from the database. This will cause all session clients
+    // listening for changes to be notified of the change.
     if (this.userToken_ != null)
-    {
-      // Delete the token from the database. This will cause all session clients
-      // listening for changes to be notified of the change.
-
       FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
-      this.userToken_ = null;
-    }
 
     // Clear the data store cache.
     this.store_.clearCache ();
-
-    // Send a notification to all listeners that we have signed out.
-    Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGOUT);
-    msg.sendToTarget ();
   }
 
   public ArrayList<HttpError> getErrors (ResponseBody errorBody)
