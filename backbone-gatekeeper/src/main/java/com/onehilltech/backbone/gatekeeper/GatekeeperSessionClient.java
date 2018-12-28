@@ -229,9 +229,14 @@ public class GatekeeperSessionClient
     this.userTokenObserver_.registerForContentChanges (context, UserToken.class);
     this.userTokenObserver_.addModelChangeListener ((table, action, primaryKeyValues) -> {
       if (action == BaseModel.Action.DELETE)
-        onTokenDeleted ((String)primaryKeyValues[0].value ());
+      {
+        if (primaryKeyValues.length == 1)
+          onTokenDeleted ((String)primaryKeyValues[0].value ());
+      }
       else if (action == BaseModel.Action.INSERT)
-        onTokenInserted ((String)primaryKeyValues[0].value ());
+      {
+        onTokenInserted ((String) primaryKeyValues[0].value ());
+      }
     });
   }
 
