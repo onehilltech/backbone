@@ -228,6 +228,9 @@ public class GatekeeperSessionClient
     // out or refreshing the user token.
     this.userTokenObserver_.registerForContentChanges (context, UserToken.class);
     this.userTokenObserver_.addModelChangeListener ((table, action, primaryKeyValues) -> {
+      if (table == null || !table.equals (UserToken.class))
+        return;
+
       if (action == BaseModel.Action.DELETE)
       {
         if (primaryKeyValues.length == 1)
