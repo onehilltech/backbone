@@ -7,5 +7,5 @@ import java.util.Set;
  */
 public interface OnPermissionsGranted
 {
-  void onPermissionGranted (Set <Permission> granted);
+  void onPermissionsGranted (Set <Permission> granted);
 }

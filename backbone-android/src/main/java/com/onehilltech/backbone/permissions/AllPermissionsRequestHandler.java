@@ -52,7 +52,7 @@ public class AllPermissionsRequestHandler implements PermissionRequestHandler.On
     // Since we did not leave the function, this means we have found
     // all the permissions we requested.
     if (found.size () == this.permissions_.size ())
-      this.onPermissionsGranted_.onPermissionGranted (found);
+      this.onPermissionsGranted_.onPermissionsGranted (found);
     else
       this.onPermissionsDenied_.onPermissionsDenied (denied);
   }
