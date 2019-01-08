@@ -1,6 +1,7 @@
 package com.onehilltech.backbone.permissions;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -14,49 +15,45 @@ public class AllPermissionsRequestHandler implements PermissionRequestHandler.On
 
   private final OnPermissionsGranted onPermissionsGranted_;
 
-  /**
-   * Callback for all permissions granted.
-   */
-  public interface OnPermissionsGranted
-  {
-    void onPermissionGranted ();
-  }
+  private final OnPermissionsDenied onPermissionsDenied_;
 
   /**
    * Initializing constructor.
    *
-   * @param permissions               Set of permissions
-   * @param onPermissionsGranted       Callback for permissions granted
+   * @param permissions           Set of permissions
+   * @param granted               Callback for permissions granted
+   *
    */
-  public AllPermissionsRequestHandler (List <String> permissions, OnPermissionsGranted onPermissionsGranted)
+  public AllPermissionsRequestHandler (List <String> permissions, OnPermissionsGranted granted, OnPermissionsDenied denied)
   {
     this.permissions_.addAll (permissions);
-    this.onPermissionsGranted_ = onPermissionsGranted;
+
+    this.onPermissionsGranted_ = granted;
+    this.onPermissionsDenied_ = denied;
   }
 
   @Override
   public void onPermissionResult (Set<Permission> granted, Set<Permission> denied)
   {
+    Set <Permission> found = new HashSet<> ();
+
     for (String expected: this.permissions_)
     {
-      boolean found = false;
-
       for (Permission permission: granted)
       {
         if (permission.name.equals (expected))
         {
-          found = true;
+          found.add (permission);
           break;
         }
       }
-
-      // If we did not find the permission, then we need to just return.
-      if (!found)
-        return;
     }
 
     // Since we did not leave the function, this means we have found
     // all the permissions we requested.
-    this.onPermissionsGranted_.onPermissionGranted ();
+    if (found.size () == this.permissions_.size ())
+      this.onPermissionsGranted_.onPermissionGranted (found);
+    else
+      this.onPermissionsDenied_.onPermissionsDenied (denied);
   }
 }
