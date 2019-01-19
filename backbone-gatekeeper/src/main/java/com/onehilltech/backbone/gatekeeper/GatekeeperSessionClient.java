@@ -524,17 +524,13 @@ public class GatekeeperSessionClient
     LOG.info ("Saving user access token to the database");
 
     this.userToken_ = UserToken.fromToken (username, jsonToken);
-    FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
 
     return this.store_.get (Account.class, "me")
                       .then (resolved (this::writeAccountToSession))
+                      .then (resolved (nothing -> FlowManager.getModelAdapter (UserToken.class).save (this.userToken_)))
                       ._catch (reason -> {
-                        LOG.error ("Failed to get my account info", reason);
-
-                        // Delete the user token that we temporarily saved.
+                        // Clear the user token.
                         this.userToken_ = null;
-                        FlowManager.getModelAdapter (UserToken.class).delete (this.userToken_);
-
                         return Promise.reject (reason);
                       });
   }
