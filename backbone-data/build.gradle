@@ -65,3 +65,7 @@ dependencies {
         exclude group: 'junit'
     }
 }
+
+def artifactId = 'backbone-data'
+
+apply from: '../publish.gradle'
