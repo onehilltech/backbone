@@ -49,3 +49,8 @@ dependencies {
         exclude group: 'junit'
     }
 }
+
+
+def artifactId = 'backbone-firebase-messaging'
+
+apply from: '../publish.gradle'

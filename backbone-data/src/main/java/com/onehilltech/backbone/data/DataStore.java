@@ -1,17 +1,13 @@
 package com.onehilltech.backbone.data;
 
-import android.app.LoaderManager;
 import android.content.Context;
-import android.content.Loader;
 import android.net.Uri;
-import android.os.Bundle;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.TypeAdapterFactory;
 import com.onehilltech.backbone.data.serializers.DateTimeSerializer;
-import com.onehilltech.backbone.dbflow.single.FlowModelLoader;
 import com.onehilltech.promises.Promise;
 import com.raizlabs.android.dbflow.config.DatabaseDefinition;
 import com.raizlabs.android.dbflow.config.FlowManager;
@@ -41,7 +37,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import androidx.annotation.NonNull;
 import okhttp3.Cache;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -297,38 +292,6 @@ public class DataStore
     {
       throw new IllegalStateException ("Failed to clear cache", e);
     }
-  }
-
-  public <T extends DataModel>  LoaderManager.LoaderCallbacks <T>
-  createSimpleModelLoaderCallback (@NonNull Context context,
-                                   @NonNull Class <T> modelClass,
-                                   @NonNull Object id,
-                                   @NonNull OnModelLoaded <T> onModelLoaded)
-  {
-    return new LoaderManager.LoaderCallbacks<T> () {
-      @Override
-      public Loader<T> onCreateLoader (int i, Bundle bundle)
-      {
-        Queriable queriable =
-            SQLite.select ()
-                  .from (modelClass)
-                  .where (Operator.op (_ID).eq (id));
-
-        return new FlowModelLoader<> (context, modelClass, queriable);
-      }
-
-      @Override
-      public void onLoadFinished (Loader<T> loader, T t)
-      {
-        onModelLoaded.onModelLoaded (t);
-      }
-
-      @Override
-      public void onLoaderReset (Loader<T> loader)
-      {
-
-      }
-    };
   }
 
   public Class <?> getDatabaseClass ()
