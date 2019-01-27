@@ -759,22 +759,36 @@ public class GatekeeperSessionClient
   private final Interceptor requestInterceptor_ = new Interceptor ()
   {
     @Override
-    public Response intercept (Chain chain) throws IOException
+    public Response intercept (Chain chain)
+        throws IOException
     {
-      okhttp3.Request original = chain.request ();
-      okhttp3.Request.Builder builder = original.newBuilder ();
-
-      if (userToken_ != null)
-        builder.header ("Authorization", "Bearer " + userToken_.accessToken);
-
-      if (userAgent_ != null)
-        builder.header ("User-Agent", userAgent_);
-
-      builder.method (original.method (), original.body ());
-
-      return chain.proceed (builder.build ());
+      return prepareRequest (chain);
     }
   };
+
+  /**
+   * Prepare the request.
+   *
+   * @param chain
+   * @return
+   * @throws IOException
+   */
+  private Response prepareRequest (Interceptor.Chain chain)
+      throws IOException
+  {
+    okhttp3.Request original = chain.request ();
+    okhttp3.Request.Builder builder = original.newBuilder ();
+
+    if (this.userToken_ != null)
+      builder.header ("Authorization", "Bearer " + this.userToken_.accessToken);
+
+    if (this.userAgent_ != null)
+      builder.header ("User-Agent", this.userAgent_);
+
+    builder.method (original.method (), original.body ());
+
+    return chain.proceed (builder.build ());
+  }
 
   /**
    * Interceptor that handles special cases for a response, such a refreshing
