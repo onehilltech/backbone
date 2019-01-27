@@ -172,7 +172,7 @@ public class GatekeeperSessionClient
 
     this.initUserToken (context);
 
-    this.store_ = GatekeeperStore.getInstance (context, this);
+    this.store_ = GatekeeperStore.open (context, this);
   }
 
   public Promise <JsonAccount> createAccount (String username, String password, String email, boolean autoSignIn)
