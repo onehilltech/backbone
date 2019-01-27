@@ -513,23 +513,26 @@ public class GatekeeperSessionClient
     this.userToken_ = UserToken.fromToken (username, jsonToken);
 
     return this.store_.get (Account.class, "me")
-                      .then (resolved (this::writeAccountToSession))
-                      .then (resolved (nothing -> FlowManager.getModelAdapter (UserToken.class).save (this.userToken_)))
+                      .then (resolved (this::persistSession))
                       ._catch (reason -> {
                         // Clear the user token.
                         this.userToken_ = null;
+
+                        // Still reject the promise.
                         return Promise.reject (reason);
                       });
   }
 
-  private void writeAccountToSession (Account account)
+  private void persistSession (Account account)
   {
-    LOG.info ("Saving the users account to the session.");
+    LOG.info ("Persisting user session");
 
     this.session_.edit ()
                  .setUsername (account.username)
                  .setUserId (account._id.toString ())
                  .commit ();
+
+    FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
   }
 
   public Promise <Boolean> signOut ()
