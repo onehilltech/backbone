@@ -131,20 +131,7 @@ public class GatekeeperSessionClient
     // adding the authentication header to each request.
     this.httpClient_ =
         new OkHttpClient.Builder ()
-            .addInterceptor (chain -> {
-              okhttp3.Request original = chain.request ();
-              okhttp3.Request.Builder builder = original.newBuilder ();
-
-              if (userToken_ != null)
-                builder.header ("Authorization", "Bearer " + userToken_.accessToken);
-
-              if (userAgent_ != null)
-                builder.header ("User-Agent", userAgent_);
-
-              builder.method (original.method (), original.body ());
-
-              return chain.proceed (builder.build ());
-            })
+            .addInterceptor (this.requestInterceptor_)
             .addInterceptor (this.responseInterceptor_)
             .build ();
 
@@ -765,6 +752,29 @@ public class GatekeeperSessionClient
       return false;
     }
   }
+
+  /**
+   * The interceptor that added header information to the request.
+   */
+  private final Interceptor requestInterceptor_ = new Interceptor ()
+  {
+    @Override
+    public Response intercept (Chain chain) throws IOException
+    {
+      okhttp3.Request original = chain.request ();
+      okhttp3.Request.Builder builder = original.newBuilder ();
+
+      if (userToken_ != null)
+        builder.header ("Authorization", "Bearer " + userToken_.accessToken);
+
+      if (userAgent_ != null)
+        builder.header ("User-Agent", userAgent_);
+
+      builder.method (original.method (), original.body ());
+
+      return chain.proceed (builder.build ());
+    }
+  };
 
   /**
    * Interceptor that handles special cases for a response, such a refreshing
