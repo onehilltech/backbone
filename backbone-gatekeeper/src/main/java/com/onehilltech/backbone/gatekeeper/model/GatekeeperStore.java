@@ -13,29 +13,22 @@ import okhttp3.CacheControl;
 
 public class GatekeeperStore
 {
-  private static DataStore dataStore_;
-
   private static DataStoreAdapter dataStoreAdapter_ = request ->
       request.url ().encodedPath ().endsWith ("/accounts/me") && request.method ().equals ("GET") ?
           request.newBuilder ().cacheControl (CacheControl.FORCE_NETWORK).build () :
           request;
 
-  public static DataStore getInstance (Context context, GatekeeperSessionClient sessionClient)
+  public static DataStore open (Context context, GatekeeperSessionClient sessionClient)
   {
-    if (dataStore_ != null)
-      return dataStore_;
-
-    dataStore_ = new DataStore.Builder (context, GatekeeperDatabase.class)
+    return new DataStore.Builder (context, GatekeeperDatabase.class)
         .setBaseUrl (sessionClient.getClient ().getConfig ().baseUri)
         .setApplicationAdapter (dataStoreAdapter_)
         .setHttpClient (sessionClient.getHttpClient ())
         .addTypeAdapter (ObjectId.class, new ObjectIdSerializer ())
         .build ();
-
-    return dataStore_;
   }
 
-  public static DataStore getInstance (Context context, GatekeeperClient client)
+  public static DataStore open (Context context, GatekeeperClient client)
   {
     return new DataStore.Builder (context, GatekeeperDatabase.class)
         .setBaseUrl (client.getConfig ().baseUri)
