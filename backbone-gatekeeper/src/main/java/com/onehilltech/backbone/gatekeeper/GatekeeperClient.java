@@ -13,7 +13,9 @@ import com.onehilltech.backbone.data.ResourceSerializer;
 import com.onehilltech.backbone.gatekeeper.http.JsonAccount;
 import com.onehilltech.backbone.gatekeeper.http.JsonBearerToken;
 import com.onehilltech.backbone.gatekeeper.http.JsonClientCredentials;
+import com.onehilltech.backbone.gatekeeper.http.JsonForgotPassword;
 import com.onehilltech.backbone.gatekeeper.http.JsonGrant;
+import com.onehilltech.backbone.gatekeeper.http.JsonResetPassword;
 import com.onehilltech.backbone.gatekeeper.model.ClientToken;
 import com.onehilltech.metadata.ManifestMetadata;
 import com.onehilltech.metadata.MetadataProperty;
@@ -275,48 +277,87 @@ public class GatekeeperClient
   }
 
   /**
+   * Request an email to reset password.
+   *
+   * @param email
+   * @return
+   */
+  Promise <Boolean> forgotPassword (String email)
+  {
+    JsonForgotPassword forgotPassword = new JsonForgotPassword ();
+    forgotPassword.email = email;
+
+    return this.execute (this.methods_.forgotPassword (forgotPassword));
+  }
+
+  /**
+   * Complete the password reset process.
+   *
+   * @param token
+   * @param password
+   * @return
+   */
+  Promise <Boolean> resetPassword (String token, String password)
+  {
+    JsonResetPassword resetPassword = new JsonResetPassword (token, password);
+    return this.execute (this.methods_.resetPassword (resetPassword));
+  }
+
+  /**
    * Helper method for requesting an access token.
    *
    * @param grantType     JsonGrant object
    */
   private Promise<JsonBearerToken> requestToken (JsonGrant grantType)
   {
-    return new Promise<> ("gatekeeper:requestToken", settlement -> {
-      grantType.clientId = this.config_.clientId;
-      grantType.clientSecret = this.config_.clientSecret;
-      grantType.packageName = this.context_.getPackageName ();
+    grantType.clientId = this.config_.clientId;
+    grantType.clientSecret = this.config_.clientSecret;
+    grantType.packageName = this.context_.getPackageName ();
 
-      this.methods_.getBearerToken (grantType)
-                   .enqueue (new Callback<JsonBearerToken> () {
-                     @Override
-                     public void onResponse (Call<JsonBearerToken> call, Response<JsonBearerToken> response)
-                     {
-                       if (response.isSuccessful ())
-                       {
-                         settlement.resolve (response.body ());
-                       }
-                       else
-                       {
-                         try
-                         {
-                           HttpError error = getFirstError (response.errorBody ());
-                           error.setStatusCode (response.code ());
+    return this.execute (this.methods_.getBearerToken (grantType));
+  }
 
-                           settlement.reject (error);
-                         }
-                         catch (IOException e)
-                         {
-                           settlement.reject (e);
-                         }
-                       }
-                     }
+  /**
+   * Execute a remote method call.
+   *
+   * @param call
+   * @param <T>
+   * @return
+   */
+  private <T> Promise <T> execute (Call <T> call)
+  {
+    return new Promise<> (settlement -> {
+      call.enqueue (new Callback<T> ()
+      {
+        @Override
+        public void onResponse (Call<T> call, Response<T> response)
+        {
+          if (response.isSuccessful ())
+          {
+            settlement.resolve (response.body ());
+          }
+          else
+          {
+            try
+            {
+              HttpError error = getFirstError (response.errorBody ());
+              error.setStatusCode (response.code ());
 
-                     @Override
-                     public void onFailure (Call<JsonBearerToken> call, Throwable t)
-                     {
-                       settlement.reject (t);
-                     }
-                   });
+              settlement.reject (error);
+            }
+            catch (IOException e)
+            {
+              settlement.reject (e);
+            }
+          }
+        }
+
+        @Override
+        public void onFailure (Call<T> call, Throwable t)
+        {
+          settlement.reject (t);
+        }
+      });
     });
   }
 
@@ -349,6 +390,12 @@ public class GatekeeperClient
   {
     @POST("oauth2/token")
     Call<JsonBearerToken> getBearerToken (@Body JsonGrant grant);
+
+    @POST("password/forgot")
+    Call<Boolean> forgotPassword (@Body JsonForgotPassword forgotPassword);
+
+    @POST("password/reset")
+    Call<Boolean> resetPassword (@Body JsonResetPassword resetPassword);
   }
 
   /**
