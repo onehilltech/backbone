@@ -282,7 +282,7 @@ public class GatekeeperClient
    * @param email
    * @return
    */
-  Promise <Boolean> forgotPassword (String email)
+  public Promise <Boolean> forgotPassword (String email)
   {
     JsonForgotPassword forgotPassword = new JsonForgotPassword ();
     forgotPassword.email = email;
@@ -297,7 +297,7 @@ public class GatekeeperClient
    * @param password
    * @return
    */
-  Promise <Boolean> resetPassword (String token, String password)
+  public Promise <Boolean> resetPassword (String token, String password)
   {
     JsonResetPassword resetPassword = new JsonResetPassword (token, password);
     return this.execute (this.methods_.resetPassword (resetPassword));
