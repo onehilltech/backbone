@@ -42,6 +42,7 @@ public class GatekeeperAccountAuthenticator extends AbstractAccountAuthenticator
                             Bundle options)
   {
     Intent intent = new Intent (this.context_, this.activityClass_);
+    intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response);
 
     Bundle result = new Bundle();
     result.putParcelable (AccountManager.KEY_INTENT, intent);
