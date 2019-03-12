@@ -120,8 +120,16 @@ public abstract class GatekeeperAuthenticatorActivity extends AccountAuthenticat
     intent.putExtra (AccountManager.KEY_ACCOUNT_TYPE, accountType);
     intent.putExtra (AccountManager.KEY_AUTHTOKEN, authToken);
 
-    this.setAccountAuthenticatorResult (intent.getExtras());
+    Bundle extras = intent.getExtras ();
+    this.prepareAccountAuthenticatorResult (extras);
+    this.setAccountAuthenticatorResult (extras);
+
     this.setResult (RESULT_OK, intent);
     this.finish ();
+  }
+
+  protected void prepareAccountAuthenticatorResult (Bundle extras)
+  {
+
   }
 }
