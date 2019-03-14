@@ -245,6 +245,11 @@ public class GatekeeperSessionClient
     });
   }
 
+  public boolean isTemporary ()
+  {
+    return this.isTemporary_;
+  }
+
   public GatekeeperClient getClient ()
   {
     return this.client_;
