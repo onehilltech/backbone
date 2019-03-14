@@ -182,7 +182,8 @@ public class GatekeeperSessionClient
         .addConverterFactory (GsonConverterFactory.create (this.gson_))
         .build ().create (Methods.class);
 
-    this.initUserToken (context);
+    if (!this.isTemporary_)
+      this.initUserToken (context);
 
     this.store_ = GatekeeperStore.open (context, this);
   }
