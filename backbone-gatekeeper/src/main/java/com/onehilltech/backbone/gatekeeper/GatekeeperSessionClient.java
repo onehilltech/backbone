@@ -37,7 +37,9 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
+import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import okhttp3.Interceptor;
@@ -84,9 +86,9 @@ public class GatekeeperSessionClient
     return new GatekeeperSessionClient (context, false);
   }
 
-  public static GatekeeperSessionClient get (Context context, boolean temporary)
+  public static GatekeeperSessionClient get (Context context, boolean local)
   {
-    return new GatekeeperSessionClient (context, temporary);
+    return new GatekeeperSessionClient (context, local);
   }
 
   private OkHttpClient httpClient_;
@@ -120,20 +122,20 @@ public class GatekeeperSessionClient
 
   private DataStore store_;
 
-  private boolean isTemporary_;
+  private boolean isLocal_;
 
   /**
    * Initializing constructor.
    *
    * @param context         Target context
    */
-  private GatekeeperSessionClient (Context context, boolean temporary)
+  private GatekeeperSessionClient (Context context, boolean isLocal)
   {
     this.packageName_ = context.getPackageName ();
     this.client_ = new GatekeeperClient.Builder (context).build ();
-    this.isTemporary_ = temporary;
+    this.isLocal_ = isLocal;
 
-    if (!this.isTemporary_)
+    if (!this.isLocal_)
     {
       this.session_ = GatekeeperSession.getCurrent (context);
       this.userTokenObserver_ = new FlowContentObserver (context.getPackageName ());
@@ -182,7 +184,7 @@ public class GatekeeperSessionClient
         .addConverterFactory (GsonConverterFactory.create (this.gson_))
         .build ().create (Methods.class);
 
-    if (!this.isTemporary_)
+    if (!this.isLocal_)
       this.initUserToken (context);
 
     this.store_ = GatekeeperStore.open (context, this);
@@ -190,7 +192,7 @@ public class GatekeeperSessionClient
 
   public Promise <JsonAccount> createAccount (String username, String password, String email, boolean autoSignIn)
   {
-    if (this.isTemporary_)
+    if (this.isLocal_)
       return Promise.reject (new IllegalAccessException ("Temporary sessions cannot create an account."));
 
     LOG.info ("Creating user account for {}", username);
@@ -246,9 +248,9 @@ public class GatekeeperSessionClient
     });
   }
 
-  public boolean isTemporary ()
+  public boolean isLocal ()
   {
-    return this.isTemporary_;
+    return this.isLocal_;
   }
 
   public GatekeeperClient getClient ()
@@ -497,10 +499,15 @@ public class GatekeeperSessionClient
    */
   public Promise <Void> signIn (String username, String password)
   {
+    return this.signIn (username, password, null);
+  }
+
+  public Promise <Void> signIn (String username, String password, @Nullable List <String> scope)
+  {
     if (this.isSignedIn ())
       return Promise.reject (new IllegalStateException ("User is already signed in"));
 
-    return this.getUserToken (username, password)
+    return this.getUserToken (username, password, scope)
                .then (token -> this.completeSignIn (username, token));
   }
 
@@ -546,10 +553,8 @@ public class GatekeeperSessionClient
 
   private void persistSession (Account account)
   {
-    if (this.isTemporary_)
+    if (this.isLocal_)
       return;
-
-    LOG.info ("Persisting user session");
 
     this.session_.edit ()
                  .setUsername (account.username)
@@ -572,57 +577,49 @@ public class GatekeeperSessionClient
     if (this.userToken_ == null)
       return Promise.resolve (true);
 
-    if (this.isTemporary_)
-    {
-      this.userToken_ = null;
-      return Promise.resolve (true);
-    }
-    else
-    {
-      LOG.info ("Signing out the current user.");
+    LOG.info ("Signing out the current user.");
 
-      return new Promise<> ("gatekeeper:signOut", settlement -> {
-        LOG.info ("Signing out current user");
+    return new Promise<> ("gatekeeper:signOut", settlement -> {
+      LOG.info ("Signing out current user");
 
-        this.userMethods_.logout ().enqueue (new Callback<Boolean> ()
+      this.userMethods_.logout ().enqueue (new Callback<Boolean> ()
+      {
+        @Override
+        @ParametersAreNonnullByDefault
+        public void onResponse (Call<Boolean> call, retrofit2.Response<Boolean> response)
         {
-          @Override
-          @ParametersAreNonnullByDefault
-          public void onResponse (Call<Boolean> call, retrofit2.Response<Boolean> response)
+          if (response.isSuccessful () || forceSignOut)
           {
-            if (response.isSuccessful () || forceSignOut)
-            {
-              Boolean result = response.body ();
-              boolean complete = (result != null && result) || forceSignOut;
+            Boolean result = response.body ();
+            boolean complete = (result != null && result) || forceSignOut;
 
-              if (complete)
-                completeSignOut ();
-
-              settlement.resolve (complete);
-            }
-            else
-            {
-              settlement.reject (new IllegalStateException ("Failed to sign out user"));
-            }
-          }
-
-          @Override
-          @ParametersAreNonnullByDefault
-          public void onFailure (Call<Boolean> call, Throwable t)
-          {
-            if (forceSignOut)
-            {
+            if (complete)
               completeSignOut ();
-              settlement.resolve (true);
-            }
-            else
-            {
-              settlement.reject (t);
-            }
+
+            settlement.resolve (complete);
           }
-        });
+          else
+          {
+            settlement.reject (new IllegalStateException ("Failed to sign out user"));
+          }
+        }
+
+        @Override
+        @ParametersAreNonnullByDefault
+        public void onFailure (Call<Boolean> call, Throwable t)
+        {
+          if (forceSignOut)
+          {
+            completeSignOut ();
+            settlement.resolve (true);
+          }
+          else
+          {
+            settlement.reject (t);
+          }
+        }
       });
-    }
+    });
   }
 
   /**
@@ -671,24 +668,17 @@ public class GatekeeperSessionClient
    * @param username        Username
    * @param password        Password
    */
-  private Promise<JsonBearerToken> getUserToken (String username, String password)
+  private Promise<JsonBearerToken> getUserToken (String username, String password, List <String> scope)
   {
     LOG.info ("Getting an access token for the user.");
 
     JsonPassword grant = new JsonPassword ();
     grant.username = username;
     grant.password = password;
-
-    if (this.isTemporary_)
-    {
-      // Temporary sessions cannot be refreshed for the time being.
-      grant.temporary = true;
-      grant.refreshable = false;
-    }
-
     grant.clientId = this.client_.getConfig ().clientId;
     grant.clientSecret = this.client_.getConfig ().clientSecret;
     grant.packageName = this.packageName_;
+    grant.scope = scope;
 
     return this.executeCall (this.methods_.getUserToken (grant));
   }

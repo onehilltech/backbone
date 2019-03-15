@@ -1,5 +1,7 @@
 package com.onehilltech.backbone.gatekeeper.http;
 
+import java.util.List;
+
 public class JsonPassword extends JsonGrant
 {
   public String username;
@@ -8,5 +10,5 @@ public class JsonPassword extends JsonGrant
 
   public Boolean refreshable;
 
-  public Boolean temporary;
+  public List<String> scope;
 }
