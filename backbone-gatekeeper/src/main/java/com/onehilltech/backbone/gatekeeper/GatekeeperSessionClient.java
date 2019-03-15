@@ -561,10 +561,10 @@ public class GatekeeperSessionClient
 
   private void persistSession (Account account)
   {
+    this.account_ = account;
+
     if (this.isLocal_)
       return;
-
-    this.account_ = account;
 
     this.session_.edit ()
                  .setUsername (account.username)
