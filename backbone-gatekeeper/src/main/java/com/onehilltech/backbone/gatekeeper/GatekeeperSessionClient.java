@@ -124,6 +124,8 @@ public class GatekeeperSessionClient
 
   private boolean isLocal_;
 
+  private Account account_;
+
   /**
    * Initializing constructor.
    *
@@ -468,6 +470,7 @@ public class GatekeeperSessionClient
     LOG.info ("Completing the sign out process");
 
     // Delete the current session information.
+    this.account_ = null;
     this.session_.edit ().delete ();
 
     // Delete the token from the database. This will cause all session clients
@@ -555,6 +558,8 @@ public class GatekeeperSessionClient
   {
     if (this.isLocal_)
       return;
+
+    this.account_ = account;
 
     this.session_.edit ()
                  .setUsername (account.username)
