@@ -265,6 +265,11 @@ public class GatekeeperSessionClient
     return this.session_;
   }
 
+  public Account getAccount ()
+  {
+    return this.account_;
+  }
+
   /**
    * A new user token was inserted into the database.
    *
