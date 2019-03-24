@@ -15,6 +15,7 @@ import com.onehilltech.backbone.data.HttpError;
 import com.onehilltech.backbone.data.Resource;
 import com.onehilltech.backbone.data.ResourceSerializer;
 import com.onehilltech.backbone.gatekeeper.http.JsonAccount;
+import com.onehilltech.backbone.gatekeeper.http.JsonAuthenticate;
 import com.onehilltech.backbone.gatekeeper.http.JsonBearerToken;
 import com.onehilltech.backbone.gatekeeper.http.JsonChangePassword;
 import com.onehilltech.backbone.gatekeeper.http.JsonGrant;
@@ -535,6 +536,12 @@ public class GatekeeperSessionClient
     return this.completeSignIn (username, token);
   }
 
+  public Promise <Boolean> authenticate (String password)
+  {
+    JsonAuthenticate authenticate = new JsonAuthenticate (password);
+    return this.executeCall (this.userMethods_.authenticate (authenticate));
+  }
+
   /**
    * Complete the signIn process by storing the information in the database, and
    * notifying all parties that the signIn is complete.
@@ -903,6 +910,9 @@ public class GatekeeperSessionClient
 
     @POST("accounts/me/password")
     Call <Boolean> changePassword (@Body Resource r);
+
+    @POST("accounts/authenticate")
+    Call <Boolean> authenticate (@Body JsonAuthenticate body);
 
     @POST("oauth2/token")
     Call <JsonBearerToken> refreshToken (@Body JsonGrant refreshToken);
