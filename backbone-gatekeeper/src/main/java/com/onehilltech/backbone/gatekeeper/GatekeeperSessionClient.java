@@ -179,9 +179,10 @@ public class GatekeeperSessionClient
         .client (this.httpClient_)
         .build ();
 
+    this.userMethods_ = userRetrofit.create (UserMethods.class);
+
     this.resourceConverter_ = userRetrofit.responseBodyConverter (Resource.class, new Annotation[0]);
 
-    this.userMethods_ = userRetrofit.create (UserMethods.class);
     this.methods_ = new Retrofit.Builder ()
         .baseUrl (this.client_.getConfig ().baseUri)
         .addConverterFactory (GsonConverterFactory.create (this.gson_))
@@ -806,15 +807,7 @@ public class GatekeeperSessionClient
   /**
    * The interceptor that added header information to the request.
    */
-  private final Interceptor requestInterceptor_ = new Interceptor ()
-  {
-    @Override
-    public Response intercept (Chain chain)
-        throws IOException
-    {
-      return prepareRequest (chain);
-    }
-  };
+  private final Interceptor requestInterceptor_ = this::prepareRequest;
 
   /**
    * Prepare the request.
