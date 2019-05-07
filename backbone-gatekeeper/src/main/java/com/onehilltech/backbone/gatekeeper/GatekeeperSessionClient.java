@@ -875,6 +875,8 @@ public class GatekeeperSessionClient
         if (!refreshTokenSync ())
           return origResponse;
 
+        LOG.info ("building new request with new access token");
+
         Request newRequest =
             origRequest.newBuilder ()
                        .addHeader ("Authorization", "Bearer " + userToken_.accessToken)
