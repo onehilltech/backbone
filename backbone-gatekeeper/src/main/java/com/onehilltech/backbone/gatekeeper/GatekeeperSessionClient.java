@@ -772,6 +772,8 @@ public class GatekeeperSessionClient
 
   private boolean refreshTokenSync ()
   {
+    LOG.info ("Refreshing access token");
+
     try
     {
       JsonRefreshToken grant = new JsonRefreshToken ();
@@ -786,6 +788,10 @@ public class GatekeeperSessionClient
       {
         JsonBearerToken token = response.body ();
 
+        if (token == null)
+          return false;
+
+        LOG.info ("Saving refreshed access token");
         this.userToken_.accessToken = token.accessToken;
         this.userToken_.refreshToken = token.refreshToken;
         FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
@@ -823,7 +829,10 @@ public class GatekeeperSessionClient
     okhttp3.Request.Builder builder = original.newBuilder ();
 
     if (this.userToken_ != null)
+    {
+      LOG.info ("adding access token to request: {}", this.userToken_.accessToken);
       builder.header ("Authorization", "Bearer " + this.userToken_.accessToken);
+    }
 
     if (this.userAgent_ != null)
       builder.header ("User-Agent", this.userAgent_);
