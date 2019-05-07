@@ -866,13 +866,24 @@ public class GatekeeperSessionClient
 
       int statusCode = origResponse.code ();
 
-      if (statusCode == 401) {
+      if (statusCode == 401)
+      {
         // Let's try to update the original token. If the response is not successful,
-        // the return the original response. Otherwise, retry the same request.
-        if (refreshTokenSync ())
-          return chain.proceed (origRequest);
+        // the return the original response. Otherwise, retry the same request with the
+        // newly refreshed access token.
+
+        if (!refreshTokenSync ())
+          return origResponse;
+
+        Request newRequest =
+            origRequest.newBuilder ()
+                       .addHeader ("Authorization", "Bearer " + userToken_.accessToken)
+                       .build ();
+
+        return chain.proceed (newRequest);
       }
-      else if (statusCode == 403) {
+      else if (statusCode == 403)
+      {
         // Let's see what kind of error message we received. We may be able to handle
         // it here in the interceptor if it related to the token.
         Resource resource = resourceConverter_.convert (origResponse.body ());
