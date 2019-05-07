@@ -315,11 +315,11 @@ public class GatekeeperSessionClient
       {
         LOG.info ("The token for this session has been deleted.");
 
-        Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGOUT);
-        msg.sendToTarget ();
-
         // Reset the user token.
         this.userToken_ = null;
+
+        Message msg = this.uiHandler_.obtainMessage (MSG_ON_LOGOUT);
+        msg.sendToTarget ();
       }
       else
       {
