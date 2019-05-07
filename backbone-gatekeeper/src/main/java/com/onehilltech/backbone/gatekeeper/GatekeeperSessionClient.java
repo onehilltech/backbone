@@ -879,7 +879,7 @@ public class GatekeeperSessionClient
 
         Request newRequest =
             origRequest.newBuilder ()
-                       .addHeader ("Authorization", "Bearer " + userToken_.accessToken)
+                       .header ("Authorization", "Bearer " + userToken_.accessToken)
                        .build ();
 
         return chain.proceed (newRequest);
