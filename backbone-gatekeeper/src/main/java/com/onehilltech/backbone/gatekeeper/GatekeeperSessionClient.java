@@ -791,10 +791,13 @@ public class GatekeeperSessionClient
         if (token == null)
           return false;
 
-        LOG.info ("Saving refreshed access token");
+        LOG.info ("current token: {}", this.userToken_.accessToken);
+
         this.userToken_.accessToken = token.accessToken;
         this.userToken_.refreshToken = token.refreshToken;
         FlowManager.getModelAdapter (UserToken.class).save (this.userToken_);
+
+        LOG.info ("refreshed token: {}", this.userToken_.accessToken);
 
         return true;
       }
