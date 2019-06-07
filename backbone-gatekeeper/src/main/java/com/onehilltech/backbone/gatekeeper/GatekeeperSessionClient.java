@@ -863,15 +863,7 @@ public class GatekeeperSessionClient
         // the return the original response. Otherwise, retry the same request with the
         // newly refreshed access token.
 
-        if (!refreshTokenSync ())
-          return origResponse;
-
-        Request newRequest =
-            origRequest.newBuilder ()
-                       .header ("Authorization", "Bearer " + userToken_.accessToken)
-                       .build ();
-
-        return chain.proceed (newRequest);
+        return this.refreshToken (chain, origRequest, origResponse);
       }
       else if (statusCode == 403)
       {
@@ -891,7 +883,13 @@ public class GatekeeperSessionClient
                         .body (responseBody)
                         .build();
 
-        if (AUTHENTICATE_ERROR_CODES.contains (error.getCode ()))
+        String errCode = error.getCode ();
+
+        if (errCode.equals ("token_expired"))
+        {
+          return this.refreshToken (chain, origRequest, origResponse);
+        }
+        else
         {
           // Notify the client to authenticate. This is optional. If the client
           // does not authenticate, then all calls will continue to fail.
@@ -902,7 +900,22 @@ public class GatekeeperSessionClient
 
       return origResponse;
     }
+
+    private Response refreshToken (Chain chain, Request origRequest, Response origResponse)
+        throws IOException
+    {
+      if (!refreshTokenSync ())
+        return origResponse;
+
+      Request newRequest =
+          origRequest.newBuilder ()
+                     .header ("Authorization", "Bearer " + userToken_.accessToken)
+                     .build ();
+
+      return chain.proceed (newRequest);
+    }
   };
+
 
   interface Methods
   {
